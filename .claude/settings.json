@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"print\\(''hello''\\)\")",
+      "Bash(perl --version)",
+      "Bash(node --version)",
+      "Bash(powershell -File:*)",
+      "Bash(xxd src/main_gui.cpp)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
+    ]
+  }
+}
