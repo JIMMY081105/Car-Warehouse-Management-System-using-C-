@@ -1,51 +1,35 @@
-# CW1 AI Review Context
+# CW1 Changed Files (Full Code Export)
 
-This file contains core project structure and code for AI review.
-Excluded: `build/`, `third_party/`, `.git/`, `.claude/`, and generated export markdown files.
+Generated for AI review of current uncommitted changes.
 
-## File Structure
+## Changed File Structure
 
 ```text
 cw1/
-  .gitignore
-  CMakeLists.txt
-  COMP2034_CW1_Planning_Summary.md
-  include\blockchain\Block.hpp
-  include\blockchain\Blockchain.hpp
-  include\blockchain\BlockStage.hpp
-  include\blockchain\Validation.hpp
-  include\models\CarRecord.hpp
-  include\utils\AuditLog.hpp
-  include\utils\HashUtil.hpp
-  include\utils\TimeUtil.hpp
-  src\blockchain\Block.cpp
-  src\blockchain\Blockchain.cpp
-  src\blockchain\BlockStage.cpp
-  src\blockchain\Validation.cpp
-  src\main.cpp
-  src\main_cli.cpp
-  src\main_gui.cpp
-  src\models\CarRecord.cpp
-  src\utils\AuditLog.cpp
-  src\utils\HashUtil.cpp
-  src\utils\TimeUtil.cpp
+  [Modified] CMakeLists.txt
+  [Deleted] CW1_AI_Review_Context.md
+  [Modified] include/blockchain/Block.hpp
+  [Modified] include/blockchain/Blockchain.hpp
+  [Modified] include/utils/AuditLog.hpp
+  [Modified] src/blockchain/Block.cpp
+  [Modified] src/blockchain/BlockStage.cpp
+  [Modified] src/blockchain/Blockchain.cpp
+  [Modified] src/blockchain/Validation.cpp
+  [Modified] src/main_cli.cpp
+  [Modified] src/main_gui.cpp
+  [Modified] src/models/CarRecord.cpp
+  [Modified] src/utils/AuditLog.cpp
+  [Modified] src/utils/HashUtil.cpp
+  [Modified] src/utils/TimeUtil.cpp
+  [Added] include/blockchain/BlockFormatter.hpp
+  [Added] include/utils/OperationTimer.hpp
 ```
 
-## Full File Contents
-
-### .gitignore
-
-```text
-build/
-.cache/
-*.exe
-*.o
-*.obj
-*.a
-*.dll
-```
+## Full Code for Changed Files
 
 ### CMakeLists.txt
+
+Status: **Modified**
 
 ```cmake
 cmake_minimum_required(VERSION 3.16)
@@ -56,11 +40,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# â”€â”€ Options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Options ───────────────────────────────────────────────────────
 option(BUILD_CLI "Build the terminal CLI version" ON)
 option(BUILD_GUI "Build the ImGui GUI version"   ON)
 
-# â”€â”€ External packages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── External packages ─────────────────────────────────────────────
 find_package(OpenSSL REQUIRED)
 find_package(OpenGL REQUIRED)
 
@@ -75,7 +59,7 @@ if(NOT glfw3_FOUND)
     add_subdirectory(third_party/glfw)
 endif()
 
-# â”€â”€ Shared backend sources (blockchain engine) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Shared backend sources (blockchain engine) ────────────────────
 set(BACKEND_SOURCES
     src/models/CarRecord.cpp
     src/blockchain/Block.cpp
@@ -87,7 +71,7 @@ set(BACKEND_SOURCES
     src/utils/TimeUtil.cpp
 )
 
-# â”€â”€ ImGui sources â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── ImGui sources ─────────────────────────────────────────────────
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui)
 set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui.cpp
@@ -99,7 +83,7 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
-# â”€â”€ CLI executable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── CLI executable ────────────────────────────────────────────────
 if(BUILD_CLI)
     add_executable(car_warehouse_cli
         src/main_cli.cpp
@@ -118,7 +102,7 @@ if(BUILD_CLI)
     endif()
 endif()
 
-# â”€â”€ GUI executable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── GUI executable ────────────────────────────────────────────────
 if(BUILD_GUI)
     add_executable(car_warehouse_gui
         src/main_gui.cpp
@@ -147,235 +131,24 @@ if(BUILD_GUI)
         COMMENT "Copying JetBrains Mono font next to executable"
     )
     if(MSVC)
-        target_compile_options(car_warehouse_gui PRIVATE /W3 /permissive-)
+        target_compile_options(car_warehouse_gui PRIVATE /W4 /permissive-)
     else()
-        target_compile_options(car_warehouse_gui PRIVATE -Wall -Wextra)
+        target_compile_options(car_warehouse_gui PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 endif()
 ```
 
-### COMP2034_CW1_Planning_Summary.md
+### CW1_AI_Review_Context.md
 
-```markdown
-# COMP2034 CW1 â€” é¡¹ç›®è§„åˆ’æ€»ç»“
-**æ—¥æœŸï¼š** 26 February 2026  
-**è¯¾ç¨‹ï¼š** COMP2034 C++ Programming  
-**ä½œä¸šï¼š** Coursework 1 â€” Car Warehouse Management System (50%)  
-**æˆªæ­¢æ—¥æœŸï¼š** 2 April 2026, 6pm
+Status: **Deleted**
 
----
-
-## ä¸€ã€ä½œä¸šåŸºæœ¬è¦æ±‚
-
-### æäº¤ç‰©æ¸…å•
-- PDF æŠ¥å‘Šï¼ˆè§£é‡Šä»£ç ã€ç®—æ³•ã€æ•°æ®ç»“æž„ã€å›°éš¾ã€ç»“è®ºã€å‚è€ƒæ–‡çŒ®ï¼‰
-- PDF æˆªå›¾ï¼ˆç¨‹åºè¾“å‡º + è¿è¡Œæ—¶é—´ï¼‰
-- `.cpp` æºä»£ç æ–‡ä»¶
-- `.o` ç›®æ ‡æ–‡ä»¶
-- `.exe` æ‰§è¡Œæ–‡ä»¶
-- å…¨éƒ¨æ‰“åŒ…æˆ `studentID_Name_CW1.zip` ä¸Šä¼  Moodle
-
-### è¯„åˆ†åˆ†å¸ƒï¼ˆå…±50åˆ†ï¼‰
-| éƒ¨åˆ† | åˆ†æ•° |
-|------|------|
-| æŠ¥å‘Šå†™ä½œ + ä»£ç æ³¨é‡Š | 20åˆ† |
-| åŠŸèƒ½æ€§C++ç¨‹åºï¼ˆåŒºå—é“¾ã€æ•°æ®ç»“æž„ç­‰ï¼‰ | 10åˆ† |
-| åˆ›æ–°æ€§ã€å¤æ‚åº¦ã€ç‹¬ç‰¹æ€§ | 15åˆ† |
-| è¯¾å ‚å±•ç¤º + Q&A | 5åˆ† |
-
----
-
-## äºŒã€å…³äºŽ Sample Code çš„å®šä½
-
-è€å¸ˆæä¾›çš„ Sample Code **åªæ˜¯èµ·ç‚¹éª¨æž¶**ï¼Œä¸æ˜¯å®Œæ•´ä½œä¸šã€‚
-
-Sample Code æä¾›äº†ï¼š
-- åŸºæœ¬ Block ç»“æž„ä½“
-- éšæœºç”Ÿæˆ Hash çš„å‡½æ•°ï¼ˆå‡å“ˆå¸Œï¼Œä¸æ˜¯çœŸæ­£SHAï¼‰
-- æ—¶é—´æˆ³èŽ·å–
-- ç®€å•è¾“å…¥å’Œæ‰“å°åŠŸèƒ½
-
-**ä½ éœ€è¦è‡ªå·±å®žçŽ°çš„ï¼š**
-- çœŸæ­£çš„ SHA-256 å“ˆå¸Œç®—æ³•
-- æ±½è½¦ä»“åº“ç®¡ç†ç³»ç»Ÿå®Œæ•´ä¸šåŠ¡é€»è¾‘
-- Linked Listã€Array of Pointers ç­‰æ•°æ®ç»“æž„
-- å®Œæ•´èœå•ç³»ç»Ÿå’ŒåŠŸèƒ½æ¨¡å—
-- ä¸“ä¸šä»£ç æ³¨é‡Šå’Œæ–‡æ¡£
-- åŠ¨æ€åŒºå—é“¾æŠ€æœ¯
-
----
-
-## ä¸‰ã€SHA-256 çš„ç†è§£ä¸Žåº”ç”¨
-
-### ä»€ä¹ˆæ˜¯ SHA-256
-- æŠŠä»»æ„é•¿åº¦æ•°æ®è½¬æ¢æˆå›ºå®š 64 å­—ç¬¦çš„"æŒ‡çº¹"
-- **å•å‘ä¸å¯é€†**â€”â€”æ— æ³•ä»Žå“ˆå¸Œå€¼åæŽ¨åŽŸå§‹æ•°æ®
-- åŒæ ·è¾“å…¥æ°¸è¿œå¾—åˆ°åŒæ ·è¾“å‡º
-- å“ªæ€•æ”¹å˜ä¸€ä¸ªå­—ç¬¦ï¼Œè¾“å‡ºå®Œå…¨ä¸åŒ
-
-### SHA-256 åœ¨ä½œä¸šä¸­çš„è§’è‰²
-
-**è®¡ç®—æ–¹å¼ï¼š**
-```
-Block Number + Previous Hash + Timestamp + Info
-        â†“ SHA-256 è®¡ç®—
-    Current Hashï¼ˆè¯¥å—çš„å”¯ä¸€æŒ‡çº¹ï¼‰
+```text
+[File deleted in working tree; no current code content available.]
 ```
 
-**ä¸‰ä¸ªæ ¸å¿ƒä½œç”¨ï¼š**
-1. **èº«ä»½è¯æ˜Ž** â€” æ¯ä¸ª Block æœ‰å”¯ä¸€æŒ‡çº¹
-2. **é˜²ç¯¡æ”¹** â€” ä»»ä½•æ•°æ®è¢«ä¿®æ”¹ç«‹åˆ»è¢«æ£€æµ‹åˆ°
-3. **é“¾å¼è¿žæŽ¥** â€” é€šè¿‡ä¼ é€’å“ˆå¸Œå€¼æŠŠæ‰€æœ‰ Block ä¸²è”æˆä¸å¯åˆ†å‰²çš„é“¾
+### include/blockchain/Block.hpp
 
-**é“¾å¼å®‰å…¨åŽŸç†ï¼š**
-```
-Block 0 (Hash: AAA) â†’ Block 1 (PrevHash: AAA, Hash: BBB) â†’ Block 2 (PrevHash: BBB)
-å¦‚æžœæœ‰äººç¯¡æ”¹ Block 1 â†’ BBB æ”¹å˜ â†’ Block 2 çš„ PrevHash å¯¹ä¸ä¸Š â†’ ç¯¡æ”¹è¢«å‘çŽ°
-```
-
-**å®žçŽ°æ–¹å¼ï¼ˆOpenSSLåº“ï¼‰ï¼š**
-```cpp
-#include <openssl/sha.h>
-
-string sha256(const string& input) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256((unsigned char*)input.c_str(), input.size(), hash);
-    stringstream ss;
-    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        ss << hex << setw(2) << setfill('0') << (int)hash[i];
-    }
-    return ss.str();
-}
-```
-
----
-
-## å››ã€åŒºå—é“¾ç»“æž„è®¾è®¡
-
-### æ¯è¾†è½¦çš„ Block æ•°é‡
-ä½œä¸š**æ²¡æœ‰å¼ºåˆ¶è§„å®š**Blockæ•°é‡ï¼ŒåŽŸæ–‡è¯´ï¼š
-> "The number of blocks really depends on the idea and concept you have constructed"
-
-**å»ºè®®ï¼šæ¯è¾†è½¦è®¾è®¡ 4ï½ž5 ä¸ª Block**
-
-### æŽ¨èçš„ Block è®¾è®¡ï¼ˆ5ä¸ªé˜¶æ®µï¼‰
-```
-Block 0 â€” ç”Ÿäº§å‡ºåŽ‚
-  Info: åˆ¶é€ å•†IDã€åˆ¶é€ å•†åã€è½¦åž‹ã€å‡ºåŽ‚æ—¥æœŸã€è½¦æž¶å·VIN
-
-Block 1 â€” ä»“åº“å…¥åº“
-  Info: ä»“åº“åœ°å€ã€å…¥åº“æ—¥æœŸã€è´Ÿè´£äººã€åº“å­˜ä½ç½®
-
-Block 2 â€” è´¨é‡æ£€æµ‹
-  Info: è´¨æ£€å‘˜IDã€æ£€æŸ¥ç»“æžœã€æ£€æŸ¥æ—¥æœŸã€åˆæ ¼è¯ç¼–å·
-
-Block 3 â€” ç»é”€å•†é…é€
-  Info: ç»é”€å•†IDã€é…é€æ—¥æœŸã€è¿è¾“æ–¹å¼ã€ç›®çš„åœ°
-
-Block 4 â€” å®¢æˆ·é”€å”®/å”®åŽ
-  Info: ä¹°å®¶IDã€é”€å”®æ—¥æœŸã€ä¿ä¿®æœŸã€å®¢æœè®°å½•
-```
-
-### å¤šè¾†è½¦çš„æ•°æ®ç»“æž„
-```cpp
-// ç”¨ Map å­˜å‚¨æ¯è¾†è½¦çš„ç‹¬ç«‹åŒºå—é“¾
-map<string, vector<Block>> warehouse;
-// key = è½¦æž¶å·VIN, value = è¯¥è½¦çš„Blocké“¾
-```
-
-**50è¾†è½¦ Ã— 5ä¸ªBlock = 250ä¸ªBlock**ï¼Œä½†ä¸éœ€è¦æ‰‹åŠ¨åˆ›å»ºï¼Œç¨‹åºè‡ªåŠ¨ç”Ÿæˆã€‚æ¼”ç¤ºæ—¶ 3ï½ž5 è¾†è½¦å°±è¶³å¤Ÿã€‚
-
----
-
-## äº”ã€UI/ä¸»é¡µè®¾è®¡æ€è·¯
-
-### ä¸»èœå•
-```
-========================================
-   Car Warehouse Management System
-========================================
-1. Add New Car
-2. View All Cars
-3. View Car Blockchain (by VIN)
-4. Search Car
-5. Verify Blockchain Integrity
-6. Exit
-========================================
-```
-
-### View All Cars â€” æ‘˜è¦åˆ—è¡¨ï¼ˆä¸å±•å¼€æ‰€æœ‰Blockï¼‰
-```
-No. | VIN     | Brand   | Model | Status      | Blocks
-----|---------|---------|-------|-------------|-------
-1   | VIN001  | Perodua | Axia  | In Stock    | 5
-2   | VIN002  | Toyota  | Vios  | Sold        | 5
-```
-ç”¨æˆ·é€‰æ‹©ç¼–å·åŽï¼Œæ‰å±•å¼€è¯¥è½¦çš„å®Œæ•´åŒºå—é“¾ã€‚
-
-### Search åŠŸèƒ½ï¼ˆåˆ›æ–°åŠ åˆ†é¡¹ï¼‰
-```
-1. Search by VIN
-2. Search by Brand
-3. Search by Status
-4. Search by Date
-```
-
----
-
-## å…­ã€UI æ¡†æž¶é€‰æ‹©
-
-### æœ€ç»ˆå†³å®šï¼šImGui
-
-**ä¸ºä»€ä¹ˆé€‰ ImGuiï¼š**
-- çº¯ C++ åº“ï¼Œå‰åŽç«¯å…¨éƒ¨ C++ å®žçŽ°
-- çœŸæ­£çš„æ¡Œé¢çª—å£ç¨‹åºï¼ˆä¸æ˜¯ Terminalï¼‰
-- å¯ä»¥åšè¡¨æ ¼ã€æœç´¢æ ã€æŒ‰é’®ã€ä¾§è¾¹æ 
-- AI å¯¹ ImGui éžå¸¸ç†Ÿæ‚‰ï¼Œå®¹æ˜“ç”Ÿæˆä»£ç 
-- ç¼–è¯‘å‡ºæ¥æ˜¯ `.exe` æ–‡ä»¶ï¼Œå®Œå…¨ç¬¦åˆæäº¤è¦æ±‚
-- åœ¨æ¸¸æˆå’Œå·¥ä¸šè½¯ä»¶ç•Œéžå¸¸ä¸“ä¸šï¼Œåå•†åŠ¡é£Žæ ¼
-
-**ImGui å¯ä»¥å®žçŽ°çš„ç•Œé¢åŠŸèƒ½ï¼š**
-- å·¦ä¾§ä¾§è¾¹æ æ˜¾ç¤ºæ‰€æœ‰è½¦è¾†åˆ—è¡¨
-- å³ä¾§å±•ç¤ºé€‰ä¸­è½¦è¾†çš„å®Œæ•´åŒºå—é“¾
-- é¡¶éƒ¨æœç´¢æ å®žæ—¶è¿‡æ»¤
-- è¡¨æ ¼æ˜¾ç¤ºæ‰€æœ‰ Block ä¿¡æ¯
-- ä¸åŒçŠ¶æ€ç”¨ä¸åŒé¢œè‰²æ ‡æ³¨
-
-### æ—¶é—´ä¼°è®¡
-- ImGui å¼€å‘æ—¶é—´çº¦ **2ï½ž3å‘¨**
-- éœ€è¦åˆç†åˆ†é…æ—¶é—´ç»™æŠ¥å‘Šå†™ä½œ
-- å–„ç”¨ AI è¾…åŠ©ç”Ÿæˆä»£ç å¯ä»¥å¤§å¹…èŠ‚çœæ—¶é—´
-
----
-
-## ä¸ƒã€å…¶ä»–å¤‡é€‰ UI æ–¹æ¡ˆï¼ˆä¾›å‚è€ƒï¼‰
-
-| é€‰é¡¹ | éš¾åº¦ | è§†è§‰æ•ˆæžœ | å•†åŠ¡æ„Ÿ | å¼€å‘æ—¶é—´ |
-|------|------|----------|--------|----------|
-| Terminal ANSI | â­ | â­â­ | â­â­ | 1ï½ž2å¤© |
-| HTML Export | â­â­ | â­â­â­â­ | â­â­â­â­â­ | 3ï½ž5å¤© |
-| **ImGuiï¼ˆé€‰å®šï¼‰** | â­â­â­ | â­â­â­â­ | â­â­â­â­ | 2ï½ž3å‘¨ |
-| Raylib | â­â­â­ | â­â­â­â­â­ | â­â­â­ | 3ï½ž4å‘¨ |
-| C++ + Web Server | â­â­â­â­ | â­â­â­â­â­ | â­â­â­â­â­ | 3ï½ž4å‘¨ |
-
----
-
-## å…«ã€ä¸‹ä¸€æ­¥è¡ŒåŠ¨å»ºè®®
-
-1. **ç¡®è®¤å¼€å‘çŽ¯å¢ƒ** â€” å®‰è£… ImGui + OpenSSL åº“
-2. **è®¾è®¡æ•°æ®ç»“æž„** â€” å®šä¹‰ Block struct å’Œ Car çš„å®Œæ•´å­—æ®µ
-3. **å®žçŽ°æ ¸å¿ƒé€»è¾‘** â€” SHA-256 å“ˆå¸Œ + åŒºå—é“¾é“¾æŽ¥
-4. **å»ºç«‹è™šæž„å…¬å¸** â€” è®¾è®¡é©¬æ¥è¥¿äºšæ±½è½¦ä¼ä¸šèƒŒæ™¯èµ„æ–™ï¼ˆç”¨äºŽæŠ¥å‘Šï¼‰
-5. **å¼€å‘ ImGui ç•Œé¢** â€” ä¸»èœå•ã€åˆ—è¡¨ã€è¯¦æƒ…ã€æœç´¢
-6. **å†™æŠ¥å‘Š** â€” è§£é‡Šæ¯ä¸ªè®¾è®¡å†³å®šï¼Œå¼•ç”¨å‚è€ƒèµ„æ–™
-7. **æµ‹è¯• + æˆªå›¾** â€” è®°å½•è¿è¡Œæ—¶é—´å’Œè¾“å‡ºæˆªå›¾
-
----
-
-*æ­¤æ€»ç»“è®°å½•äº† COMP2034 CW1 è§„åˆ’å¯¹è¯çš„å®Œæ•´å†…å®¹ï¼Œä¾›ä¸‹æ¬¡ç»§ç»­å¼€å‘æ—¶å‚è€ƒã€‚*
-```
-
-### include\blockchain\Block.hpp
+Status: **Modified**
 
 ```cpp
 #pragma once
@@ -385,25 +158,33 @@ No. | VIN     | Brand   | Model | Status      | Blocks
 #include <string>
 
 #include "models/CarRecord.hpp"
+#include "blockchain/BlockBase.hpp"
 
 namespace cw1 {
 
-class Block {
+/// A single block in the car warehouse blockchain.
+/// Inherits from BlockBase (demonstrates single inheritance, Lecture 7).
+/// Overrides all pure virtual methods from the base class.
+class Block : public BlockBase {
 public:
     Block(std::size_t index, std::string previousHash, CarRecord record);
 
-    std::size_t         getIndex()        const noexcept;
-    const std::string&  getCurrentHash()  const noexcept;
-    const std::string&  getPreviousHash() const noexcept;
-    const std::string&  getTimestamp()    const noexcept;
+    std::size_t         getIndex()        const noexcept override;
+    const std::string&  getCurrentHash()  const noexcept override;
+    const std::string&  getPreviousHash() const noexcept override;
+    const std::string&  getTimestamp()    const noexcept override;
     std::uint64_t       getNonce()        const noexcept;
     const CarRecord&    getRecord()       const noexcept;
 
     /// Recompute the hash from the block's data (used for integrity checks).
-    std::string computeHash() const;
+    std::string computeHash() const override;
 
     /// Human-readable one-line summary.
-    std::string toString() const;
+    std::string toString() const override;
+
+    /// Debug/admin helper for tamper simulation coursework demo.
+    /// Intentionally overrides the stored hash to break integrity checks.
+    void debugOverrideCurrentHash(std::string forgedHash);
 
 private:
     static std::uint64_t generateNonce();
@@ -419,7 +200,9 @@ private:
 } // namespace cw1
 ```
 
-### include\blockchain\Blockchain.hpp
+### include/blockchain/Blockchain.hpp
+
+Status: **Modified**
 
 ```cpp
 #pragma once
@@ -487,6 +270,12 @@ public:
     /// Verify the entire global chain (hashes + linkage).
     ValidationResult verifyIntegrity() const;
 
+    /// Admin/debug coursework feature: intentionally tamper a block hash.
+    /// Returns false with message if index is invalid.
+    bool tamperBlockHash(std::size_t index,
+                         const std::string& forgedHash,
+                         std::string& message);
+
     // -- Audit log -----------------------------------------------------
 
     /// Access the audit log (const version -- works even on const Blockchain
@@ -512,115 +301,9 @@ private:
 } // namespace cw1
 ```
 
-### include\blockchain\BlockStage.hpp
+### include/utils/AuditLog.hpp
 
-```cpp
-#pragma once
-
-#include <string>
-
-namespace cw1 {
-
-/// Lifecycle stages a car passes through in the warehouse system.
-enum class BlockStage {
-    PRODUCTION,        // Factory manufacture
-    WAREHOUSE_INTAKE,  // Arrival at warehouse
-    QUALITY_CHECK,     // Inspection / QC
-    DEALER_DISPATCH,   // Shipped to dealer
-    CUSTOMER_SALE      // Sold to end customer
-};
-
-/// Convert a BlockStage value to a human-readable string.
-std::string stageToString(BlockStage stage);
-
-/// Convert a string back to BlockStage (case-insensitive). Throws on bad input.
-BlockStage stringToStage(const std::string& text);
-
-} // namespace cw1
-```
-
-### include\blockchain\Validation.hpp
-
-```cpp
-#pragma once
-
-#include <string>
-#include <vector>
-
-#include "blockchain/Block.hpp"
-
-namespace cw1 {
-
-struct ValidationResult {
-    bool        ok;
-    std::string message;
-};
-
-namespace Validation {
-
-/// Verify hash integrity and chain linkage across all blocks.
-ValidationResult verifyChain(const std::vector<Block>& blocks);
-
-} // namespace Validation
-
-} // namespace cw1
-```
-
-### include\models\CarRecord.hpp
-
-```cpp
-#pragma once
-
-#include <string>
-
-#include "blockchain/BlockStage.hpp"
-
-namespace cw1 {
-
-/// Represents a single event/record attached to a block.
-/// Common fields are always present; stage-specific fields are filled
-/// depending on which lifecycle stage the block represents.
-struct CarRecord {
-    // â”€â”€ Common fields (every block has these) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    std::string vin;
-    std::string manufacturer;
-    std::string model;
-    std::string color;
-    int         productionYear = 0;
-    BlockStage  stage          = BlockStage::PRODUCTION;
-
-    // â”€â”€ Stage-specific fields (filled as needed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // PRODUCTION
-    std::string factoryLocation;   // e.g. "Shah Alam Plant"
-
-    // WAREHOUSE_INTAKE
-    std::string warehouseLocation; // e.g. "WH-A1"
-    std::string receivedBy;        // staff name / ID
-
-    // QUALITY_CHECK
-    std::string inspectorId;       // e.g. "QC-007"
-    bool        passed = false;    // QC result
-    std::string qcNotes;           // remarks
-
-    // DEALER_DISPATCH
-    std::string dealerId;          // e.g. "DLR-KL-01"
-    std::string destination;       // city / address
-    std::string transportMode;     // "Truck", "Rail", etc.
-
-    // CUSTOMER_SALE
-    std::string buyerId;           // e.g. "CUST-88201"
-    double      salePrice = 0.0;   // MYR
-    std::string warrantyExpiry;    // ISO date string
-
-    // â”€â”€ Serialisation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    /// Deterministic pipe-delimited string used as hash input.
-    std::string serialize() const;
-};
-
-} // namespace cw1
-```
-
-### include\utils\AuditLog.hpp
+Status: **Modified**
 
 ```cpp
 #pragma once
@@ -631,6 +314,7 @@ struct CarRecord {
 
 #include <cstddef>
 #include <string>
+#include <utility>
 
 namespace cw1 {
 
@@ -640,7 +324,8 @@ enum class AuditAction {
     BLOCK_ADDED,        // A new block was appended to the blockchain
     INTEGRITY_CHECK,    // verifyIntegrity() was called
     SEARCH_PERFORMED,   // A search function was called
-    CHAIN_VIEWED        // The chain or a car record was displayed
+    CHAIN_VIEWED,       // The chain or a car record was displayed
+    TAMPER_SIMULATED    // Debug/admin tamper simulation executed
 };
 
 /// Convert an AuditAction enum value to a human-readable string.
@@ -713,61 +398,59 @@ private:
     std::size_t count_;  // Total node count -- O(1) size()
 };
 
+/// RAII owner for AuditLog::getRecentEntries().
+///
+/// Coursework requirement remains intact:
+/// - AuditLog still returns a raw heap-allocated array of pointers.
+/// - This wrapper only automates delete[] to prevent call-site leaks.
+class RecentEntryArray {
+public:
+    RecentEntryArray(const AuditLog& log, std::size_t maxCount);
+    ~RecentEntryArray();
+
+    RecentEntryArray(const RecentEntryArray&) = delete;
+    RecentEntryArray& operator=(const RecentEntryArray&) = delete;
+
+    RecentEntryArray(RecentEntryArray&& other) noexcept;
+    RecentEntryArray& operator=(RecentEntryArray&& other) noexcept;
+
+    std::size_t size() const noexcept;
+    bool empty() const noexcept;
+
+    const AuditEntry* operator[](std::size_t index) const noexcept;
+    const AuditEntry* const* begin() const noexcept;
+    const AuditEntry* const* end() const noexcept;
+
+private:
+    const AuditEntry** data_;
+    std::size_t count_;
+};
+
 } // namespace cw1
 ```
 
-### include\utils\HashUtil.hpp
+### src/blockchain/Block.cpp
 
-```cpp
-#pragma once
-
-#include <string>
-
-namespace cw1::HashUtil {
-
-/// Compute the SHA-256 hash of the input string and return it as a
-/// 64-character lowercase hex string.
-std::string sha256(const std::string& input);
-
-} // namespace cw1::HashUtil
-```
-
-### include\utils\TimeUtil.hpp
-
-```cpp
-#pragma once
-
-#include <string>
-
-namespace cw1::TimeUtil {
-
-/// Return the current UTC time as an ISO-8601 string (e.g. "2026-03-02T12:30:00Z").
-std::string nowIso8601();
-
-} // namespace cw1::TimeUtil
-```
-
-### src\blockchain\Block.cpp
+Status: **Modified**
 
 ```cpp
 #include "blockchain/Block.hpp"
 
 #include <random>
 #include <sstream>
+#include <utility>
 
 #include "utils/HashUtil.hpp"
 #include "utils/TimeUtil.hpp"
 
-using namespace std;
-
 namespace cw1 {
 
-Block::Block(size_t index, string previousHash, CarRecord record)
+Block::Block(std::size_t index, std::string previousHash, CarRecord record)
     : index_(index),
-      previousHash_(move(previousHash)),
+      previousHash_(std::move(previousHash)),
       timestamp_(TimeUtil::nowIso8601()),
       nonce_(generateNonce()),
-      record_(move(record)) {
+      record_(std::move(record)) {
     currentHash_ = computeHash();
 
     // Coursework spec: the genesis block's previousHash must equal its
@@ -780,23 +463,23 @@ Block::Block(size_t index, string previousHash, CarRecord record)
     }
 }
 
-size_t Block::getIndex() const noexcept {
+std::size_t Block::getIndex() const noexcept {
     return index_;
 }
 
-const string& Block::getCurrentHash() const noexcept {
+const std::string& Block::getCurrentHash() const noexcept {
     return currentHash_;
 }
 
-const string& Block::getPreviousHash() const noexcept {
+const std::string& Block::getPreviousHash() const noexcept {
     return previousHash_;
 }
 
-const string& Block::getTimestamp() const noexcept {
+const std::string& Block::getTimestamp() const noexcept {
     return timestamp_;
 }
 
-uint64_t Block::getNonce() const noexcept {
+std::uint64_t Block::getNonce() const noexcept {
     return nonce_;
 }
 
@@ -804,20 +487,20 @@ const CarRecord& Block::getRecord() const noexcept {
     return record_;
 }
 
-string Block::computeHash() const {
-    ostringstream payload;
+std::string Block::computeHash() const {
+    std::ostringstream payload;
     // For the genesis block (index_ == 0), always use "0" as the previousHash
     // in the hash computation, regardless of the stored previousHash_ value.
     // This is necessary because the constructor sets previousHash_ = currentHash_
     // after the hash is first computed, so we must reproduce the original "0"
     // input to verify the hash correctly during integrity checks.
-    const string prevForHash = (index_ == 0) ? string("0") : previousHash_;
+    const std::string prevForHash = (index_ == 0) ? std::string("0") : previousHash_;
     payload << index_ << prevForHash << timestamp_ << nonce_ << record_.serialize();
     return HashUtil::sha256(payload.str());
 }
 
-string Block::toString() const {
-    ostringstream out;
+std::string Block::toString() const {
+    std::ostringstream out;
     out << "Block(index=" << index_
         << ", hash=" << currentHash_.substr(0, 12) << "..."
         << ", prev=" << (previousHash_.size() > 12 ? previousHash_.substr(0, 12) + "..." : previousHash_)
@@ -826,16 +509,64 @@ string Block::toString() const {
     return out.str();
 }
 
-uint64_t Block::generateNonce() {
-    static thread_local mt19937_64 engine{random_device{}()};
-    static thread_local uniform_int_distribution<uint64_t> dist;
+void Block::debugOverrideCurrentHash(std::string forgedHash) {
+    currentHash_ = std::move(forgedHash);
+}
+
+std::uint64_t Block::generateNonce() {
+    static thread_local std::mt19937_64 engine{std::random_device{}()};
+    static thread_local std::uniform_int_distribution<std::uint64_t> dist;
     return dist(engine);
 }
 
 } // namespace cw1
 ```
 
-### src\blockchain\Blockchain.cpp
+### src/blockchain/BlockStage.cpp
+
+Status: **Modified**
+
+```cpp
+#include "blockchain/BlockStage.hpp"
+
+#include <algorithm>
+#include <cctype>
+#include <stdexcept>
+
+namespace cw1 {
+
+std::string stageToString(BlockStage stage) {
+    switch (stage) {
+        case BlockStage::PRODUCTION:       return "Production";
+        case BlockStage::WAREHOUSE_INTAKE: return "Warehouse Intake";
+        case BlockStage::QUALITY_CHECK:    return "Quality Check";
+        case BlockStage::DEALER_DISPATCH:  return "Dealer Dispatch";
+        case BlockStage::CUSTOMER_SALE:    return "Customer Sale";
+    }
+    return "Unknown";
+}
+
+BlockStage stringToStage(const std::string& text) {
+    // Work with a lowercase copy for case-insensitive matching.
+    std::string lower = text;
+    std::transform(lower.begin(), lower.end(), lower.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    if (lower == "production")       return BlockStage::PRODUCTION;
+    if (lower == "warehouse intake") return BlockStage::WAREHOUSE_INTAKE;
+    if (lower == "quality check")    return BlockStage::QUALITY_CHECK;
+    if (lower == "dealer dispatch")  return BlockStage::DEALER_DISPATCH;
+    if (lower == "customer sale")    return BlockStage::CUSTOMER_SALE;
+
+    throw std::invalid_argument("Unknown stage: " + text);
+}
+
+} // namespace cw1
+```
+
+### src/blockchain/Blockchain.cpp
+
+Status: **Modified**
 
 ```cpp
 #include "blockchain/Blockchain.hpp"
@@ -845,26 +576,26 @@ uint64_t Block::generateNonce() {
 #include <sstream>
 #include <stdexcept>
 
-using namespace std;
-
 namespace cw1 {
 
 namespace {
 
 /// Case-insensitive substring search.
-bool containsIgnoreCase(const string& haystack, const string& needle) {
+bool containsIgnoreCase(const std::string& haystack, const std::string& needle) {
     if (needle.empty()) return true;
     if (needle.size() > haystack.size()) return false;
 
-    auto toLower = [](unsigned char c) { return static_cast<char>(tolower(c)); };
+    auto toLower = [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    };
 
-    string h, n;
+    std::string h, n;
     h.resize(haystack.size());
     n.resize(needle.size());
-    transform(haystack.begin(), haystack.end(), h.begin(), toLower);
-    transform(needle.begin(), needle.end(), n.begin(), toLower);
+    std::transform(haystack.begin(), haystack.end(), h.begin(), toLower);
+    std::transform(needle.begin(), needle.end(), n.begin(), toLower);
 
-    return h.find(n) != string::npos;
+    return h.find(n) != std::string::npos;
 }
 
 } // namespace
@@ -873,7 +604,7 @@ bool containsIgnoreCase(const string& haystack, const string& needle) {
 
 void Blockchain::addBlock(const CarRecord& record) {
     // 1. Determine the previous hash (genesis uses "0").
-    const string prevHash =
+    const std::string prevHash =
         chain_.empty() ? "0" : chain_.back().getCurrentHash();
 
     // 2. Create the block and append to the global chain.
@@ -884,41 +615,41 @@ void Blockchain::addBlock(const CarRecord& record) {
 
     // 4. Log the block addition to the audit trail.
     const Block& added = chain_.back();
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "Added block #" << added.getIndex()
            << " for " << record.vin
            << " (" << stageToString(record.stage) << ")";
     auditLog_.log(AuditAction::BLOCK_ADDED, detail.str());
 }
 
-const vector<Block>& Blockchain::getChain() const noexcept {
+const std::vector<Block>& Blockchain::getChain() const noexcept {
     return chain_;
 }
 
-size_t Blockchain::totalBlocks() const noexcept {
+std::size_t Blockchain::totalBlocks() const noexcept {
     return chain_.size();
 }
 
 // -- Per-car lookups --------------------------------------------------
 
-vector<const Block*> Blockchain::getCarHistory(const string& vin) const {
-    vector<const Block*> history;
+std::vector<const Block*> Blockchain::getCarHistory(const std::string& vin) const {
+    std::vector<const Block*> history;
     auto it = vinIndex_.find(vin);
     if (it != vinIndex_.end()) {
         history.reserve(it->second.size());
-        for (size_t idx : it->second) {
+        for (std::size_t idx : it->second) {
             history.push_back(&chain_[idx]);
         }
     }
     return history;
 }
 
-bool Blockchain::hasVin(const string& vin) const {
+bool Blockchain::hasVin(const std::string& vin) const {
     return vinIndex_.count(vin) > 0;
 }
 
-vector<string> Blockchain::getAllVins() const {
-    vector<string> vins;
+std::vector<std::string> Blockchain::getAllVins() const {
+    std::vector<std::string> vins;
     vins.reserve(vinIndex_.size());
     for (const auto& [vin, indices] : vinIndex_) {
         vins.push_back(vin);
@@ -926,10 +657,10 @@ vector<string> Blockchain::getAllVins() const {
     return vins;
 }
 
-BlockStage Blockchain::getLatestStage(const string& vin) const {
+BlockStage Blockchain::getLatestStage(const std::string& vin) const {
     auto it = vinIndex_.find(vin);
     if (it == vinIndex_.end() || it->second.empty()) {
-        throw runtime_error("VIN not found: " + vin);
+        throw std::runtime_error("VIN not found: " + vin);
     }
     // The last index in the vector is the most recent event for this car.
     return chain_[it->second.back()].getRecord().stage;
@@ -937,36 +668,36 @@ BlockStage Blockchain::getLatestStage(const string& vin) const {
 
 // -- Search / filter --------------------------------------------------
 
-vector<const Block*> Blockchain::searchByBrand(const string& brand) const {
-    vector<const Block*> results;
+std::vector<const Block*> Blockchain::searchByBrand(const std::string& brand) const {
+    std::vector<const Block*> results;
     for (const auto& block : chain_) {
         if (containsIgnoreCase(block.getRecord().manufacturer, brand)) {
             results.push_back(&block);
         }
     }
     // Log the search in the audit trail (auditLog_ is mutable -- see header).
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "searchByBrand(\"" << brand << "\") -> " << results.size() << " result(s)";
     auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
     return results;
 }
 
-vector<const Block*> Blockchain::searchByStage(BlockStage stage) const {
-    vector<const Block*> results;
+std::vector<const Block*> Blockchain::searchByStage(BlockStage stage) const {
+    std::vector<const Block*> results;
     for (const auto& block : chain_) {
         if (block.getRecord().stage == stage) {
             results.push_back(&block);
         }
     }
     // Log the search in the audit trail (auditLog_ is mutable -- see header).
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "searchByStage(" << stageToString(stage) << ") -> " << results.size() << " result(s)";
     auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
     return results;
 }
 
-vector<const Block*> Blockchain::searchGeneral(const string& query) const {
-    vector<const Block*> results;
+std::vector<const Block*> Blockchain::searchGeneral(const std::string& query) const {
+    std::vector<const Block*> results;
     for (const auto& block : chain_) {
         const CarRecord& rec = block.getRecord();
         if (containsIgnoreCase(rec.vin, query) ||
@@ -978,7 +709,7 @@ vector<const Block*> Blockchain::searchGeneral(const string& query) const {
         }
     }
     // Log the search in the audit trail (auditLog_ is mutable -- see header).
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "searchGeneral(\"" << query << "\") -> " << results.size() << " result(s)";
     auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
     return results;
@@ -989,11 +720,46 @@ vector<const Block*> Blockchain::searchGeneral(const string& query) const {
 ValidationResult Blockchain::verifyIntegrity() const {
     ValidationResult result = Validation::verifyChain(chain_);
     // Log the integrity check result in the audit trail.
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "verifyIntegrity() -> " << (result.ok ? "PASS" : "FAIL")
            << ": " << result.message;
     auditLog_.log(AuditAction::INTEGRITY_CHECK, detail.str());
     return result;
+}
+
+bool Blockchain::tamperBlockHash(std::size_t index,
+                                 const std::string& forgedHash,
+                                 std::string& message) {
+    if (index >= chain_.size()) {
+        std::ostringstream err;
+        err << "Tamper failed: block index " << index
+            << " out of range (0.." << (chain_.empty() ? 0 : chain_.size() - 1) << ").";
+        message = err.str();
+        return false;
+    }
+
+    std::string finalHash = forgedHash;
+    if (finalHash.empty()) {
+        finalHash = chain_[index].getCurrentHash();
+        if (finalHash.empty()) {
+            finalHash = "tampered_hash";
+        } else {
+            finalHash[0] = (finalHash[0] == '0') ? '1' : '0';
+        }
+    }
+
+    if (finalHash == chain_[index].getCurrentHash()) {
+        finalHash.push_back('x');
+    }
+
+    chain_[index].debugOverrideCurrentHash(finalHash);
+
+    std::ostringstream ok;
+    ok << "Tampered block #" << index
+       << ". Stored currentHash overridden for integrity-failure demo.";
+    message = ok.str();
+    auditLog_.log(AuditAction::TAMPER_SIMULATED, message);
+    return true;
 }
 
 // -- Audit log --------------------------------------------------------
@@ -1012,67 +778,26 @@ AuditLog& Blockchain::getAuditLog() noexcept {
 } // namespace cw1
 ```
 
-### src\blockchain\BlockStage.cpp
+### src/blockchain/Validation.cpp
 
-```cpp
-#include "blockchain/BlockStage.hpp"
-
-#include <algorithm>
-#include <stdexcept>
-
-using namespace std;
-
-namespace cw1 {
-
-string stageToString(BlockStage stage) {
-    switch (stage) {
-        case BlockStage::PRODUCTION:       return "Production";
-        case BlockStage::WAREHOUSE_INTAKE: return "Warehouse Intake";
-        case BlockStage::QUALITY_CHECK:    return "Quality Check";
-        case BlockStage::DEALER_DISPATCH:  return "Dealer Dispatch";
-        case BlockStage::CUSTOMER_SALE:    return "Customer Sale";
-    }
-    return "Unknown";
-}
-
-BlockStage stringToStage(const string& text) {
-    // Work with a lowercase copy for case-insensitive matching.
-    string lower = text;
-    transform(lower.begin(), lower.end(), lower.begin(),
-                   [](unsigned char c) { return static_cast<char>(tolower(c)); });
-
-    if (lower == "production")       return BlockStage::PRODUCTION;
-    if (lower == "warehouse intake") return BlockStage::WAREHOUSE_INTAKE;
-    if (lower == "quality check")    return BlockStage::QUALITY_CHECK;
-    if (lower == "dealer dispatch")  return BlockStage::DEALER_DISPATCH;
-    if (lower == "customer sale")    return BlockStage::CUSTOMER_SALE;
-
-    throw invalid_argument("Unknown stage: " + text);
-}
-
-} // namespace cw1
-```
-
-### src\blockchain\Validation.cpp
+Status: **Modified**
 
 ```cpp
 #include "blockchain/Validation.hpp"
 
-using namespace std;
-
 namespace cw1::Validation {
 
-ValidationResult verifyChain(const vector<Block>& blocks) {
+ValidationResult verifyChain(const std::vector<Block>& blocks) {
     if (blocks.empty()) {
         return {true, "Blockchain is empty and therefore valid."};
     }
 
-    for (size_t i = 0; i < blocks.size(); ++i) {
+    for (std::size_t i = 0; i < blocks.size(); ++i) {
         const Block& current = blocks[i];
 
         // Check that the stored hash matches a fresh computation.
         if (current.getCurrentHash() != current.computeHash()) {
-            return {false, "Hash mismatch at block index " + to_string(i)};
+            return {false, "Hash mismatch at block index " + std::to_string(i)};
         }
 
         if (i == 0) {
@@ -1088,37 +813,49 @@ ValidationResult verifyChain(const vector<Block>& blocks) {
         // Every subsequent block must reference the previous block's hash.
         const Block& previous = blocks[i - 1];
         if (current.getPreviousHash() != previous.getCurrentHash()) {
-            return {false, "Chain link mismatch at block index " + to_string(i)};
+            return {false, "Chain link mismatch at block index " + std::to_string(i)};
         }
     }
 
-    return {true, "Blockchain integrity verified. " + to_string(blocks.size()) + " block(s) OK."};
+    return {true, "Blockchain integrity verified. " + std::to_string(blocks.size()) + " block(s) OK."};
 }
 
 } // namespace cw1::Validation
 ```
 
-### src\main.cpp
+### src/main_cli.cpp
+
+Status: **Modified**
 
 ```cpp
+#include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <string>
-#include <iomanip>
 #include <thread>
-#include <chrono>
+#include <vector>
 
+#include "blockchain/BlockFormatter.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/BlockStage.hpp"
-
-using namespace std;
+#include "utils/OperationTimer.hpp"
 
 namespace {
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Helper: safe integer parsing Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+using std::cin;
+using std::cout;
+using std::fixed;
+using std::getline;
+using std::left;
+using std::setprecision;
+using std::setw;
+using std::string;
+using std::to_string;
+using std::vector;
 
 int parseIntOrDefault(const string& value, int fallback) {
     try {
-        return stoi(value);
+        return std::stoi(value);
     } catch (...) {
         return fallback;
     }
@@ -1126,13 +863,11 @@ int parseIntOrDefault(const string& value, int fallback) {
 
 double parseDoubleOrDefault(const string& value, double fallback) {
     try {
-        return stod(value);
+        return std::stod(value);
     } catch (...) {
         return fallback;
     }
 }
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Helper: read a line with prompt Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 string prompt(const string& label) {
     string value;
@@ -1141,12 +876,21 @@ string prompt(const string& label) {
     return value;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Demo data Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+void printOperationDuration(double seconds) {
+    cout << "  Operation took: " << cw1::formatSeconds(seconds) << " s\n";
+}
+
+void printSeparator() {
+    cout << "  " << string(60, '-') << '\n';
+}
+
+void printBlockDetail(const cw1::Block& block) {
+    cout << cw1::formatBlockForDisplay(block);
+}
 
 void loadDemoData(cw1::Blockchain& chain) {
     cout << "\n  Loading demo fleet...\n";
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 1: Perodua Axia (full lifecycle Ã¢â‚¬â€ all 5 stages) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     {
         cw1::CarRecord r;
         r.vin = "VIN1001"; r.manufacturer = "Perodua"; r.model = "Axia";
@@ -1173,10 +917,8 @@ void loadDemoData(cw1::Blockchain& chain) {
         chain.addBlock(r);
     }
 
-    // Small delay so timestamps differ between cars.
-    this_thread::sleep_for(chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 2: Toyota Vios (4 stages Ã¢â‚¬â€ awaiting sale) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     {
         cw1::CarRecord r;
         r.vin = "VIN1002"; r.manufacturer = "Toyota"; r.model = "Vios";
@@ -1191,7 +933,7 @@ void loadDemoData(cw1::Blockchain& chain) {
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::QUALITY_CHECK;
-        r.inspectorId = "QC-003"; r.passed = true; r.qcNotes = "Minor paint scratch Ã¢â‚¬â€ touched up";
+        r.inspectorId = "QC-003"; r.passed = true; r.qcNotes = "Minor paint scratch - touched up";
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::DEALER_DISPATCH;
@@ -1199,9 +941,8 @@ void loadDemoData(cw1::Blockchain& chain) {
         chain.addBlock(r);
     }
 
-    this_thread::sleep_for(chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 3: Honda City (3 stages Ã¢â‚¬â€ in QC) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     {
         cw1::CarRecord r;
         r.vin = "VIN1003"; r.manufacturer = "Honda"; r.model = "City";
@@ -1216,13 +957,12 @@ void loadDemoData(cw1::Blockchain& chain) {
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::QUALITY_CHECK;
-        r.inspectorId = "QC-007"; r.passed = false; r.qcNotes = "Brake pad below spec Ã¢â‚¬â€ pending replacement";
+        r.inspectorId = "QC-007"; r.passed = false; r.qcNotes = "Brake pad below spec - pending replacement";
         chain.addBlock(r);
     }
 
-    this_thread::sleep_for(chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 4: Proton X50 (2 stages Ã¢â‚¬â€ just arrived at warehouse) Ã¢â€â‚¬Ã¢â€â‚¬
     {
         cw1::CarRecord r;
         r.vin = "VIN1004"; r.manufacturer = "Proton"; r.model = "X50";
@@ -1237,9 +977,8 @@ void loadDemoData(cw1::Blockchain& chain) {
         chain.addBlock(r);
     }
 
-    this_thread::sleep_for(chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 5: Perodua Myvi (1 stage Ã¢â‚¬â€ just manufactured) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     {
         cw1::CarRecord r;
         r.vin = "VIN1005"; r.manufacturer = "Perodua"; r.model = "Myvi";
@@ -1250,66 +989,14 @@ void loadDemoData(cw1::Blockchain& chain) {
         chain.addBlock(r);
     }
 
-    // Print summary
     const auto vins = chain.getAllVins();
     cout << "  Loaded " << vins.size() << " cars, "
          << chain.totalBlocks() << " total blocks.\n\n";
 
-    // Verify integrity after loading
     const auto result = chain.verifyIntegrity();
     cout << "  Integrity: " << (result.ok ? "PASS" : "FAIL")
-         << " Ã¢â‚¬â€ " << result.message << "\n\n";
+         << " - " << result.message << "\n\n";
 }
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Display helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-void printSeparator() {
-    cout << "  " << string(60, '-') << '\n';
-}
-
-void printBlockDetail(const cw1::Block& block) {
-    const cw1::CarRecord& r = block.getRecord();
-
-    printSeparator();
-    cout << "  Block #" << block.getIndex()
-         << "  |  " << cw1::stageToString(r.stage) << '\n';
-    printSeparator();
-    cout << "  Timestamp   : " << block.getTimestamp() << '\n';
-    cout << "  Nonce       : " << block.getNonce() << '\n';
-    cout << "  PrevHash    : " << block.getPreviousHash() << '\n';
-    cout << "  CurrentHash : " << block.getCurrentHash() << '\n';
-    cout << "  VIN         : " << r.vin << '\n';
-    cout << "  Car         : " << r.manufacturer << " " << r.model
-         << " (" << r.color << ", " << r.productionYear << ")\n";
-
-    // Print stage-specific fields
-    switch (r.stage) {
-        case cw1::BlockStage::PRODUCTION:
-            cout << "  Factory     : " << r.factoryLocation << '\n';
-            break;
-        case cw1::BlockStage::WAREHOUSE_INTAKE:
-            cout << "  Warehouse   : " << r.warehouseLocation << '\n';
-            cout << "  Received By : " << r.receivedBy << '\n';
-            break;
-        case cw1::BlockStage::QUALITY_CHECK:
-            cout << "  Inspector   : " << r.inspectorId << '\n';
-            cout << "  QC Result   : " << (r.passed ? "PASSED" : "FAILED") << '\n';
-            cout << "  QC Notes    : " << r.qcNotes << '\n';
-            break;
-        case cw1::BlockStage::DEALER_DISPATCH:
-            cout << "  Dealer      : " << r.dealerId << '\n';
-            cout << "  Destination : " << r.destination << '\n';
-            cout << "  Transport   : " << r.transportMode << '\n';
-            break;
-        case cw1::BlockStage::CUSTOMER_SALE:
-            cout << "  Buyer       : " << r.buyerId << '\n';
-            cout << "  Sale Price  : MYR " << fixed << setprecision(2) << r.salePrice << '\n';
-            cout << "  Warranty    : " << r.warrantyExpiry << '\n';
-            break;
-    }
-}
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Menu actions Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 void viewAllCars(const cw1::Blockchain& chain) {
     const auto vins = chain.getAllVins();
@@ -1332,7 +1019,9 @@ void viewAllCars(const cw1::Blockchain& chain) {
     int num = 1;
     for (const auto& vin : vins) {
         const auto history = chain.getCarHistory(vin);
-        if (history.empty()) continue;
+        if (history.empty()) {
+            continue;
+        }
 
         const auto& rec = history.front()->getRecord();
         const auto latestStage = chain.getLatestStage(vin);
@@ -1349,28 +1038,25 @@ void viewAllCars(const cw1::Blockchain& chain) {
     }
     cout << '\n';
 
-    // Log that the car summary was viewed.
     chain.getAuditLog().log(cw1::AuditAction::CHAIN_VIEWED,
         "Viewed all cars summary (" + to_string(vins.size()) + " VINs)");
 }
 
 void viewCarByVin(const cw1::Blockchain& chain) {
-    string vin = prompt("Enter VIN");
+    const string vin = prompt("Enter VIN");
     if (!chain.hasVin(vin)) {
         cout << "\n  VIN \"" << vin << "\" not found.\n\n";
         return;
     }
 
     const auto history = chain.getCarHistory(vin);
-    cout << "\n  Blockchain for " << vin << " (" << history.size() << " blocks):\n";
+    cout << "\n  Blockchain for " << vin << " (" << history.size() << " block(s)):\n\n";
 
     for (const auto* block : history) {
         printBlockDetail(*block);
     }
-    printSeparator();
     cout << '\n';
 
-    // Log that this VIN chain was viewed.
     chain.getAuditLog().log(cw1::AuditAction::CHAIN_VIEWED,
         "Viewed blockchain for " + vin + " (" + to_string(history.size()) + " blocks)");
 }
@@ -1383,23 +1069,20 @@ void addNewCarStage(cw1::Blockchain& chain) {
     cout << "  4. Dealer Dispatch\n";
     cout << "  5. Customer Sale\n";
 
-    string choice = prompt("Stage (1-5)");
-    int stageNum = parseIntOrDefault(choice, 0);
+    const string choice = prompt("Stage (1-5)");
+    const int stageNum = parseIntOrDefault(choice, 0);
     if (stageNum < 1 || stageNum > 5) {
         cout << "  Invalid stage.\n\n";
         return;
     }
 
     cw1::CarRecord r;
+    r.vin = prompt("VIN");
+    r.manufacturer = prompt("Manufacturer");
+    r.model = prompt("Model");
+    r.color = prompt("Color");
+    r.productionYear = parseIntOrDefault(prompt("Production Year"), 0);
 
-    // Common fields
-    r.vin              = prompt("VIN");
-    r.manufacturer     = prompt("Manufacturer");
-    r.model            = prompt("Model");
-    r.color            = prompt("Color");
-    r.productionYear   = parseIntOrDefault(prompt("Production Year"), 0);
-
-    // Stage-specific fields
     switch (stageNum) {
         case 1:
             r.stage = cw1::BlockStage::PRODUCTION;
@@ -1428,10 +1111,17 @@ void addNewCarStage(cw1::Blockchain& chain) {
             r.salePrice = parseDoubleOrDefault(prompt("Sale Price (MYR)"), 0.0);
             r.warrantyExpiry = prompt("Warranty Expiry (YYYY-MM-DD)");
             break;
+        default:
+            break;
     }
 
-    chain.addBlock(r);
-    cout << "\n  Block added. Total blocks: " << chain.totalBlocks() << "\n\n";
+    const double seconds = cw1::measureSeconds([&]() {
+        chain.addBlock(r);
+    });
+
+    cout << "\n  Block added. Total blocks: " << chain.totalBlocks() << '\n';
+    printOperationDuration(seconds);
+    cout << '\n';
 }
 
 void searchCars(const cw1::Blockchain& chain) {
@@ -1440,39 +1130,54 @@ void searchCars(const cw1::Blockchain& chain) {
     cout << "  2. Brand\n";
     cout << "  3. Lifecycle Stage\n";
 
-    string choice = prompt("Choice (1-3)");
-
+    const string choice = prompt("Choice (1-3)");
     vector<const cw1::Block*> results;
+    double seconds = 0.0;
 
     if (choice == "1") {
-        string query = prompt("Search query");
-        results = chain.searchGeneral(query);
+        const string query = prompt("Search query");
+        seconds = cw1::measureSeconds([&]() {
+            results = chain.searchGeneral(query);
+        });
     } else if (choice == "2") {
-        string brand = prompt("Brand name");
-        results = chain.searchByBrand(brand);
+        const string brand = prompt("Brand name");
+        seconds = cw1::measureSeconds([&]() {
+            results = chain.searchByBrand(brand);
+        });
     } else if (choice == "3") {
         cout << "  1=Production  2=Intake  3=QC  4=Dispatch  5=Sale\n";
-        int s = parseIntOrDefault(prompt("Stage (1-5)"), 0);
+        const int s = parseIntOrDefault(prompt("Stage (1-5)"), 0);
         if (s >= 1 && s <= 5) {
-            results = chain.searchByStage(static_cast<cw1::BlockStage>(s - 1));
+            seconds = cw1::measureSeconds([&]() {
+                results = chain.searchByStage(static_cast<cw1::BlockStage>(s - 1));
+            });
+        } else {
+            cout << "  Invalid stage.\n\n";
+            return;
         }
     } else {
         cout << "  Invalid choice.\n\n";
         return;
     }
 
-    cout << "\n  Found " << results.size() << " block(s):\n";
+    cout << "\n  Found " << results.size() << " block(s):\n\n";
     for (const auto* block : results) {
         printBlockDetail(*block);
     }
-    if (!results.empty()) printSeparator();
+    printOperationDuration(seconds);
     cout << '\n';
 }
 
 void verifyIntegrity(const cw1::Blockchain& chain) {
-    const auto result = chain.verifyIntegrity();
+    cw1::ValidationResult result{};
+    const double seconds = cw1::measureSeconds([&]() {
+        result = chain.verifyIntegrity();
+    });
+
     cout << "\n  Integrity: " << (result.ok ? "PASS" : "FAIL")
-         << " Ã¢â‚¬â€ " << result.message << "\n\n";
+         << " - " << result.message << '\n';
+    printOperationDuration(seconds);
+    cout << '\n';
 }
 
 void printGlobalChain(const cw1::Blockchain& chain) {
@@ -1482,68 +1187,90 @@ void printGlobalChain(const cw1::Blockchain& chain) {
         return;
     }
 
-    cout << "\n  Global Chain (" << blocks.size() << " blocks):\n";
+    cout << "\n  Global Chain (" << blocks.size() << " block(s)):\n\n";
     for (const auto& block : blocks) {
-        const auto& r = block.getRecord();
-        cout << "  [" << setw(3) << block.getIndex() << "] "
-             << left << setw(10) << r.vin
-             << setw(18) << cw1::stageToString(r.stage)
-             << setw(10) << r.manufacturer
-             << block.getCurrentHash().substr(0, 16) << "...\n";
+        printBlockDetail(block);
     }
     cout << '\n';
 
-    // Log that the global chain was viewed.
     chain.getAuditLog().log(cw1::AuditAction::CHAIN_VIEWED,
         "Viewed global chain (" + to_string(blocks.size()) + " blocks)");
 }
-/// Display the most recent N entries from the audit log.
-/// Demonstrates Array of Pointers: getRecentEntries() returns a heap-
-/// allocated array of const AuditEntry* that we iterate and then delete[].
+
 void viewAuditLog(const cw1::Blockchain& chain) {
     const cw1::AuditLog& log = chain.getAuditLog();
-    cout << "\n  Audit Log -- Total entries: " << log.size() << "\n";
+    cout << "\n  Audit Log - Total entries: " << log.size() << '\n';
 
-    string input = prompt("View last how many entries? (default 10)");
-    size_t n = 10;
+    const string input = prompt("View last how many entries? (default 10)");
+    std::size_t n = 10;
     if (!input.empty()) {
-        int parsed = parseIntOrDefault(input, 10);
-        n = (parsed > 0) ? static_cast<size_t>(parsed) : 10;
+        const int parsed = parseIntOrDefault(input, 10);
+        n = (parsed > 0) ? static_cast<std::size_t>(parsed) : 10;
     }
 
-    size_t actualCount = 0;
-    // getRecentEntries demonstrates Array of Pointers: a heap-allocated
-    // raw array (const AuditEntry**) where each slot is a pointer to a
-    // linked list node. We must delete[] the array after use.
-    const cw1::AuditEntry** arr = log.getRecentEntries(n, actualCount);
-
-    if (arr == nullptr || actualCount == 0) {
+    cw1::RecentEntryArray entries(log, n);
+    if (entries.empty()) {
         cout << "\n  No audit entries to display.\n\n";
         return;
     }
 
-    cout << "\n  Showing last " << actualCount << " entries:\n";
+    cout << "\n  Showing last " << entries.size() << " entries:\n";
     printSeparator();
 
-    // Iterate the raw pointer array -- demonstrates array-of-pointers access.
-    for (size_t i = 0; i < actualCount; ++i) {
-        const cw1::AuditEntry* entry = arr[i];
+    for (std::size_t i = 0; i < entries.size(); ++i) {
+        const cw1::AuditEntry* entry = entries[i];
+        if (entry == nullptr) {
+            continue;
+        }
         cout << "  [" << setw(4) << (i + 1) << "] "
              << left << setw(22) << entry->timestamp
              << setw(20) << cw1::actionToString(entry->action)
-             << entry->details << "\n";
+             << entry->details << '\n';
     }
 
     printSeparator();
-    cout << "\n";
+    cout << '\n';
+}
 
-    // Free the array of pointers (entries themselves are owned by AuditLog).
-    delete[] arr;
+void simulateTamper(cw1::Blockchain& chain) {
+    const std::size_t total = chain.totalBlocks();
+    if (total == 0) {
+        cout << "\n  Cannot tamper: chain is empty.\n\n";
+        return;
+    }
+
+    cout << "\n  Tamper Simulation (Debug/Admin)\n";
+    cout << "  This intentionally breaks blockchain integrity.\n";
+
+    const string promptText = "Block index to tamper (0-" + to_string(total - 1) + ", blank=last)";
+    const string indexInput = prompt(promptText);
+
+    std::size_t index = total - 1;
+    if (!indexInput.empty()) {
+        const int parsed = parseIntOrDefault(indexInput, -1);
+        if (parsed < 0 || static_cast<std::size_t>(parsed) >= total) {
+            cout << "  Invalid block index.\n\n";
+            return;
+        }
+        index = static_cast<std::size_t>(parsed);
+    }
+
+    const string forgedHash = prompt("Optional forged hash (blank = auto-generate)");
+
+    bool success = false;
+    string message;
+    const double seconds = cw1::measureSeconds([&]() {
+        success = chain.tamperBlockHash(index, forgedHash, message);
+    });
+
+    cout << '\n';
+    cout << "  " << (success ? "Tamper simulation applied." : "Tamper simulation failed.") << '\n';
+    cout << "  " << message << '\n';
+    printOperationDuration(seconds);
+    cout << '\n';
 }
 
 } // namespace
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Main Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 int main() {
     cw1::Blockchain chain;
@@ -1564,9 +1291,10 @@ int main() {
         cout << "  5. View Global Chain\n";
         cout << "  6. Verify Integrity\n";
         cout << "  7. View Audit Log\n";
-    cout << "  8. Exit\n";
+        cout << "  8. Tamper Simulation (Debug)\n";
+        cout << "  9. Exit\n";
 
-        string choice = prompt("Select (1-8)");
+        const string choice = prompt("Select (1-9)");
 
         if (choice == "1") { viewAllCars(chain); continue; }
         if (choice == "2") { viewCarByVin(chain); continue; }
@@ -1575,7 +1303,8 @@ int main() {
         if (choice == "5") { printGlobalChain(chain); continue; }
         if (choice == "6") { verifyIntegrity(chain); continue; }
         if (choice == "7") { viewAuditLog(chain); continue; }
-        if (choice == "8") { cout << "\n  Exiting.\n"; break; }
+        if (choice == "8") { simulateTamper(chain); continue; }
+        if (choice == "9") { cout << "\n  Exiting.\n"; break; }
 
         cout << "  Invalid choice.\n\n";
     }
@@ -1584,493 +1313,9 @@ int main() {
 }
 ```
 
-### src\main_cli.cpp
+### src/main_gui.cpp
 
-```cpp
-#include <iostream>
-#include <string>
-#include <iomanip>
-#include <thread>
-#include <chrono>
-
-#include "blockchain/Blockchain.hpp"
-#include "blockchain/BlockStage.hpp"
-
-using namespace std;
-
-namespace {
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Helper: safe integer parsing Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-int parseIntOrDefault(const string& value, int fallback) {
-    try {
-        return stoi(value);
-    } catch (...) {
-        return fallback;
-    }
-}
-
-double parseDoubleOrDefault(const string& value, double fallback) {
-    try {
-        return stod(value);
-    } catch (...) {
-        return fallback;
-    }
-}
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Helper: read a line with prompt Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-string prompt(const string& label) {
-    string value;
-    cout << "  " << label << ": ";
-    getline(cin, value);
-    return value;
-}
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Demo data Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-void loadDemoData(cw1::Blockchain& chain) {
-    cout << "\n  Loading demo fleet...\n";
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 1: Perodua Axia (full lifecycle Ã¢â‚¬â€ all 5 stages) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    {
-        cw1::CarRecord r;
-        r.vin = "VIN1001"; r.manufacturer = "Perodua"; r.model = "Axia";
-        r.color = "Silver"; r.productionYear = 2024;
-
-        r.stage = cw1::BlockStage::PRODUCTION;
-        r.factoryLocation = "Shah Alam Plant";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
-        r.warehouseLocation = "WH-A1"; r.receivedBy = "Ahmad bin Ismail";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::QUALITY_CHECK;
-        r.inspectorId = "QC-001"; r.passed = true; r.qcNotes = "All systems nominal";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::DEALER_DISPATCH;
-        r.dealerId = "DLR-KB-01"; r.destination = "Kota Bharu"; r.transportMode = "Truck";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::CUSTOMER_SALE;
-        r.buyerId = "CUST-10201"; r.salePrice = 38000.00; r.warrantyExpiry = "2029-03-01";
-        chain.addBlock(r);
-    }
-
-    // Small delay so timestamps differ between cars.
-    this_thread::sleep_for(chrono::milliseconds(50));
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 2: Toyota Vios (4 stages Ã¢â‚¬â€ awaiting sale) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    {
-        cw1::CarRecord r;
-        r.vin = "VIN1002"; r.manufacturer = "Toyota"; r.model = "Vios";
-        r.color = "White"; r.productionYear = 2023;
-
-        r.stage = cw1::BlockStage::PRODUCTION;
-        r.factoryLocation = "Toyota Bukit Raja";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
-        r.warehouseLocation = "WH-B2"; r.receivedBy = "Lim Wei Jie";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::QUALITY_CHECK;
-        r.inspectorId = "QC-003"; r.passed = true; r.qcNotes = "Minor paint scratch Ã¢â‚¬â€ touched up";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::DEALER_DISPATCH;
-        r.dealerId = "DLR-KL-05"; r.destination = "Kuala Lumpur"; r.transportMode = "Truck";
-        chain.addBlock(r);
-    }
-
-    this_thread::sleep_for(chrono::milliseconds(50));
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 3: Honda City (3 stages Ã¢â‚¬â€ in QC) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    {
-        cw1::CarRecord r;
-        r.vin = "VIN1003"; r.manufacturer = "Honda"; r.model = "City";
-        r.color = "Blue"; r.productionYear = 2025;
-
-        r.stage = cw1::BlockStage::PRODUCTION;
-        r.factoryLocation = "Honda Pegoh, Melaka";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
-        r.warehouseLocation = "WH-C3"; r.receivedBy = "Raj Kumar";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::QUALITY_CHECK;
-        r.inspectorId = "QC-007"; r.passed = false; r.qcNotes = "Brake pad below spec Ã¢â‚¬â€ pending replacement";
-        chain.addBlock(r);
-    }
-
-    this_thread::sleep_for(chrono::milliseconds(50));
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 4: Proton X50 (2 stages Ã¢â‚¬â€ just arrived at warehouse) Ã¢â€â‚¬Ã¢â€â‚¬
-    {
-        cw1::CarRecord r;
-        r.vin = "VIN1004"; r.manufacturer = "Proton"; r.model = "X50";
-        r.color = "Red"; r.productionYear = 2025;
-
-        r.stage = cw1::BlockStage::PRODUCTION;
-        r.factoryLocation = "Proton Tanjung Malim";
-        chain.addBlock(r);
-
-        r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
-        r.warehouseLocation = "WH-D4"; r.receivedBy = "Nurul Aina";
-        chain.addBlock(r);
-    }
-
-    this_thread::sleep_for(chrono::milliseconds(50));
-
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Car 5: Perodua Myvi (1 stage Ã¢â‚¬â€ just manufactured) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    {
-        cw1::CarRecord r;
-        r.vin = "VIN1005"; r.manufacturer = "Perodua"; r.model = "Myvi";
-        r.color = "Black"; r.productionYear = 2025;
-
-        r.stage = cw1::BlockStage::PRODUCTION;
-        r.factoryLocation = "Perodua Rawang";
-        chain.addBlock(r);
-    }
-
-    // Print summary
-    const auto vins = chain.getAllVins();
-    cout << "  Loaded " << vins.size() << " cars, "
-         << chain.totalBlocks() << " total blocks.\n\n";
-
-    // Verify integrity after loading
-    const auto result = chain.verifyIntegrity();
-    cout << "  Integrity: " << (result.ok ? "PASS" : "FAIL")
-         << " Ã¢â‚¬â€ " << result.message << "\n\n";
-}
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Display helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-void printSeparator() {
-    cout << "  " << string(60, '-') << '\n';
-}
-
-void printBlockDetail(const cw1::Block& block) {
-    const cw1::CarRecord& r = block.getRecord();
-
-    printSeparator();
-    cout << "  Block #" << block.getIndex()
-         << "  |  " << cw1::stageToString(r.stage) << '\n';
-    printSeparator();
-    cout << "  Timestamp   : " << block.getTimestamp() << '\n';
-    cout << "  Nonce       : " << block.getNonce() << '\n';
-    cout << "  PrevHash    : " << block.getPreviousHash() << '\n';
-    cout << "  CurrentHash : " << block.getCurrentHash() << '\n';
-    cout << "  VIN         : " << r.vin << '\n';
-    cout << "  Car         : " << r.manufacturer << " " << r.model
-         << " (" << r.color << ", " << r.productionYear << ")\n";
-
-    // Print stage-specific fields
-    switch (r.stage) {
-        case cw1::BlockStage::PRODUCTION:
-            cout << "  Factory     : " << r.factoryLocation << '\n';
-            break;
-        case cw1::BlockStage::WAREHOUSE_INTAKE:
-            cout << "  Warehouse   : " << r.warehouseLocation << '\n';
-            cout << "  Received By : " << r.receivedBy << '\n';
-            break;
-        case cw1::BlockStage::QUALITY_CHECK:
-            cout << "  Inspector   : " << r.inspectorId << '\n';
-            cout << "  QC Result   : " << (r.passed ? "PASSED" : "FAILED") << '\n';
-            cout << "  QC Notes    : " << r.qcNotes << '\n';
-            break;
-        case cw1::BlockStage::DEALER_DISPATCH:
-            cout << "  Dealer      : " << r.dealerId << '\n';
-            cout << "  Destination : " << r.destination << '\n';
-            cout << "  Transport   : " << r.transportMode << '\n';
-            break;
-        case cw1::BlockStage::CUSTOMER_SALE:
-            cout << "  Buyer       : " << r.buyerId << '\n';
-            cout << "  Sale Price  : MYR " << fixed << setprecision(2) << r.salePrice << '\n';
-            cout << "  Warranty    : " << r.warrantyExpiry << '\n';
-            break;
-    }
-}
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Menu actions Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-void viewAllCars(const cw1::Blockchain& chain) {
-    const auto vins = chain.getAllVins();
-    if (vins.empty()) {
-        cout << "\n  No cars in the system.\n\n";
-        return;
-    }
-
-    cout << "\n  " << left
-         << setw(5)  << "No."
-         << setw(12) << "VIN"
-         << setw(12) << "Brand"
-         << setw(10) << "Model"
-         << setw(8)  << "Color"
-         << setw(6)  << "Year"
-         << setw(20) << "Latest Stage"
-         << setw(7)  << "Blocks" << '\n';
-    printSeparator();
-
-    int num = 1;
-    for (const auto& vin : vins) {
-        const auto history = chain.getCarHistory(vin);
-        if (history.empty()) continue;
-
-        const auto& rec = history.front()->getRecord();
-        const auto latestStage = chain.getLatestStage(vin);
-
-        cout << "  " << left
-             << setw(5)  << num++
-             << setw(12) << rec.vin
-             << setw(12) << rec.manufacturer
-             << setw(10) << rec.model
-             << setw(8)  << rec.color
-             << setw(6)  << rec.productionYear
-             << setw(20) << cw1::stageToString(latestStage)
-             << setw(7)  << history.size() << '\n';
-    }
-    cout << '\n';
-
-    // Log that the car summary was viewed.
-    chain.getAuditLog().log(cw1::AuditAction::CHAIN_VIEWED,
-        "Viewed all cars summary (" + to_string(vins.size()) + " VINs)");
-}
-
-void viewCarByVin(const cw1::Blockchain& chain) {
-    string vin = prompt("Enter VIN");
-    if (!chain.hasVin(vin)) {
-        cout << "\n  VIN \"" << vin << "\" not found.\n\n";
-        return;
-    }
-
-    const auto history = chain.getCarHistory(vin);
-    cout << "\n  Blockchain for " << vin << " (" << history.size() << " blocks):\n";
-
-    for (const auto* block : history) {
-        printBlockDetail(*block);
-    }
-    printSeparator();
-    cout << '\n';
-
-    // Log that this VIN chain was viewed.
-    chain.getAuditLog().log(cw1::AuditAction::CHAIN_VIEWED,
-        "Viewed blockchain for " + vin + " (" + to_string(history.size()) + " blocks)");
-}
-
-void addNewCarStage(cw1::Blockchain& chain) {
-    cout << "\n  Select lifecycle stage to add:\n";
-    cout << "  1. Production\n";
-    cout << "  2. Warehouse Intake\n";
-    cout << "  3. Quality Check\n";
-    cout << "  4. Dealer Dispatch\n";
-    cout << "  5. Customer Sale\n";
-
-    string choice = prompt("Stage (1-5)");
-    int stageNum = parseIntOrDefault(choice, 0);
-    if (stageNum < 1 || stageNum > 5) {
-        cout << "  Invalid stage.\n\n";
-        return;
-    }
-
-    cw1::CarRecord r;
-
-    // Common fields
-    r.vin              = prompt("VIN");
-    r.manufacturer     = prompt("Manufacturer");
-    r.model            = prompt("Model");
-    r.color            = prompt("Color");
-    r.productionYear   = parseIntOrDefault(prompt("Production Year"), 0);
-
-    // Stage-specific fields
-    switch (stageNum) {
-        case 1:
-            r.stage = cw1::BlockStage::PRODUCTION;
-            r.factoryLocation = prompt("Factory Location");
-            break;
-        case 2:
-            r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
-            r.warehouseLocation = prompt("Warehouse Location");
-            r.receivedBy = prompt("Received By");
-            break;
-        case 3:
-            r.stage = cw1::BlockStage::QUALITY_CHECK;
-            r.inspectorId = prompt("Inspector ID");
-            r.passed = (prompt("Passed? (y/n)") == "y");
-            r.qcNotes = prompt("QC Notes");
-            break;
-        case 4:
-            r.stage = cw1::BlockStage::DEALER_DISPATCH;
-            r.dealerId = prompt("Dealer ID");
-            r.destination = prompt("Destination");
-            r.transportMode = prompt("Transport Mode");
-            break;
-        case 5:
-            r.stage = cw1::BlockStage::CUSTOMER_SALE;
-            r.buyerId = prompt("Buyer ID");
-            r.salePrice = parseDoubleOrDefault(prompt("Sale Price (MYR)"), 0.0);
-            r.warrantyExpiry = prompt("Warranty Expiry (YYYY-MM-DD)");
-            break;
-    }
-
-    chain.addBlock(r);
-    cout << "\n  Block added. Total blocks: " << chain.totalBlocks() << "\n\n";
-}
-
-void searchCars(const cw1::Blockchain& chain) {
-    cout << "\n  Search by:\n";
-    cout << "  1. General (VIN / Brand / Model / Color)\n";
-    cout << "  2. Brand\n";
-    cout << "  3. Lifecycle Stage\n";
-
-    string choice = prompt("Choice (1-3)");
-
-    vector<const cw1::Block*> results;
-
-    if (choice == "1") {
-        string query = prompt("Search query");
-        results = chain.searchGeneral(query);
-    } else if (choice == "2") {
-        string brand = prompt("Brand name");
-        results = chain.searchByBrand(brand);
-    } else if (choice == "3") {
-        cout << "  1=Production  2=Intake  3=QC  4=Dispatch  5=Sale\n";
-        int s = parseIntOrDefault(prompt("Stage (1-5)"), 0);
-        if (s >= 1 && s <= 5) {
-            results = chain.searchByStage(static_cast<cw1::BlockStage>(s - 1));
-        }
-    } else {
-        cout << "  Invalid choice.\n\n";
-        return;
-    }
-
-    cout << "\n  Found " << results.size() << " block(s):\n";
-    for (const auto* block : results) {
-        printBlockDetail(*block);
-    }
-    if (!results.empty()) printSeparator();
-    cout << '\n';
-}
-
-void verifyIntegrity(const cw1::Blockchain& chain) {
-    const auto result = chain.verifyIntegrity();
-    cout << "\n  Integrity: " << (result.ok ? "PASS" : "FAIL")
-         << " Ã¢â‚¬â€ " << result.message << "\n\n";
-}
-
-void printGlobalChain(const cw1::Blockchain& chain) {
-    const auto& blocks = chain.getChain();
-    if (blocks.empty()) {
-        cout << "\n  Global chain is empty.\n\n";
-        return;
-    }
-
-    cout << "\n  Global Chain (" << blocks.size() << " blocks):\n";
-    for (const auto& block : blocks) {
-        const auto& r = block.getRecord();
-        cout << "  [" << setw(3) << block.getIndex() << "] "
-             << left << setw(10) << r.vin
-             << setw(18) << cw1::stageToString(r.stage)
-             << setw(10) << r.manufacturer
-             << block.getCurrentHash().substr(0, 16) << "...\n";
-    }
-    cout << '\n';
-
-    // Log that the global chain was viewed.
-    chain.getAuditLog().log(cw1::AuditAction::CHAIN_VIEWED,
-        "Viewed global chain (" + to_string(blocks.size()) + " blocks)");
-}
-/// Display the most recent N entries from the audit log.
-/// Demonstrates Array of Pointers: getRecentEntries() returns a heap-
-/// allocated array of const AuditEntry* that we iterate and then delete[].
-void viewAuditLog(const cw1::Blockchain& chain) {
-    const cw1::AuditLog& log = chain.getAuditLog();
-    cout << "\n  Audit Log -- Total entries: " << log.size() << "\n";
-
-    string input = prompt("View last how many entries? (default 10)");
-    size_t n = 10;
-    if (!input.empty()) {
-        int parsed = parseIntOrDefault(input, 10);
-        n = (parsed > 0) ? static_cast<size_t>(parsed) : 10;
-    }
-
-    size_t actualCount = 0;
-    // getRecentEntries demonstrates Array of Pointers: a heap-allocated
-    // raw array (const AuditEntry**) where each slot is a pointer to a
-    // linked list node. We must delete[] the array after use.
-    const cw1::AuditEntry** arr = log.getRecentEntries(n, actualCount);
-
-    if (arr == nullptr || actualCount == 0) {
-        cout << "\n  No audit entries to display.\n\n";
-        return;
-    }
-
-    cout << "\n  Showing last " << actualCount << " entries:\n";
-    printSeparator();
-
-    // Iterate the raw pointer array -- demonstrates array-of-pointers access.
-    for (size_t i = 0; i < actualCount; ++i) {
-        const cw1::AuditEntry* entry = arr[i];
-        cout << "  [" << setw(4) << (i + 1) << "] "
-             << left << setw(22) << entry->timestamp
-             << setw(20) << cw1::actionToString(entry->action)
-             << entry->details << "\n";
-    }
-
-    printSeparator();
-    cout << "\n";
-
-    // Free the array of pointers (entries themselves are owned by AuditLog).
-    delete[] arr;
-}
-
-} // namespace
-
-// Ã¢â€â‚¬Ã¢â€â‚¬ Main Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-int main() {
-    cw1::Blockchain chain;
-
-    cout << "\n  ========================================\n";
-    cout << "    Car Warehouse Blockchain System\n";
-    cout << "    Hybrid Architecture (Global + Index)\n";
-    cout << "  ========================================\n\n";
-
-    loadDemoData(chain);
-
-    while (true) {
-        cout << "  ---- MENU ----\n";
-        cout << "  1. View All Cars (summary)\n";
-        cout << "  2. View Car Blockchain (by VIN)\n";
-        cout << "  3. Add New Block (lifecycle stage)\n";
-        cout << "  4. Search\n";
-        cout << "  5. View Global Chain\n";
-        cout << "  6. Verify Integrity\n";
-        cout << "  7. View Audit Log\n";
-    cout << "  8. Exit\n";
-
-        string choice = prompt("Select (1-8)");
-
-        if (choice == "1") { viewAllCars(chain); continue; }
-        if (choice == "2") { viewCarByVin(chain); continue; }
-        if (choice == "3") { addNewCarStage(chain); continue; }
-        if (choice == "4") { searchCars(chain); continue; }
-        if (choice == "5") { printGlobalChain(chain); continue; }
-        if (choice == "6") { verifyIntegrity(chain); continue; }
-        if (choice == "7") { viewAuditLog(chain); continue; }
-        if (choice == "8") { cout << "\n  Exiting.\n"; break; }
-
-        cout << "  Invalid choice.\n\n";
-    }
-
-    return 0;
-}
-```
-
-### src\main_gui.cpp
+Status: **Modified**
 
 ```cpp
 // main_gui.cpp -- ImGui/GLFW/OpenGL3 GUI for the Car Warehouse Blockchain.
@@ -2090,8 +1335,10 @@ int main() {
 #include <string>
 #include <vector>
 
+#include "blockchain/BlockFormatter.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/BlockStage.hpp"
+#include "utils/OperationTimer.hpp"
 
 // =================================================================
 //  SECTION 1: Color palette (GitHub Dark)
@@ -2207,6 +1454,29 @@ static std::string g_selectedVin;
 static char        g_searchBuf[256] = {};
 static cw1::ValidationResult g_lastVerify = {false, "Not yet verified"};
 static bool        g_verifyDone = false;
+static double      g_lastVerifySeconds = 0.0;
+static double      g_lastAddBlockSeconds = 0.0;
+static double      g_lastSearchSeconds = 0.0;
+static int         g_tamperIndex = -1;
+
+// Sidebar search cache: avoids per-frame search calls and audit-log spam.
+static std::string              g_cachedSearchQuery;
+static std::vector<std::string> g_cachedSearchVins;
+
+// Guard to prevent per-frame audit log spam.
+// We only log a CHAIN_VIEWED event once when the user first switches to a view.
+static View        g_lastLoggedView = View::DASHBOARD;
+static std::string g_lastLoggedVin;
+
+/// Log a CHAIN_VIEWED event only once per view switch (not every frame).
+static void LogViewOnce(const cw1::Blockchain& chain, View currentView,
+                        const std::string& vin, const std::string& details) {
+    if (currentView != g_lastLoggedView || vin != g_lastLoggedVin) {
+        chain.getAuditLog().log(cw1::AuditAction::CHAIN_VIEWED, details);
+        g_lastLoggedView = currentView;
+        g_lastLoggedVin  = vin;
+    }
+}
 
 // Toast notification system
 struct Toast { std::string msg; float remainingSecs; ImVec4 color; };
@@ -2322,12 +1592,6 @@ static std::string Truncate(const std::string& s, size_t maxLen) {
     return (s.size() <= maxLen) ? s : s.substr(0, maxLen) + "...";
 }
 
-static std::string FormatMYR(double v) {
-    std::ostringstream ss;
-    ss << "MYR " << std::fixed << std::setprecision(2) << v;
-    return ss.str();
-}
-
 // =================================================================
 //  SECTION 6: Header bar
 // =================================================================
@@ -2420,20 +1684,40 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "VEHICLES (%zu)", allVins.size());
     ImGui::Spacing();
 
-    // Build filtered list
+    // Build filtered list.
+    // Search is run only when query text changes to keep timing meaningful
+    // and avoid writing audit log entries every frame.
     std::vector<std::string> displayVins;
-    if (g_searchBuf[0]) {
-        const auto hits = chain.searchGeneral(std::string(g_searchBuf));
-        std::vector<std::string> seen;
-        for (const auto* blk : hits) {
-            const auto& v = blk->getRecord().vin;
-            if (std::find(seen.begin(), seen.end(), v) == seen.end()) {
-                seen.push_back(v);
-                displayVins.push_back(v);
-            }
+    const std::string query(g_searchBuf);
+    if (!query.empty()) {
+        if (query != g_cachedSearchQuery) {
+            g_cachedSearchQuery = query;
+            g_cachedSearchVins.clear();
+
+            const double seconds = cw1::measureSeconds([&]() {
+                const auto hits = chain.searchGeneral(query);
+                std::vector<std::string> seen;
+                for (const auto* blk : hits) {
+                    const std::string& vin = blk->getRecord().vin;
+                    if (std::find(seen.begin(), seen.end(), vin) == seen.end()) {
+                        seen.push_back(vin);
+                        g_cachedSearchVins.push_back(vin);
+                    }
+                }
+            });
+            g_lastSearchSeconds = seconds;
         }
+        displayVins = g_cachedSearchVins;
     } else {
+        g_cachedSearchQuery.clear();
+        g_cachedSearchVins.clear();
         displayVins = allVins;
+    }
+
+    if (!query.empty()) {
+        ImGui::TextColored(COL_VERY_MUTED, "Search operation took: %s s",
+                           cw1::formatSeconds(g_lastSearchSeconds).c_str());
+        ImGui::Spacing();
     }
 
     for (const auto& vin : displayVins) {
@@ -2500,7 +1784,7 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
     size_t totalBlocks = chain.totalBlocks();
     size_t totalCars   = chain.getAllVins().size();
 
-    // â”€â”€ Stat cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Stat cards ────────────────────────────────────────────────
     if (ImGui::BeginTable("##stats", 4,
             ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoPadOuterX,
             ImVec2(-1, 90))) {
@@ -2537,7 +1821,7 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // â”€â”€ Recent blocks table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Recent blocks table ────────────────────────────────────────
     ImGuiTableFlags tflags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_ScrollY  | ImGuiTableFlags_SizingStretchProp;
     if (ImGui::BeginTable("##recent", 6, tflags, ImVec2(-1, -1))) {
@@ -2647,84 +1931,21 @@ static void RenderCarDetail(const cw1::Blockchain& chain) {
         // Use hdrLabel as unique child ID
         ImGui::BeginChild(hdrLabel, ImVec2(-1, 0), true);
 
-        // Stage badge + timestamp
-        ImGui::TextColored(StageColor(rec.stage), "[%s]",
-                           cw1::stageToString(rec.stage).c_str());
-        ImGui::SameLine();
-        ImGui::TextColored(COL_MUTED, "  %s", blk.getTimestamp().c_str());
+        ImGui::TextColored(COL_MUTED, "Canonical Block Output");
+        ImGui::Spacing();
 
-        ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-
-        // Helper: label + value on one line
-        auto Field = [](const char* lbl, const char* val, ImVec4 col) {
-            ImGui::TextColored(COL_MUTED, "%-20s", lbl);
-            ImGui::SameLine();
-            ImGui::TextColored(col, "%s", val);
-        };
-
-        Field("Hash:",          blk.getCurrentHash().c_str(),  COL_PURPLE);
-        Field("Prev Hash:",     blk.getPreviousHash().c_str(), COL_PURPLE);
-
-        char nonceBuf[32];
-        snprintf(nonceBuf, sizeof(nonceBuf), "%llu",
-                 static_cast<unsigned long long>(blk.getNonce()));
-        Field("Nonce:",         nonceBuf, COL_ORANGE);
-
-        ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-        ImGui::TextColored(COL_MUTED, "Record Fields");
-        ImGui::Separator(); ImGui::Spacing();
-
-        Field("VIN:",           rec.vin.c_str(),          COL_TEXT);
-        Field("Manufacturer:",  rec.manufacturer.c_str(), COL_TEXT);
-        Field("Model:",         rec.model.c_str(),        COL_TEXT);
-        Field("Color:",         rec.color.c_str(),        COL_TEXT);
-
-        char yearBuf[16];
-        snprintf(yearBuf, sizeof(yearBuf), "%d", rec.productionYear);
-        Field("Production Year:", yearBuf, COL_TEXT);
-        Field("Stage:",           cw1::stageToString(rec.stage).c_str(),
-                                  StageColor(rec.stage));
-
-        ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-        ImGui::TextColored(COL_MUTED, "Stage Details");
-        ImGui::Separator(); ImGui::Spacing();
-
-        switch (rec.stage) {
-        case cw1::BlockStage::PRODUCTION:
-            Field("Factory:",   rec.factoryLocation.c_str(), COL_TEXT);
-            break;
-        case cw1::BlockStage::WAREHOUSE_INTAKE:
-            Field("Warehouse:", rec.warehouseLocation.c_str(), COL_TEXT);
-            Field("Received By:",rec.receivedBy.c_str(),       COL_TEXT);
-            break;
-        case cw1::BlockStage::QUALITY_CHECK:
-            Field("Inspector:", rec.inspectorId.c_str(), COL_TEXT);
-            Field("Passed:",    rec.passed ? "Yes" : "No",
-                                rec.passed ? COL_GREEN_BR : COL_RED);
-            Field("QC Notes:",  rec.qcNotes.c_str(), COL_TEXT);
-            break;
-        case cw1::BlockStage::DEALER_DISPATCH:
-            Field("Dealer ID:", rec.dealerId.c_str(),      COL_TEXT);
-            Field("Destination:",rec.destination.c_str(),  COL_TEXT);
-            Field("Transport:", rec.transportMode.c_str(), COL_ORANGE);
-            break;
-        case cw1::BlockStage::CUSTOMER_SALE: {
-            Field("Buyer ID:",  rec.buyerId.c_str(), COL_TEXT);
-            char priceBuf[48];
-            snprintf(priceBuf, sizeof(priceBuf), "%s", FormatMYR(rec.salePrice).c_str());
-            Field("Sale Price:", priceBuf, COL_GREEN_BR);
-            Field("Warranty:",  rec.warrantyExpiry.c_str(), COL_TEXT);
-            break;
-        }
-        }
+        const std::string formatted = cw1::formatBlockForDisplay(blk);
+        ImGui::PushStyleColor(ImGuiCol_Text, COL_TEXT);
+        ImGui::TextUnformatted(formatted.c_str());
+        ImGui::PopStyleColor();
 
         ImGui::Spacing();
         ImGui::EndChild();
         ImGui::PopStyleColor();
         ImGui::Spacing();
     }
-    chain.getAuditLog().log(cw1::AuditAction::CHAIN_VIEWED,
-                            "Car detail viewed: " + g_selectedVin);
+    LogViewOnce(chain, View::CAR_DETAIL, g_selectedVin,
+                "Car detail viewed: " + g_selectedVin);
 }
 
 // =================================================================
@@ -2851,9 +2072,13 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
             break;
         }
 
-        chain.addBlock(r);
+        const double seconds = cw1::measureSeconds([&]() {
+            chain.addBlock(r);
+        });
+        g_lastAddBlockSeconds = seconds;
         PushToast("Block #" + std::to_string(chain.totalBlocks() - 1) +
-                  " added for " + std::string(g_formVin),
+                  " added for " + std::string(g_formVin) +
+                  " | Operation took: " + cw1::formatSeconds(seconds) + " s",
                   COL_GREEN_BR);
 
         // Clear all form buffers
@@ -2866,6 +2091,12 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         g_formDealerId[0]= '\0'; g_formDestination[0] = '\0';
         g_formTransport[0]= '\0'; g_formBuyerId[0]    = '\0';
         g_formSalePrice = 0.0;   g_formWarranty[0]    = '\0';
+    }
+
+    if (g_lastAddBlockSeconds > 0.0) {
+        ImGui::Spacing();
+        ImGui::TextColored(COL_VERY_MUTED, "Last add-block operation took: %s s",
+                           cw1::formatSeconds(g_lastAddBlockSeconds).c_str());
     }
 }
 
@@ -2946,7 +2177,8 @@ static void RenderGlobalChain(const cw1::Blockchain& chain) {
         }
         ImGui::EndTable();
     }
-    chain.getAuditLog().log(cw1::AuditAction::CHAIN_VIEWED, "Global chain viewed");
+    LogViewOnce(chain, View::GLOBAL_CHAIN, "",
+                "Global chain viewed");
 }
 
 // =================================================================
@@ -2969,11 +2201,9 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "entries");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    // Retrieve via Array of Pointers pattern
-    std::size_t outCount = 0;
-    const cw1::AuditEntry** entries =
-        chain.getAuditLog().getRecentEntries(
-            static_cast<std::size_t>(g_auditN), outCount);
+    // Retrieve via Array-of-Pointers through RAII wrapper.
+    cw1::RecentEntryArray entries(chain.getAuditLog(),
+                                  static_cast<std::size_t>(g_auditN));
 
     auto ActionColor = [](cw1::AuditAction act) -> ImVec4 {
         switch (act) {
@@ -2981,6 +2211,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         case cw1::AuditAction::INTEGRITY_CHECK:  return COL_YELLOW;
         case cw1::AuditAction::SEARCH_PERFORMED: return COL_ACCENT;
         case cw1::AuditAction::CHAIN_VIEWED:     return COL_PURPLE;
+        case cw1::AuditAction::TAMPER_SIMULATED: return COL_RED;
         default:                                  return COL_TEXT;
         }
     };
@@ -2990,6 +2221,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         case cw1::AuditAction::INTEGRITY_CHECK:  return "INTEGRITY_CHECK";
         case cw1::AuditAction::SEARCH_PERFORMED: return "SEARCH_PERFORMED";
         case cw1::AuditAction::CHAIN_VIEWED:     return "CHAIN_VIEWED";
+        case cw1::AuditAction::TAMPER_SIMULATED: return "TAMPER_SIMULATED";
         default:                                  return "UNKNOWN";
         }
     };
@@ -3003,8 +2235,11 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         ImGui::TableSetupColumn("Details",   ImGuiTableColumnFlags_WidthStretch, 4.0f);
         ImGui::TableHeadersRow();
 
-        for (std::size_t i = 0; i < outCount; ++i) {
+        for (std::size_t i = 0; i < entries.size(); ++i) {
             const cw1::AuditEntry* e = entries[i];
+            if (e == nullptr) {
+                continue;
+            }
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
@@ -3018,9 +2253,6 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         }
         ImGui::EndTable();
     }
-
-    // Caller must delete[] the raw array (Array of Pointers pattern)
-    delete[] entries;
 }
 
 // =================================================================
@@ -3035,10 +2267,57 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
     if (ImGui::Button("  Run Verification  ", ImVec2(200, 36))) {
-        g_lastVerify = chain.verifyIntegrity();
+        g_lastVerifySeconds = cw1::measureSeconds([&]() {
+            g_lastVerify = chain.verifyIntegrity();
+        });
         g_verifyDone = true;
-        PushToast(g_lastVerify.ok ? "Chain VERIFIED OK" : "Chain TAMPERED!",
+        PushToast((g_lastVerify.ok ? "Chain VERIFIED OK" : "Chain TAMPERED!") +
+                  std::string(" | Operation took: ") +
+                  cw1::formatSeconds(g_lastVerifySeconds) + " s",
                   g_lastVerify.ok ? COL_GREEN_BR : COL_RED);
+    }
+    ImGui::PopStyleColor(3);
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputInt("Tamper block index##tamper", &g_tamperIndex);
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Button,        COL_RED);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HexColor(0xe5534b));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0xb62324));
+    if (ImGui::Button("Simulate Tamper", ImVec2(180, 36))) {
+        const std::size_t total = chain.totalBlocks();
+        if (total == 0) {
+            PushToast("Tamper failed: chain is empty.", COL_RED);
+        } else {
+            std::size_t target = total - 1;
+            bool validIndex = true;
+            if (g_tamperIndex >= 0) {
+                const std::size_t requested = static_cast<std::size_t>(g_tamperIndex);
+                if (requested < total) {
+                    target = requested;
+                } else {
+                    PushToast("Tamper failed: index out of range.", COL_RED);
+                    validIndex = false;
+                }
+            }
+
+            if (validIndex) {
+                std::string tamperMsg;
+                bool success = false;
+                const double tamperSeconds = cw1::measureSeconds([&]() {
+                    success = chain.tamperBlockHash(target, "", tamperMsg);
+                });
+
+                if (success) {
+                    PushToast(tamperMsg + " | Operation took: " +
+                              cw1::formatSeconds(tamperSeconds) + " s",
+                              COL_RED);
+                } else {
+                    PushToast(tamperMsg, COL_RED);
+                }
+            }
+        }
     }
     ImGui::PopStyleColor(3);
 
@@ -3066,6 +2345,11 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "Result: ");
     ImGui::SameLine();
     ImGui::TextWrapped("%s", g_lastVerify.message.c_str());
+
+    if (g_lastVerifySeconds > 0.0) {
+        ImGui::TextColored(COL_VERY_MUTED, "Last verification operation took: %s s",
+                           cw1::formatSeconds(g_lastVerifySeconds).c_str());
+    }
 
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
@@ -3146,7 +2430,7 @@ static void RenderToasts(float deltaTime) {
 // =================================================================
 
 int main() {
-    // â”€â”€ 1. GLFW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 1. GLFW ───────────────────────────────────────────────────
     if (!glfwInit()) return 1;
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -3162,7 +2446,7 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    // â”€â”€ 2. ImGui â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 2. ImGui ──────────────────────────────────────────────────
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -3174,7 +2458,7 @@ int main() {
 
     ApplyGitHubDarkTheme();
 
-    // â”€â”€ 3. Font (fallback to default if file absent) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 3. Font (fallback to default if file absent) ──────────────
     {
         const char* fontPath = "fonts/JetBrainsMono-Regular.ttf";
         FILE* fp = fopen(fontPath, "rb");
@@ -3186,13 +2470,15 @@ int main() {
         }
     }
 
-    // â”€â”€ 4. Blockchain + demo data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 4. Blockchain + demo data ─────────────────────────────────
     cw1::Blockchain chain;
     loadDemoData(chain);
-    g_lastVerify = chain.verifyIntegrity();
+    g_lastVerifySeconds = cw1::measureSeconds([&]() {
+        g_lastVerify = chain.verifyIntegrity();
+    });
     g_verifyDone = true;
 
-    // â”€â”€ 5. Main loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 5. Main loop ──────────────────────────────────────────────
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -3247,7 +2533,7 @@ int main() {
         // Toast overlay (rendered after main window)
         RenderToasts(io.DeltaTime);
 
-        // â”€â”€ Draw â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Draw ──────────────────────────────────────────────────
         ImGui::Render();
         int dispW, dispH;
         glfwGetFramebufferSize(window, &dispW, &dispH);
@@ -3258,7 +2544,7 @@ int main() {
         glfwSwapBuffers(window);
     }
 
-    // â”€â”€ 6. Cleanup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 6. Cleanup ────────────────────────────────────────────────
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -3268,22 +2554,22 @@ int main() {
 }
 ```
 
-### src\models\CarRecord.cpp
+### src/models/CarRecord.cpp
+
+Status: **Modified**
 
 ```cpp
 #include "models/CarRecord.hpp"
 
 #include <sstream>
 
-using namespace std;
-
 namespace cw1 {
 
 namespace {
 
 /// Escape pipe and backslash so the serialised string is unambiguous.
-string escapeField(const string& value) {
-    string escaped;
+std::string escapeField(const std::string& value) {
+    std::string escaped;
     escaped.reserve(value.size());
     for (char ch : value) {
         if (ch == '\\' || ch == '|') {
@@ -3296,8 +2582,8 @@ string escapeField(const string& value) {
 
 } // namespace
 
-string CarRecord::serialize() const {
-    ostringstream out;
+std::string CarRecord::serialize() const {
+    std::ostringstream out;
 
     // Common fields
     out << "vin=" << escapeField(vin)
@@ -3307,7 +2593,7 @@ string CarRecord::serialize() const {
         << "|productionYear=" << productionYear
         << "|stage=" << escapeField(stageToString(stage));
 
-    // Stage-specific fields â€” include all so that the hash is deterministic
+    // Stage-specific fields — include all so that the hash is deterministic
     // regardless of which fields happen to be empty.
     out << "|factoryLocation=" << escapeField(factoryLocation)
         << "|warehouseLocation=" << escapeField(warehouseLocation)
@@ -3328,7 +2614,9 @@ string CarRecord::serialize() const {
 } // namespace cw1
 ```
 
-### src\utils\AuditLog.cpp
+### src/utils/AuditLog.cpp
+
+Status: **Modified**
 
 ```cpp
 // AuditLog.cpp -- Implementation of the hand-written singly linked list
@@ -3345,23 +2633,22 @@ string CarRecord::serialize() const {
 
 #include <algorithm>  // std::min
 
-using namespace std;
-
 namespace cw1 {
 
-// â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helper ────────────────────────────────────────────────────────
 
-string actionToString(AuditAction action) {
+std::string actionToString(AuditAction action) {
     switch (action) {
-        case AuditAction::BLOCK_ADDED:      return "BLOCK_ADDED";
-        case AuditAction::INTEGRITY_CHECK:  return "INTEGRITY_CHECK";
-        case AuditAction::SEARCH_PERFORMED: return "SEARCH_PERFORMED";
-        case AuditAction::CHAIN_VIEWED:     return "CHAIN_VIEWED";
-        default:                            return "UNKNOWN";
+        case AuditAction::BLOCK_ADDED:       return "BLOCK_ADDED";
+        case AuditAction::INTEGRITY_CHECK:   return "INTEGRITY_CHECK";
+        case AuditAction::SEARCH_PERFORMED:  return "SEARCH_PERFORMED";
+        case AuditAction::CHAIN_VIEWED:      return "CHAIN_VIEWED";
+        case AuditAction::TAMPER_SIMULATED:  return "TAMPER_SIMULATED";
+        default:                             return "UNKNOWN";
     }
 }
 
-// â”€â”€ AuditLog constructor / destructor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── AuditLog constructor / destructor ─────────────────────────────
 
 AuditLog::AuditLog()
     : head_(nullptr), tail_(nullptr), count_(0) {
@@ -3373,9 +2660,9 @@ AuditLog::~AuditLog() {
     clear();
 }
 
-// â”€â”€ Core linked list operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Core linked list operations ───────────────────────────────────
 
-void AuditLog::log(AuditAction action, const string& details) {
+void AuditLog::log(AuditAction action, const std::string& details) {
     // Allocate a new node on the heap (demonstrates new/delete pattern).
     AuditEntry* node = new AuditEntry(action, details, TimeUtil::nowIso8601());
 
@@ -3393,7 +2680,7 @@ void AuditLog::log(AuditAction action, const string& details) {
     ++count_;
 }
 
-size_t AuditLog::size() const noexcept {
+std::size_t AuditLog::size() const noexcept {
     return count_;
 }
 
@@ -3415,17 +2702,17 @@ void AuditLog::clear() {
     count_ = 0;
 }
 
-// â”€â”€ Array of Pointers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Array of Pointers ─────────────────────────────────────────────
 
-const AuditEntry** AuditLog::getRecentEntries(size_t maxCount,
-                                               size_t& outCount) const {
+const AuditEntry** AuditLog::getRecentEntries(std::size_t maxCount,
+                                              std::size_t& outCount) const {
     // Demonstrates: Array of Pointers (raw pointer array, manual memory
     // management). The returned array is a heap-allocated array whose
     // elements are pointers into the linked list (not copies). The caller
     // must delete[] the array but must NOT delete the pointed-to nodes.
 
     // Determine how many entries we can actually return.
-    size_t actualCount = (maxCount < count_) ? maxCount : count_;
+    std::size_t actualCount = (maxCount < count_) ? maxCount : count_;
     outCount = actualCount;
 
     if (actualCount == 0) {
@@ -3439,14 +2726,14 @@ const AuditEntry** AuditLog::getRecentEntries(size_t maxCount,
     // Skip the first (count_ - actualCount) nodes to reach the start of
     // the last actualCount entries. This requires a linear traversal from
     // the head because we only have a singly linked list (no random access).
-    size_t skipCount = count_ - actualCount;
+    std::size_t skipCount = count_ - actualCount;
     const AuditEntry* node = head_;
-    for (size_t i = 0; i < skipCount; ++i) {
+    for (std::size_t i = 0; i < skipCount; ++i) {
         node = node->next;  // Advance through nodes we want to skip
     }
 
     // Fill the array with pointers to the remaining (most recent) nodes.
-    for (size_t i = 0; i < actualCount; ++i) {
+    for (std::size_t i = 0; i < actualCount; ++i) {
         arr[i] = node;      // Store pointer to node (not a copy of the node)
         node = node->next;  // Advance linked list pointer
     }
@@ -3454,10 +2741,63 @@ const AuditEntry** AuditLog::getRecentEntries(size_t maxCount,
     return arr;  // Caller must delete[] this array
 }
 
+RecentEntryArray::RecentEntryArray(const AuditLog& log, std::size_t maxCount)
+    : data_(nullptr), count_(0) {
+    data_ = log.getRecentEntries(maxCount, count_);
+}
+
+RecentEntryArray::~RecentEntryArray() {
+    delete[] data_;
+}
+
+RecentEntryArray::RecentEntryArray(RecentEntryArray&& other) noexcept
+    : data_(other.data_), count_(other.count_) {
+    other.data_ = nullptr;
+    other.count_ = 0;
+}
+
+RecentEntryArray& RecentEntryArray::operator=(RecentEntryArray&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
+
+    delete[] data_;
+    data_ = other.data_;
+    count_ = other.count_;
+    other.data_ = nullptr;
+    other.count_ = 0;
+    return *this;
+}
+
+std::size_t RecentEntryArray::size() const noexcept {
+    return count_;
+}
+
+bool RecentEntryArray::empty() const noexcept {
+    return count_ == 0;
+}
+
+const AuditEntry* RecentEntryArray::operator[](std::size_t index) const noexcept {
+    if (data_ == nullptr || index >= count_) {
+        return nullptr;
+    }
+    return data_[index];
+}
+
+const AuditEntry* const* RecentEntryArray::begin() const noexcept {
+    return data_;
+}
+
+const AuditEntry* const* RecentEntryArray::end() const noexcept {
+    return data_ == nullptr ? nullptr : (data_ + count_);
+}
+
 } // namespace cw1
 ```
 
-### src\utils\HashUtil.cpp
+### src/utils/HashUtil.cpp
+
+Status: **Modified**
 
 ```cpp
 #include "utils/HashUtil.hpp"
@@ -3466,11 +2806,9 @@ const AuditEntry** AuditLog::getRecentEntries(size_t maxCount,
 #include <openssl/sha.h>
 #include <sstream>
 
-using namespace std;
-
 namespace cw1::HashUtil {
 
-string sha256(const string& input) {
+std::string sha256(const std::string& input) {
     unsigned char digest[SHA256_DIGEST_LENGTH] = {0};
 
     SHA256(
@@ -3479,11 +2817,11 @@ string sha256(const string& input) {
         digest
     );
 
-    ostringstream output;
-    output << hex << setfill('0');
+    std::ostringstream output;
+    output << std::hex << std::setfill('0');
 
     for (unsigned char byte : digest) {
-        output << setw(2) << static_cast<int>(byte);
+        output << std::setw(2) << static_cast<int>(byte);
     }
 
     return output.str();
@@ -3492,7 +2830,9 @@ string sha256(const string& input) {
 } // namespace cw1::HashUtil
 ```
 
-### src\utils\TimeUtil.cpp
+### src/utils/TimeUtil.cpp
+
+Status: **Modified**
 
 ```cpp
 #include "utils/TimeUtil.hpp"
@@ -3502,26 +2842,146 @@ string sha256(const string& input) {
 #include <iomanip>
 #include <sstream>
 
-using namespace std;
-
 namespace cw1::TimeUtil {
 
-string nowIso8601() {
-    const auto now = chrono::system_clock::now();
-    const time_t currentTime = chrono::system_clock::to_time_t(now);
+std::string nowIso8601() {
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
 
-    tm utcTime = {};
+    std::tm utcTime = {};
 #ifdef _WIN32
     gmtime_s(&utcTime, &currentTime);
 #else
     gmtime_r(&currentTime, &utcTime);
 #endif
 
-    ostringstream output;
-    output << put_time(&utcTime, "%Y-%m-%dT%H:%M:%SZ");
+    std::ostringstream output;
+    output << std::put_time(&utcTime, "%Y-%m-%dT%H:%M:%SZ");
     return output.str();
 }
 
 } // namespace cw1::TimeUtil
+```
+
+### include/blockchain/BlockFormatter.hpp
+
+Status: **Added**
+
+```cpp
+#pragma once
+
+#include <iomanip>
+#include <sstream>
+#include <string>
+
+#include "blockchain/Block.hpp"
+#include "blockchain/BlockStage.hpp"
+
+namespace cw1 {
+
+/// Canonical block formatter used by both CLI and GUI.
+/// Keeps screenshot output consistent with coursework block requirements.
+inline std::string formatBlockForDisplay(const Block& block) {
+    const CarRecord& record = block.getRecord();
+    const bool isGenesis = (block.getIndex() == 0);
+    const bool genesisRuleSatisfied =
+        (block.getPreviousHash() == block.getCurrentHash());
+
+    std::ostringstream out;
+    out << "======================================================================\n";
+    out << "Block #" << block.getIndex()
+        << " | Stage: " << stageToString(record.stage) << '\n';
+    out << "----------------------------------------------------------------------\n";
+    out << "Current Hash : " << block.getCurrentHash() << '\n';
+    out << "Previous Hash: " << block.getPreviousHash() << '\n';
+    if (isGenesis) {
+        out << "Genesis Rule : previousHash == currentHash -> "
+            << (genesisRuleSatisfied ? "YES" : "NO") << '\n';
+    }
+    out << "Timestamp    : " << block.getTimestamp() << '\n';
+    out << "Nonce        : " << block.getNonce() << '\n';
+    out << "VIN          : " << record.vin << '\n';
+    out << "Vehicle      : " << record.manufacturer << ' ' << record.model
+        << " (" << record.color << ", " << record.productionYear << ")\n";
+
+    out << "Payload      :\n";
+    switch (record.stage) {
+        case BlockStage::PRODUCTION:
+            out << "  - Factory Location: " << record.factoryLocation << '\n';
+            break;
+        case BlockStage::WAREHOUSE_INTAKE:
+            out << "  - Warehouse Location: " << record.warehouseLocation << '\n';
+            out << "  - Received By       : " << record.receivedBy << '\n';
+            break;
+        case BlockStage::QUALITY_CHECK:
+            out << "  - Inspector ID      : " << record.inspectorId << '\n';
+            out << "  - QC Result         : " << (record.passed ? "PASSED" : "FAILED") << '\n';
+            out << "  - QC Notes          : " << record.qcNotes << '\n';
+            break;
+        case BlockStage::DEALER_DISPATCH:
+            out << "  - Dealer ID         : " << record.dealerId << '\n';
+            out << "  - Destination       : " << record.destination << '\n';
+            out << "  - Transport Mode    : " << record.transportMode << '\n';
+            break;
+        case BlockStage::CUSTOMER_SALE:
+            out << "  - Buyer ID          : " << record.buyerId << '\n';
+            out << "  - Sale Price        : MYR " << std::fixed
+                << std::setprecision(2) << record.salePrice << '\n';
+            out << "  - Warranty Expiry   : " << record.warrantyExpiry << '\n';
+            break;
+    }
+
+    out << "======================================================================\n";
+    return out.str();
+}
+
+} // namespace cw1
+```
+
+### include/utils/OperationTimer.hpp
+
+Status: **Added**
+
+```cpp
+#pragma once
+
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+#include <string>
+#include <utility>
+
+namespace cw1 {
+
+/// Lightweight stopwatch for operation runtime reporting.
+class OperationTimer {
+public:
+    using Clock = std::chrono::steady_clock;
+
+    OperationTimer() : start_(Clock::now()) {}
+
+    double elapsedSeconds() const {
+        const auto elapsed = Clock::now() - start_;
+        return std::chrono::duration<double>(elapsed).count();
+    }
+
+private:
+    Clock::time_point start_;
+};
+
+template <typename Callable>
+double measureSeconds(Callable&& callable) {
+    OperationTimer timer;
+    std::forward<Callable>(callable)();
+    return timer.elapsedSeconds();
+}
+
+inline std::string formatSeconds(double seconds) {
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(4) << seconds;
+    return out.str();
+}
+
+} // namespace cw1
 ```
 

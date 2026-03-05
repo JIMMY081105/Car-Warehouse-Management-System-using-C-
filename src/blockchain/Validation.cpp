@@ -1,20 +1,18 @@
 #include "blockchain/Validation.hpp"
 
-using namespace std;
-
 namespace cw1::Validation {
 
-ValidationResult verifyChain(const vector<Block>& blocks) {
+ValidationResult verifyChain(const std::vector<Block>& blocks) {
     if (blocks.empty()) {
         return {true, "Blockchain is empty and therefore valid."};
     }
 
-    for (size_t i = 0; i < blocks.size(); ++i) {
+    for (std::size_t i = 0; i < blocks.size(); ++i) {
         const Block& current = blocks[i];
 
         // Check that the stored hash matches a fresh computation.
         if (current.getCurrentHash() != current.computeHash()) {
-            return {false, "Hash mismatch at block index " + to_string(i)};
+            return {false, "Hash mismatch at block index " + std::to_string(i)};
         }
 
         if (i == 0) {
@@ -30,11 +28,11 @@ ValidationResult verifyChain(const vector<Block>& blocks) {
         // Every subsequent block must reference the previous block's hash.
         const Block& previous = blocks[i - 1];
         if (current.getPreviousHash() != previous.getCurrentHash()) {
-            return {false, "Chain link mismatch at block index " + to_string(i)};
+            return {false, "Chain link mismatch at block index " + std::to_string(i)};
         }
     }
 
-    return {true, "Blockchain integrity verified. " + to_string(blocks.size()) + " block(s) OK."};
+    return {true, "Blockchain integrity verified. " + std::to_string(blocks.size()) + " block(s) OK."};
 }
 
 } // namespace cw1::Validation

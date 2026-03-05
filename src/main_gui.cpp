@@ -15,8 +15,10 @@
 #include <string>
 #include <vector>
 
+#include "blockchain/BlockFormatter.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/BlockStage.hpp"
+#include "utils/OperationTimer.hpp"
 
 // =================================================================
 //  SECTION 1: Color palette (GitHub Dark)
@@ -132,6 +134,14 @@ static std::string g_selectedVin;
 static char        g_searchBuf[256] = {};
 static cw1::ValidationResult g_lastVerify = {false, "Not yet verified"};
 static bool        g_verifyDone = false;
+static double      g_lastVerifySeconds = 0.0;
+static double      g_lastAddBlockSeconds = 0.0;
+static double      g_lastSearchSeconds = 0.0;
+static int         g_tamperIndex = -1;
+
+// Sidebar search cache: avoids per-frame search calls and audit-log spam.
+static std::string              g_cachedSearchQuery;
+static std::vector<std::string> g_cachedSearchVins;
 
 // Guard to prevent per-frame audit log spam.
 // We only log a CHAIN_VIEWED event once when the user first switches to a view.
@@ -262,12 +272,6 @@ static std::string Truncate(const std::string& s, size_t maxLen) {
     return (s.size() <= maxLen) ? s : s.substr(0, maxLen) + "...";
 }
 
-static std::string FormatMYR(double v) {
-    std::ostringstream ss;
-    ss << "MYR " << std::fixed << std::setprecision(2) << v;
-    return ss.str();
-}
-
 // =================================================================
 //  SECTION 6: Header bar
 // =================================================================
@@ -360,20 +364,40 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "VEHICLES (%zu)", allVins.size());
     ImGui::Spacing();
 
-    // Build filtered list
+    // Build filtered list.
+    // Search is run only when query text changes to keep timing meaningful
+    // and avoid writing audit log entries every frame.
     std::vector<std::string> displayVins;
-    if (g_searchBuf[0]) {
-        const auto hits = chain.searchGeneral(std::string(g_searchBuf));
-        std::vector<std::string> seen;
-        for (const auto* blk : hits) {
-            const auto& v = blk->getRecord().vin;
-            if (std::find(seen.begin(), seen.end(), v) == seen.end()) {
-                seen.push_back(v);
-                displayVins.push_back(v);
-            }
+    const std::string query(g_searchBuf);
+    if (!query.empty()) {
+        if (query != g_cachedSearchQuery) {
+            g_cachedSearchQuery = query;
+            g_cachedSearchVins.clear();
+
+            const double seconds = cw1::measureSeconds([&]() {
+                const auto hits = chain.searchGeneral(query);
+                std::vector<std::string> seen;
+                for (const auto* blk : hits) {
+                    const std::string& vin = blk->getRecord().vin;
+                    if (std::find(seen.begin(), seen.end(), vin) == seen.end()) {
+                        seen.push_back(vin);
+                        g_cachedSearchVins.push_back(vin);
+                    }
+                }
+            });
+            g_lastSearchSeconds = seconds;
         }
+        displayVins = g_cachedSearchVins;
     } else {
+        g_cachedSearchQuery.clear();
+        g_cachedSearchVins.clear();
         displayVins = allVins;
+    }
+
+    if (!query.empty()) {
+        ImGui::TextColored(COL_VERY_MUTED, "Search operation took: %s s",
+                           cw1::formatSeconds(g_lastSearchSeconds).c_str());
+        ImGui::Spacing();
     }
 
     for (const auto& vin : displayVins) {
@@ -587,76 +611,13 @@ static void RenderCarDetail(const cw1::Blockchain& chain) {
         // Use hdrLabel as unique child ID
         ImGui::BeginChild(hdrLabel, ImVec2(-1, 0), true);
 
-        // Stage badge + timestamp
-        ImGui::TextColored(StageColor(rec.stage), "[%s]",
-                           cw1::stageToString(rec.stage).c_str());
-        ImGui::SameLine();
-        ImGui::TextColored(COL_MUTED, "  %s", blk.getTimestamp().c_str());
+        ImGui::TextColored(COL_MUTED, "Canonical Block Output");
+        ImGui::Spacing();
 
-        ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-
-        // Helper: label + value on one line
-        auto Field = [](const char* lbl, const char* val, ImVec4 col) {
-            ImGui::TextColored(COL_MUTED, "%-20s", lbl);
-            ImGui::SameLine();
-            ImGui::TextColored(col, "%s", val);
-        };
-
-        Field("Hash:",          blk.getCurrentHash().c_str(),  COL_PURPLE);
-        Field("Prev Hash:",     blk.getPreviousHash().c_str(), COL_PURPLE);
-
-        char nonceBuf[32];
-        snprintf(nonceBuf, sizeof(nonceBuf), "%llu",
-                 static_cast<unsigned long long>(blk.getNonce()));
-        Field("Nonce:",         nonceBuf, COL_ORANGE);
-
-        ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-        ImGui::TextColored(COL_MUTED, "Record Fields");
-        ImGui::Separator(); ImGui::Spacing();
-
-        Field("VIN:",           rec.vin.c_str(),          COL_TEXT);
-        Field("Manufacturer:",  rec.manufacturer.c_str(), COL_TEXT);
-        Field("Model:",         rec.model.c_str(),        COL_TEXT);
-        Field("Color:",         rec.color.c_str(),        COL_TEXT);
-
-        char yearBuf[16];
-        snprintf(yearBuf, sizeof(yearBuf), "%d", rec.productionYear);
-        Field("Production Year:", yearBuf, COL_TEXT);
-        Field("Stage:",           cw1::stageToString(rec.stage).c_str(),
-                                  StageColor(rec.stage));
-
-        ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-        ImGui::TextColored(COL_MUTED, "Stage Details");
-        ImGui::Separator(); ImGui::Spacing();
-
-        switch (rec.stage) {
-        case cw1::BlockStage::PRODUCTION:
-            Field("Factory:",   rec.factoryLocation.c_str(), COL_TEXT);
-            break;
-        case cw1::BlockStage::WAREHOUSE_INTAKE:
-            Field("Warehouse:", rec.warehouseLocation.c_str(), COL_TEXT);
-            Field("Received By:",rec.receivedBy.c_str(),       COL_TEXT);
-            break;
-        case cw1::BlockStage::QUALITY_CHECK:
-            Field("Inspector:", rec.inspectorId.c_str(), COL_TEXT);
-            Field("Passed:",    rec.passed ? "Yes" : "No",
-                                rec.passed ? COL_GREEN_BR : COL_RED);
-            Field("QC Notes:",  rec.qcNotes.c_str(), COL_TEXT);
-            break;
-        case cw1::BlockStage::DEALER_DISPATCH:
-            Field("Dealer ID:", rec.dealerId.c_str(),      COL_TEXT);
-            Field("Destination:",rec.destination.c_str(),  COL_TEXT);
-            Field("Transport:", rec.transportMode.c_str(), COL_ORANGE);
-            break;
-        case cw1::BlockStage::CUSTOMER_SALE: {
-            Field("Buyer ID:",  rec.buyerId.c_str(), COL_TEXT);
-            char priceBuf[48];
-            snprintf(priceBuf, sizeof(priceBuf), "%s", FormatMYR(rec.salePrice).c_str());
-            Field("Sale Price:", priceBuf, COL_GREEN_BR);
-            Field("Warranty:",  rec.warrantyExpiry.c_str(), COL_TEXT);
-            break;
-        }
-        }
+        const std::string formatted = cw1::formatBlockForDisplay(blk);
+        ImGui::PushStyleColor(ImGuiCol_Text, COL_TEXT);
+        ImGui::TextUnformatted(formatted.c_str());
+        ImGui::PopStyleColor();
 
         ImGui::Spacing();
         ImGui::EndChild();
@@ -791,9 +752,13 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
             break;
         }
 
-        chain.addBlock(r);
+        const double seconds = cw1::measureSeconds([&]() {
+            chain.addBlock(r);
+        });
+        g_lastAddBlockSeconds = seconds;
         PushToast("Block #" + std::to_string(chain.totalBlocks() - 1) +
-                  " added for " + std::string(g_formVin),
+                  " added for " + std::string(g_formVin) +
+                  " | Operation took: " + cw1::formatSeconds(seconds) + " s",
                   COL_GREEN_BR);
 
         // Clear all form buffers
@@ -806,6 +771,12 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         g_formDealerId[0]= '\0'; g_formDestination[0] = '\0';
         g_formTransport[0]= '\0'; g_formBuyerId[0]    = '\0';
         g_formSalePrice = 0.0;   g_formWarranty[0]    = '\0';
+    }
+
+    if (g_lastAddBlockSeconds > 0.0) {
+        ImGui::Spacing();
+        ImGui::TextColored(COL_VERY_MUTED, "Last add-block operation took: %s s",
+                           cw1::formatSeconds(g_lastAddBlockSeconds).c_str());
     }
 }
 
@@ -910,11 +881,9 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "entries");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    // Retrieve via Array of Pointers pattern
-    std::size_t outCount = 0;
-    const cw1::AuditEntry** entries =
-        chain.getAuditLog().getRecentEntries(
-            static_cast<std::size_t>(g_auditN), outCount);
+    // Retrieve via Array-of-Pointers through RAII wrapper.
+    cw1::RecentEntryArray entries(chain.getAuditLog(),
+                                  static_cast<std::size_t>(g_auditN));
 
     auto ActionColor = [](cw1::AuditAction act) -> ImVec4 {
         switch (act) {
@@ -922,6 +891,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         case cw1::AuditAction::INTEGRITY_CHECK:  return COL_YELLOW;
         case cw1::AuditAction::SEARCH_PERFORMED: return COL_ACCENT;
         case cw1::AuditAction::CHAIN_VIEWED:     return COL_PURPLE;
+        case cw1::AuditAction::TAMPER_SIMULATED: return COL_RED;
         default:                                  return COL_TEXT;
         }
     };
@@ -931,6 +901,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         case cw1::AuditAction::INTEGRITY_CHECK:  return "INTEGRITY_CHECK";
         case cw1::AuditAction::SEARCH_PERFORMED: return "SEARCH_PERFORMED";
         case cw1::AuditAction::CHAIN_VIEWED:     return "CHAIN_VIEWED";
+        case cw1::AuditAction::TAMPER_SIMULATED: return "TAMPER_SIMULATED";
         default:                                  return "UNKNOWN";
         }
     };
@@ -944,8 +915,11 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         ImGui::TableSetupColumn("Details",   ImGuiTableColumnFlags_WidthStretch, 4.0f);
         ImGui::TableHeadersRow();
 
-        for (std::size_t i = 0; i < outCount; ++i) {
+        for (std::size_t i = 0; i < entries.size(); ++i) {
             const cw1::AuditEntry* e = entries[i];
+            if (e == nullptr) {
+                continue;
+            }
             ImGui::TableNextRow();
 
             ImGui::TableNextColumn();
@@ -959,9 +933,6 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         }
         ImGui::EndTable();
     }
-
-    // Caller must delete[] the raw array (Array of Pointers pattern)
-    delete[] entries;
 }
 
 // =================================================================
@@ -976,10 +947,57 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
     if (ImGui::Button("  Run Verification  ", ImVec2(200, 36))) {
-        g_lastVerify = chain.verifyIntegrity();
+        g_lastVerifySeconds = cw1::measureSeconds([&]() {
+            g_lastVerify = chain.verifyIntegrity();
+        });
         g_verifyDone = true;
-        PushToast(g_lastVerify.ok ? "Chain VERIFIED OK" : "Chain TAMPERED!",
+        PushToast((g_lastVerify.ok ? "Chain VERIFIED OK" : "Chain TAMPERED!") +
+                  std::string(" | Operation took: ") +
+                  cw1::formatSeconds(g_lastVerifySeconds) + " s",
                   g_lastVerify.ok ? COL_GREEN_BR : COL_RED);
+    }
+    ImGui::PopStyleColor(3);
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputInt("Tamper block index##tamper", &g_tamperIndex);
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Button,        COL_RED);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HexColor(0xe5534b));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0xb62324));
+    if (ImGui::Button("Simulate Tamper", ImVec2(180, 36))) {
+        const std::size_t total = chain.totalBlocks();
+        if (total == 0) {
+            PushToast("Tamper failed: chain is empty.", COL_RED);
+        } else {
+            std::size_t target = total - 1;
+            bool validIndex = true;
+            if (g_tamperIndex >= 0) {
+                const std::size_t requested = static_cast<std::size_t>(g_tamperIndex);
+                if (requested < total) {
+                    target = requested;
+                } else {
+                    PushToast("Tamper failed: index out of range.", COL_RED);
+                    validIndex = false;
+                }
+            }
+
+            if (validIndex) {
+                std::string tamperMsg;
+                bool success = false;
+                const double tamperSeconds = cw1::measureSeconds([&]() {
+                    success = chain.tamperBlockHash(target, "", tamperMsg);
+                });
+
+                if (success) {
+                    PushToast(tamperMsg + " | Operation took: " +
+                              cw1::formatSeconds(tamperSeconds) + " s",
+                              COL_RED);
+                } else {
+                    PushToast(tamperMsg, COL_RED);
+                }
+            }
+        }
     }
     ImGui::PopStyleColor(3);
 
@@ -1007,6 +1025,11 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "Result: ");
     ImGui::SameLine();
     ImGui::TextWrapped("%s", g_lastVerify.message.c_str());
+
+    if (g_lastVerifySeconds > 0.0) {
+        ImGui::TextColored(COL_VERY_MUTED, "Last verification operation took: %s s",
+                           cw1::formatSeconds(g_lastVerifySeconds).c_str());
+    }
 
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
@@ -1130,7 +1153,9 @@ int main() {
     // ── 4. Blockchain + demo data ─────────────────────────────────
     cw1::Blockchain chain;
     loadDemoData(chain);
-    g_lastVerify = chain.verifyIntegrity();
+    g_lastVerifySeconds = cw1::measureSeconds([&]() {
+        g_lastVerify = chain.verifyIntegrity();
+    });
     g_verifyDone = true;
 
     // ── 5. Main loop ──────────────────────────────────────────────

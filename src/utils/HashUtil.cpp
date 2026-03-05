@@ -4,11 +4,9 @@
 #include <openssl/sha.h>
 #include <sstream>
 
-using namespace std;
-
 namespace cw1::HashUtil {
 
-string sha256(const string& input) {
+std::string sha256(const std::string& input) {
     unsigned char digest[SHA256_DIGEST_LENGTH] = {0};
 
     SHA256(
@@ -17,11 +15,11 @@ string sha256(const string& input) {
         digest
     );
 
-    ostringstream output;
-    output << hex << setfill('0');
+    std::ostringstream output;
+    output << std::hex << std::setfill('0');
 
     for (unsigned char byte : digest) {
-        output << setw(2) << static_cast<int>(byte);
+        output << std::setw(2) << static_cast<int>(byte);
     }
 
     return output.str();

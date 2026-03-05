@@ -5,26 +5,26 @@
 #include <sstream>
 #include <stdexcept>
 
-using namespace std;
-
 namespace cw1 {
 
 namespace {
 
 /// Case-insensitive substring search.
-bool containsIgnoreCase(const string& haystack, const string& needle) {
+bool containsIgnoreCase(const std::string& haystack, const std::string& needle) {
     if (needle.empty()) return true;
     if (needle.size() > haystack.size()) return false;
 
-    auto toLower = [](unsigned char c) { return static_cast<char>(tolower(c)); };
+    auto toLower = [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    };
 
-    string h, n;
+    std::string h, n;
     h.resize(haystack.size());
     n.resize(needle.size());
-    transform(haystack.begin(), haystack.end(), h.begin(), toLower);
-    transform(needle.begin(), needle.end(), n.begin(), toLower);
+    std::transform(haystack.begin(), haystack.end(), h.begin(), toLower);
+    std::transform(needle.begin(), needle.end(), n.begin(), toLower);
 
-    return h.find(n) != string::npos;
+    return h.find(n) != std::string::npos;
 }
 
 } // namespace
@@ -33,7 +33,7 @@ bool containsIgnoreCase(const string& haystack, const string& needle) {
 
 void Blockchain::addBlock(const CarRecord& record) {
     // 1. Determine the previous hash (genesis uses "0").
-    const string prevHash =
+    const std::string prevHash =
         chain_.empty() ? "0" : chain_.back().getCurrentHash();
 
     // 2. Create the block and append to the global chain.
@@ -44,41 +44,41 @@ void Blockchain::addBlock(const CarRecord& record) {
 
     // 4. Log the block addition to the audit trail.
     const Block& added = chain_.back();
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "Added block #" << added.getIndex()
            << " for " << record.vin
            << " (" << stageToString(record.stage) << ")";
     auditLog_.log(AuditAction::BLOCK_ADDED, detail.str());
 }
 
-const vector<Block>& Blockchain::getChain() const noexcept {
+const std::vector<Block>& Blockchain::getChain() const noexcept {
     return chain_;
 }
 
-size_t Blockchain::totalBlocks() const noexcept {
+std::size_t Blockchain::totalBlocks() const noexcept {
     return chain_.size();
 }
 
 // -- Per-car lookups --------------------------------------------------
 
-vector<const Block*> Blockchain::getCarHistory(const string& vin) const {
-    vector<const Block*> history;
+std::vector<const Block*> Blockchain::getCarHistory(const std::string& vin) const {
+    std::vector<const Block*> history;
     auto it = vinIndex_.find(vin);
     if (it != vinIndex_.end()) {
         history.reserve(it->second.size());
-        for (size_t idx : it->second) {
+        for (std::size_t idx : it->second) {
             history.push_back(&chain_[idx]);
         }
     }
     return history;
 }
 
-bool Blockchain::hasVin(const string& vin) const {
+bool Blockchain::hasVin(const std::string& vin) const {
     return vinIndex_.count(vin) > 0;
 }
 
-vector<string> Blockchain::getAllVins() const {
-    vector<string> vins;
+std::vector<std::string> Blockchain::getAllVins() const {
+    std::vector<std::string> vins;
     vins.reserve(vinIndex_.size());
     for (const auto& [vin, indices] : vinIndex_) {
         vins.push_back(vin);
@@ -86,10 +86,10 @@ vector<string> Blockchain::getAllVins() const {
     return vins;
 }
 
-BlockStage Blockchain::getLatestStage(const string& vin) const {
+BlockStage Blockchain::getLatestStage(const std::string& vin) const {
     auto it = vinIndex_.find(vin);
     if (it == vinIndex_.end() || it->second.empty()) {
-        throw runtime_error("VIN not found: " + vin);
+        throw std::runtime_error("VIN not found: " + vin);
     }
     // The last index in the vector is the most recent event for this car.
     return chain_[it->second.back()].getRecord().stage;
@@ -97,36 +97,36 @@ BlockStage Blockchain::getLatestStage(const string& vin) const {
 
 // -- Search / filter --------------------------------------------------
 
-vector<const Block*> Blockchain::searchByBrand(const string& brand) const {
-    vector<const Block*> results;
+std::vector<const Block*> Blockchain::searchByBrand(const std::string& brand) const {
+    std::vector<const Block*> results;
     for (const auto& block : chain_) {
         if (containsIgnoreCase(block.getRecord().manufacturer, brand)) {
             results.push_back(&block);
         }
     }
     // Log the search in the audit trail (auditLog_ is mutable -- see header).
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "searchByBrand(\"" << brand << "\") -> " << results.size() << " result(s)";
     auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
     return results;
 }
 
-vector<const Block*> Blockchain::searchByStage(BlockStage stage) const {
-    vector<const Block*> results;
+std::vector<const Block*> Blockchain::searchByStage(BlockStage stage) const {
+    std::vector<const Block*> results;
     for (const auto& block : chain_) {
         if (block.getRecord().stage == stage) {
             results.push_back(&block);
         }
     }
     // Log the search in the audit trail (auditLog_ is mutable -- see header).
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "searchByStage(" << stageToString(stage) << ") -> " << results.size() << " result(s)";
     auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
     return results;
 }
 
-vector<const Block*> Blockchain::searchGeneral(const string& query) const {
-    vector<const Block*> results;
+std::vector<const Block*> Blockchain::searchGeneral(const std::string& query) const {
+    std::vector<const Block*> results;
     for (const auto& block : chain_) {
         const CarRecord& rec = block.getRecord();
         if (containsIgnoreCase(rec.vin, query) ||
@@ -138,7 +138,7 @@ vector<const Block*> Blockchain::searchGeneral(const string& query) const {
         }
     }
     // Log the search in the audit trail (auditLog_ is mutable -- see header).
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "searchGeneral(\"" << query << "\") -> " << results.size() << " result(s)";
     auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
     return results;
@@ -149,11 +149,46 @@ vector<const Block*> Blockchain::searchGeneral(const string& query) const {
 ValidationResult Blockchain::verifyIntegrity() const {
     ValidationResult result = Validation::verifyChain(chain_);
     // Log the integrity check result in the audit trail.
-    ostringstream detail;
+    std::ostringstream detail;
     detail << "verifyIntegrity() -> " << (result.ok ? "PASS" : "FAIL")
            << ": " << result.message;
     auditLog_.log(AuditAction::INTEGRITY_CHECK, detail.str());
     return result;
+}
+
+bool Blockchain::tamperBlockHash(std::size_t index,
+                                 const std::string& forgedHash,
+                                 std::string& message) {
+    if (index >= chain_.size()) {
+        std::ostringstream err;
+        err << "Tamper failed: block index " << index
+            << " out of range (0.." << (chain_.empty() ? 0 : chain_.size() - 1) << ").";
+        message = err.str();
+        return false;
+    }
+
+    std::string finalHash = forgedHash;
+    if (finalHash.empty()) {
+        finalHash = chain_[index].getCurrentHash();
+        if (finalHash.empty()) {
+            finalHash = "tampered_hash";
+        } else {
+            finalHash[0] = (finalHash[0] == '0') ? '1' : '0';
+        }
+    }
+
+    if (finalHash == chain_[index].getCurrentHash()) {
+        finalHash.push_back('x');
+    }
+
+    chain_[index].debugOverrideCurrentHash(finalHash);
+
+    std::ostringstream ok;
+    ok << "Tampered block #" << index
+       << ". Stored currentHash overridden for integrity-failure demo.";
+    message = ok.str();
+    auditLog_.log(AuditAction::TAMPER_SIMULATED, message);
+    return true;
 }
 
 // -- Audit log --------------------------------------------------------

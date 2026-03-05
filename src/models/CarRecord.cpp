@@ -2,15 +2,13 @@
 
 #include <sstream>
 
-using namespace std;
-
 namespace cw1 {
 
 namespace {
 
 /// Escape pipe and backslash so the serialised string is unambiguous.
-string escapeField(const string& value) {
-    string escaped;
+std::string escapeField(const std::string& value) {
+    std::string escaped;
     escaped.reserve(value.size());
     for (char ch : value) {
         if (ch == '\\' || ch == '|') {
@@ -23,8 +21,8 @@ string escapeField(const string& value) {
 
 } // namespace
 
-string CarRecord::serialize() const {
-    ostringstream out;
+std::string CarRecord::serialize() const {
+    std::ostringstream out;
 
     // Common fields
     out << "vin=" << escapeField(vin)

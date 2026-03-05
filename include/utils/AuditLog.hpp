@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <string>
+#include <utility>
 
 namespace cw1 {
 
@@ -15,7 +16,9 @@ enum class AuditAction {
     BLOCK_ADDED,        // A new block was appended to the blockchain
     INTEGRITY_CHECK,    // verifyIntegrity() was called
     SEARCH_PERFORMED,   // A search function was called
-    CHAIN_VIEWED        // The chain or a car record was displayed
+    CHAIN_VIEWED,       // The chain or a car record was displayed
+    TAMPER_SIMULATED,   // Debug/admin tamper simulation executed
+    PERSISTENCE_IO      // Save/load operations
 };
 
 /// Convert an AuditAction enum value to a human-readable string.
@@ -86,6 +89,34 @@ private:
     AuditEntry* head_;   // First node (oldest entry)
     AuditEntry* tail_;   // Last node (newest entry) -- kept for O(1) append
     std::size_t count_;  // Total node count -- O(1) size()
+};
+
+/// RAII owner for AuditLog::getRecentEntries().
+///
+/// Coursework requirement remains intact:
+/// - AuditLog still returns a raw heap-allocated array of pointers.
+/// - This wrapper only automates delete[] to prevent call-site leaks.
+class RecentEntryArray {
+public:
+    RecentEntryArray(const AuditLog& log, std::size_t maxCount);
+    ~RecentEntryArray();
+
+    RecentEntryArray(const RecentEntryArray&) = delete;
+    RecentEntryArray& operator=(const RecentEntryArray&) = delete;
+
+    RecentEntryArray(RecentEntryArray&& other) noexcept;
+    RecentEntryArray& operator=(RecentEntryArray&& other) noexcept;
+
+    std::size_t size() const noexcept;
+    bool empty() const noexcept;
+
+    const AuditEntry* operator[](std::size_t index) const noexcept;
+    const AuditEntry* const* begin() const noexcept;
+    const AuditEntry* const* end() const noexcept;
+
+private:
+    const AuditEntry** data_;
+    std::size_t count_;
 };
 
 } // namespace cw1

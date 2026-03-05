@@ -15,6 +15,12 @@ namespace cw1 {
 class Block : public BlockBase {
 public:
     Block(std::size_t index, std::string previousHash, CarRecord record);
+    Block(std::size_t index,
+          std::string previousHash,
+          std::string currentHash,
+          std::string timestamp,
+          std::uint64_t nonce,
+          CarRecord record);
 
     std::size_t         getIndex()        const noexcept override;
     const std::string&  getCurrentHash()  const noexcept override;
@@ -28,6 +34,14 @@ public:
 
     /// Human-readable one-line summary.
     std::string toString() const override;
+
+    /// Debug/admin helper for tamper simulation coursework demo.
+    /// Intentionally overrides the stored hash to break integrity checks.
+    void debugOverrideCurrentHash(std::string forgedHash);
+
+    /// Debug / Simulation Feature:
+    /// intentionally mutates payload data without updating hash.
+    void debugTamperPayloadForSimulation(const std::string& marker);
 
 private:
     static std::uint64_t generateNonce();

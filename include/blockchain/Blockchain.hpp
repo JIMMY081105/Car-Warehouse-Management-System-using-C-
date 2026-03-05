@@ -63,6 +63,23 @@ public:
     /// Verify the entire global chain (hashes + linkage).
     ValidationResult verifyIntegrity() const;
 
+    /// Debug / Simulation Feature:
+    /// intentionally modifies only block payload data and does not re-hash.
+    /// This is used to demonstrate immutability and integrity failure.
+    void tamperBlock(std::size_t index);
+
+    /// Admin/debug coursework feature: intentionally tamper a block hash.
+    /// Returns false with message if index is invalid.
+    bool tamperBlockHash(std::size_t index,
+                         const std::string& forgedHash,
+                         std::string& message);
+
+    /// Save blockchain to disk. Returns true on success.
+    bool saveBlockchain(const std::string& path) const;
+
+    /// Load blockchain from disk. Returns true on success.
+    bool loadBlockchain(const std::string& path);
+
     // -- Audit log -----------------------------------------------------
 
     /// Access the audit log (const version -- works even on const Blockchain

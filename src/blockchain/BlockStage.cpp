@@ -1,13 +1,12 @@
 #include "blockchain/BlockStage.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <stdexcept>
-
-using namespace std;
 
 namespace cw1 {
 
-string stageToString(BlockStage stage) {
+std::string stageToString(BlockStage stage) {
     switch (stage) {
         case BlockStage::PRODUCTION:       return "Production";
         case BlockStage::WAREHOUSE_INTAKE: return "Warehouse Intake";
@@ -18,11 +17,11 @@ string stageToString(BlockStage stage) {
     return "Unknown";
 }
 
-BlockStage stringToStage(const string& text) {
+BlockStage stringToStage(const std::string& text) {
     // Work with a lowercase copy for case-insensitive matching.
-    string lower = text;
-    transform(lower.begin(), lower.end(), lower.begin(),
-                   [](unsigned char c) { return static_cast<char>(tolower(c)); });
+    std::string lower = text;
+    std::transform(lower.begin(), lower.end(), lower.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
     if (lower == "production")       return BlockStage::PRODUCTION;
     if (lower == "warehouse intake") return BlockStage::WAREHOUSE_INTAKE;
@@ -30,7 +29,7 @@ BlockStage stringToStage(const string& text) {
     if (lower == "dealer dispatch")  return BlockStage::DEALER_DISPATCH;
     if (lower == "customer sale")    return BlockStage::CUSTOMER_SALE;
 
-    throw invalid_argument("Unknown stage: " + text);
+    throw std::invalid_argument("Unknown stage: " + text);
 }
 
 } // namespace cw1
