@@ -17,6 +17,7 @@ struct CarRecord {
     std::string color;
     int         productionYear = 0;
     BlockStage  stage          = BlockStage::PRODUCTION;
+    std::string manufacturerId;  // e.g. "MFR-2522"
 
     // ── Stage-specific fields (filled as needed) ───────────────────
     // PRODUCTION
@@ -25,6 +26,7 @@ struct CarRecord {
     // WAREHOUSE_INTAKE
     std::string warehouseLocation; // e.g. "WH-A1"
     std::string receivedBy;        // staff name / ID
+    std::string supplierId;        // e.g. "SUP-197588"
 
     // QUALITY_CHECK
     std::string inspectorId;       // e.g. "QC-007"
@@ -38,6 +40,7 @@ struct CarRecord {
 
     // CUSTOMER_SALE
     std::string buyerId;           // e.g. "CUST-88201"
+    std::string retailerId;        // e.g. "RTL-91428"
     double      salePrice = 0.0;   // MYR
     std::string warrantyExpiry;    // ISO date string
 

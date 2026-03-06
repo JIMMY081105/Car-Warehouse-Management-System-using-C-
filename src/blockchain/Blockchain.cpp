@@ -245,9 +245,12 @@ bool Blockchain::saveBlockchain(const std::string& path) const {
             << std::quoted(r.transportMode) << '\t'
             << std::quoted(r.buyerId) << '\t'
             << r.salePrice << '\t'
-            << std::quoted(r.warrantyExpiry) << '\n';
-    }
+            << std::quoted(r.warrantyExpiry)
+            << '\t' << std::quoted(r.manufacturerId)
+            << '\t' << std::quoted(r.supplierId)
+            << '\t' << std::quoted(r.retailerId) << '\n';
 
+    }
     if (!out.good()) {
         auditLog_.log(AuditAction::PERSISTENCE_IO,
                       "saveBlockchain failed while writing file " + path);
@@ -334,7 +337,10 @@ bool Blockchain::loadBlockchain(const std::string& path) {
                   >> std::quoted(record.transportMode)
                   >> std::quoted(record.buyerId)
                   >> record.salePrice
-                  >> std::quoted(record.warrantyExpiry))) {
+                  >> std::quoted(record.warrantyExpiry)
+                  >> std::quoted(record.manufacturerId)
+                  >> std::quoted(record.supplierId)
+                  >> std::quoted(record.retailerId))) {
             std::ostringstream detail;
             detail << "loadBlockchain failed: parse error at line " << lineNo;
             auditLog_.log(AuditAction::PERSISTENCE_IO, detail.str());

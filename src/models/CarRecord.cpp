@@ -30,13 +30,15 @@ std::string CarRecord::serialize() const {
         << "|model=" << escapeField(model)
         << "|color=" << escapeField(color)
         << "|productionYear=" << productionYear
-        << "|stage=" << escapeField(stageToString(stage));
+        << "|stage=" << escapeField(stageToString(stage))
+        << "|manufacturerId=" << escapeField(manufacturerId);
 
     // Stage-specific fields — include all so that the hash is deterministic
     // regardless of which fields happen to be empty.
     out << "|factoryLocation=" << escapeField(factoryLocation)
         << "|warehouseLocation=" << escapeField(warehouseLocation)
         << "|receivedBy=" << escapeField(receivedBy)
+        << "|supplierId=" << escapeField(supplierId)
         << "|inspectorId=" << escapeField(inspectorId)
         << "|passed=" << (passed ? "true" : "false")
         << "|qcNotes=" << escapeField(qcNotes)
@@ -44,6 +46,7 @@ std::string CarRecord::serialize() const {
         << "|destination=" << escapeField(destination)
         << "|transportMode=" << escapeField(transportMode)
         << "|buyerId=" << escapeField(buyerId)
+        << "|retailerId=" << escapeField(retailerId)
         << "|salePrice=" << salePrice
         << "|warrantyExpiry=" << escapeField(warrantyExpiry);
 

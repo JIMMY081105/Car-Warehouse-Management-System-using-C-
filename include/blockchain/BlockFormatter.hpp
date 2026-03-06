@@ -31,6 +31,7 @@ inline std::string formatBlockForDisplay(const Block& block) {
     out << "Timestamp    : " << block.getTimestamp() << '\n';
     out << "Nonce        : " << block.getNonce() << '\n';
     out << "VIN          : " << record.vin << '\n';
+    out << "Mfr. ID      : " << record.manufacturerId << '\n';
     out << "Vehicle      : " << record.manufacturer << ' ' << record.model
         << " (" << record.color << ", " << record.productionYear << ")\n";
 
@@ -42,6 +43,7 @@ inline std::string formatBlockForDisplay(const Block& block) {
         case BlockStage::WAREHOUSE_INTAKE:
             out << "  - Warehouse Location: " << record.warehouseLocation << '\n';
             out << "  - Received By       : " << record.receivedBy << '\n';
+            out << "  - Supplier ID       : " << record.supplierId << '\n';
             break;
         case BlockStage::QUALITY_CHECK:
             out << "  - Inspector ID      : " << record.inspectorId << '\n';
@@ -55,6 +57,7 @@ inline std::string formatBlockForDisplay(const Block& block) {
             break;
         case BlockStage::CUSTOMER_SALE:
             out << "  - Buyer ID          : " << record.buyerId << '\n';
+            out << "  - Retailer ID       : " << record.retailerId << '\n';
             out << "  - Sale Price        : MYR " << std::fixed
                 << std::setprecision(2) << record.salePrice << '\n';
             out << "  - Warranty Expiry   : " << record.warrantyExpiry << '\n';

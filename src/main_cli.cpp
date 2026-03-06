@@ -66,12 +66,14 @@ void loadDemoData(cw1::Blockchain& chain) {
         r.vin = "VIN1001"; r.manufacturer = "Perodua"; r.model = "Axia";
         r.color = "Silver"; r.productionYear = 2024;
 
+        r.manufacturerId = "MFR-2522";
         r.stage = cw1::BlockStage::PRODUCTION;
         r.factoryLocation = "Shah Alam Plant";
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
         r.warehouseLocation = "WH-A1"; r.receivedBy = "Ahmad bin Ismail";
+        r.supplierId = "SUP-197588";
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::QUALITY_CHECK;
@@ -84,6 +86,7 @@ void loadDemoData(cw1::Blockchain& chain) {
 
         r.stage = cw1::BlockStage::CUSTOMER_SALE;
         r.buyerId = "CUST-10201"; r.salePrice = 38000.00; r.warrantyExpiry = "2029-03-01";
+        r.retailerId = "RTL-91428";
         chain.addBlock(r);
     }
 
@@ -94,12 +97,14 @@ void loadDemoData(cw1::Blockchain& chain) {
         r.vin = "VIN1002"; r.manufacturer = "Toyota"; r.model = "Vios";
         r.color = "White"; r.productionYear = 2023;
 
+        r.manufacturerId = "MFR-3011";
         r.stage = cw1::BlockStage::PRODUCTION;
         r.factoryLocation = "Toyota Bukit Raja";
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
         r.warehouseLocation = "WH-B2"; r.receivedBy = "Lim Wei Jie";
+        r.supplierId = "SUP-203344";
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::QUALITY_CHECK;
@@ -118,12 +123,14 @@ void loadDemoData(cw1::Blockchain& chain) {
         r.vin = "VIN1003"; r.manufacturer = "Honda"; r.model = "City";
         r.color = "Blue"; r.productionYear = 2025;
 
+        r.manufacturerId = "MFR-4500";
         r.stage = cw1::BlockStage::PRODUCTION;
         r.factoryLocation = "Honda Pegoh, Melaka";
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
         r.warehouseLocation = "WH-C3"; r.receivedBy = "Raj Kumar";
+        r.supplierId = "SUP-310021";
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::QUALITY_CHECK;
@@ -138,12 +145,14 @@ void loadDemoData(cw1::Blockchain& chain) {
         r.vin = "VIN1004"; r.manufacturer = "Proton"; r.model = "X50";
         r.color = "Red"; r.productionYear = 2025;
 
+        r.manufacturerId = "MFR-1088";
         r.stage = cw1::BlockStage::PRODUCTION;
         r.factoryLocation = "Proton Tanjung Malim";
         chain.addBlock(r);
 
         r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
         r.warehouseLocation = "WH-D4"; r.receivedBy = "Nurul Aina";
+        r.supplierId = "SUP-405512";
         chain.addBlock(r);
     }
 
@@ -154,6 +163,7 @@ void loadDemoData(cw1::Blockchain& chain) {
         r.vin = "VIN1005"; r.manufacturer = "Perodua"; r.model = "Myvi";
         r.color = "Black"; r.productionYear = 2025;
 
+        r.manufacturerId = "MFR-2523";
         r.stage = cw1::BlockStage::PRODUCTION;
         r.factoryLocation = "Perodua Rawang";
         chain.addBlock(r);
@@ -239,12 +249,14 @@ void addNewCarStage(cw1::Blockchain& chain) {
     cout << "  4. Dealer Dispatch\n";
     cout << "  5. Customer Sale\n";
 
-    const string choice = prompt("Stage (1-5)");
-    const int stageNum = parseIntOrDefault(choice, 0);
-    if (stageNum < 1 || stageNum > 5) {
-        cout << "  Invalid stage.\n\n";
-        return;
-    }
+    int stageNum;
+    do {
+        const string choice = prompt("Stage (1-5)");
+        stageNum = parseIntOrDefault(choice, 0);
+        if (stageNum < 1 || stageNum > 5) {
+            cout << "  Invalid stage. Please enter a number between 1 and 5.\n";
+        }
+    } while (stageNum < 1 || stageNum > 5);
 
     cw1::CarRecord r;
     r.vin = prompt("VIN");
@@ -252,6 +264,7 @@ void addNewCarStage(cw1::Blockchain& chain) {
     r.model = prompt("Model");
     r.color = prompt("Color");
     r.productionYear = parseIntOrDefault(prompt("Production Year"), 0);
+    r.manufacturerId = prompt("Manufacturer ID");
 
     switch (stageNum) {
         case 1:
@@ -262,6 +275,7 @@ void addNewCarStage(cw1::Blockchain& chain) {
             r.stage = cw1::BlockStage::WAREHOUSE_INTAKE;
             r.warehouseLocation = prompt("Warehouse Location");
             r.receivedBy = prompt("Received By");
+            r.supplierId = prompt("Supplier ID");
             break;
         case 3:
             r.stage = cw1::BlockStage::QUALITY_CHECK;
@@ -278,11 +292,29 @@ void addNewCarStage(cw1::Blockchain& chain) {
         case 5:
             r.stage = cw1::BlockStage::CUSTOMER_SALE;
             r.buyerId = prompt("Buyer ID");
+            r.retailerId = prompt("Retailer ID");
             r.salePrice = parseDoubleOrDefault(prompt("Sale Price (MYR)"), 0.0);
             r.warrantyExpiry = prompt("Warranty Expiry (YYYY-MM-DD)");
             break;
         default:
             break;
+    }
+
+    if (r.vin.empty()) {
+        cout << "  Error: VIN is required.\n\n";
+        return;
+    }
+    if (r.manufacturer.empty()) {
+        cout << "  Error: Manufacturer is required.\n\n";
+        return;
+    }
+    if (r.model.empty()) {
+        cout << "  Error: Model is required.\n\n";
+        return;
+    }
+    if (r.productionYear < 1900 || r.productionYear > 2030) {
+        cout << "  Error: Production year must be between 1900 and 2030.\n\n";
+        return;
     }
 
     const double seconds = cw1::measureSeconds([&]() {
@@ -449,7 +481,8 @@ int main() {
 
     loadDemoData(chain);
 
-    while (true) {
+    string choice;
+    do {
         cout << "  ---- MENU ----\n";
         cout << "  1. View All Cars (summary)\n";
         cout << "  2. View Car Blockchain (by VIN)\n";
@@ -461,20 +494,19 @@ int main() {
         cout << "  8. Tamper Simulation (Debug)\n";
         cout << "  9. Exit\n";
 
-        const string choice = prompt("Select (1-9)");
+        choice = prompt("Select (1-9)");
 
-        if (choice == "1") { viewAllCars(chain); continue; }
-        if (choice == "2") { viewCarByVin(chain); continue; }
-        if (choice == "3") { addNewCarStage(chain); continue; }
-        if (choice == "4") { searchCars(chain); continue; }
-        if (choice == "5") { printGlobalChain(chain); continue; }
-        if (choice == "6") { verifyIntegrity(chain); continue; }
-        if (choice == "7") { viewAuditLog(chain); continue; }
-        if (choice == "8") { simulateTamper(chain); continue; }
-        if (choice == "9") { cout << "\n  Exiting.\n"; break; }
-
-        cout << "  Invalid choice.\n\n";
-    }
+        if (choice == "1") { viewAllCars(chain); }
+        else if (choice == "2") { viewCarByVin(chain); }
+        else if (choice == "3") { addNewCarStage(chain); }
+        else if (choice == "4") { searchCars(chain); }
+        else if (choice == "5") { printGlobalChain(chain); }
+        else if (choice == "6") { verifyIntegrity(chain); }
+        else if (choice == "7") { viewAuditLog(chain); }
+        else if (choice == "8") { simulateTamper(chain); }
+        else if (choice == "9") { cout << "\n  Exiting.\n"; }
+        else { cout << "  Invalid choice.\n\n"; }
+    } while (choice != "9");
 
     return 0;
 }

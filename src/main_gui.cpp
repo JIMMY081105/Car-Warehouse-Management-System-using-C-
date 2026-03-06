@@ -188,6 +188,9 @@ static char   g_formTransport[64]   = {};
 static char   g_formBuyerId[64]     = {};
 static double g_formSalePrice       = 0.0;
 static char   g_formWarranty[32]    = {};
+static char   g_formMfrId[64]       = {};
+static char   g_formSupplierId[64]  = {};
+static char   g_formRetailerId[64]  = {};
 static int    g_auditN              = 20;
 
 // =================================================================
@@ -198,10 +201,12 @@ static void loadDemoData(cw1::Blockchain& chain) {
     { cw1::CarRecord r;
       r.vin="VIN1001"; r.manufacturer="Perodua"; r.model="Axia";
       r.color="Silver"; r.productionYear=2024;
+      r.manufacturerId="MFR-2522";
       r.stage=cw1::BlockStage::PRODUCTION; r.factoryLocation="Shah Alam Plant";
       chain.addBlock(r);
       r.stage=cw1::BlockStage::WAREHOUSE_INTAKE;
       r.warehouseLocation="WH-A1"; r.receivedBy="Ahmad bin Ismail";
+      r.supplierId="SUP-197588";
       chain.addBlock(r);
       r.stage=cw1::BlockStage::QUALITY_CHECK;
       r.inspectorId="QC-001"; r.passed=true; r.qcNotes="All systems nominal";
@@ -211,14 +216,17 @@ static void loadDemoData(cw1::Blockchain& chain) {
       chain.addBlock(r);
       r.stage=cw1::BlockStage::CUSTOMER_SALE;
       r.buyerId="CUST-10201"; r.salePrice=38000.00; r.warrantyExpiry="2029-03-01";
+      r.retailerId="RTL-91428";
       chain.addBlock(r); }
     { cw1::CarRecord r;
       r.vin="VIN1002"; r.manufacturer="Toyota"; r.model="Vios";
       r.color="White"; r.productionYear=2023;
+      r.manufacturerId="MFR-3011";
       r.stage=cw1::BlockStage::PRODUCTION; r.factoryLocation="Toyota Bukit Raja";
       chain.addBlock(r);
       r.stage=cw1::BlockStage::WAREHOUSE_INTAKE;
       r.warehouseLocation="WH-B2"; r.receivedBy="Lim Wei Jie";
+      r.supplierId="SUP-203344";
       chain.addBlock(r);
       r.stage=cw1::BlockStage::QUALITY_CHECK;
       r.inspectorId="QC-003"; r.passed=true; r.qcNotes="Minor paint scratch - touched up";
@@ -229,10 +237,12 @@ static void loadDemoData(cw1::Blockchain& chain) {
     { cw1::CarRecord r;
       r.vin="VIN1003"; r.manufacturer="Honda"; r.model="City";
       r.color="Blue"; r.productionYear=2025;
+      r.manufacturerId="MFR-4500";
       r.stage=cw1::BlockStage::PRODUCTION; r.factoryLocation="Honda Pegoh, Melaka";
       chain.addBlock(r);
       r.stage=cw1::BlockStage::WAREHOUSE_INTAKE;
       r.warehouseLocation="WH-C3"; r.receivedBy="Raj Kumar";
+      r.supplierId="SUP-310021";
       chain.addBlock(r);
       r.stage=cw1::BlockStage::QUALITY_CHECK;
       r.inspectorId="QC-007"; r.passed=false;
@@ -241,14 +251,17 @@ static void loadDemoData(cw1::Blockchain& chain) {
     { cw1::CarRecord r;
       r.vin="VIN1004"; r.manufacturer="Proton"; r.model="X50";
       r.color="Red"; r.productionYear=2025;
+      r.manufacturerId="MFR-1088";
       r.stage=cw1::BlockStage::PRODUCTION; r.factoryLocation="Proton Tanjung Malim";
       chain.addBlock(r);
       r.stage=cw1::BlockStage::WAREHOUSE_INTAKE;
       r.warehouseLocation="WH-D4"; r.receivedBy="Nurul Aina";
+      r.supplierId="SUP-405512";
       chain.addBlock(r); }
     { cw1::CarRecord r;
       r.vin="VIN1005"; r.manufacturer="Perodua"; r.model="Myvi";
       r.color="Black"; r.productionYear=2025;
+      r.manufacturerId="MFR-2523";
       r.stage=cw1::BlockStage::PRODUCTION; r.factoryLocation="Perodua Rawang";
       chain.addBlock(r); }
 }
@@ -695,8 +708,11 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(120);
     ImGui::InputInt("##add_year", &g_formYear);
+    if (g_formYear < 1900) g_formYear = 1900;
 
+    if (g_formYear > 2030) g_formYear = 2030;
     ImGui::Spacing(); ImGui::Spacing();
+    LabelText("Manufacturer ID", g_formMfrId, sizeof(g_formMfrId));
     ImGui::TextColored(COL_MUTED, "STAGE-SPECIFIC FIELDS");
     ImGui::Separator(); ImGui::Spacing();
 
@@ -707,6 +723,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     case 1: // WAREHOUSE_INTAKE
         LabelText("Warehouse",  g_formWarehouse,   sizeof(g_formWarehouse));
         LabelText("Received By",g_formReceivedBy,  sizeof(g_formReceivedBy));
+        LabelText("Supplier ID", g_formSupplierId, sizeof(g_formSupplierId));
         break;
     case 2: // QUALITY_CHECK
         LabelText("Inspector ID", g_formInspector, sizeof(g_formInspector));
@@ -722,6 +739,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         break;
     case 4: // CUSTOMER_SALE
         LabelText("Buyer ID",     g_formBuyerId, sizeof(g_formBuyerId));
+        LabelText("Retailer ID",  g_formRetailerId, sizeof(g_formRetailerId));
         ImGui::TextColored(COL_MUTED, "%-18s", "Sale Price (MYR)");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(200);
@@ -738,7 +756,16 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     bool submit = ImGui::Button("  Add Block  ", ImVec2(150, 36));
     ImGui::PopStyleColor(3);
 
-    if (submit) {
+    bool canSubmit = (g_formVin[0] != '\0') &&
+                     (g_formMfr[0] != '\0') &&
+                     (g_formModel[0] != '\0');
+
+    if (!canSubmit) {
+        ImGui::SameLine();
+        ImGui::TextColored(COL_RED, "  VIN, Manufacturer, and Model are required.");
+    }
+
+    if (submit && canSubmit) {
         cw1::CarRecord r;
         r.vin            = g_formVin;
         r.manufacturer   = g_formMfr;
@@ -746,6 +773,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         r.color          = g_formColor;
         r.productionYear = g_formYear;
         r.stage          = static_cast<cw1::BlockStage>(g_formStage);
+        r.manufacturerId = g_formMfrId;
 
         switch (g_formStage) {
         case 0:
@@ -754,6 +782,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         case 1:
             r.warehouseLocation = g_formWarehouse;
             r.receivedBy        = g_formReceivedBy;
+            r.supplierId        = g_formSupplierId;
             break;
         case 2:
             r.inspectorId = g_formInspector;
@@ -767,6 +796,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
             break;
         case 4:
             r.buyerId        = g_formBuyerId;
+            r.retailerId     = g_formRetailerId;
             r.salePrice      = g_formSalePrice;
             r.warrantyExpiry = g_formWarranty;
             break;
@@ -791,6 +821,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         g_formDealerId[0]= '\0'; g_formDestination[0] = '\0';
         g_formTransport[0]= '\0'; g_formBuyerId[0]    = '\0';
         g_formSalePrice = 0.0;   g_formWarranty[0]    = '\0';
+        g_formMfrId[0] = '\0'; g_formSupplierId[0] = '\0'; g_formRetailerId[0] = '\0';
     }
 
     if (g_lastAddBlockSeconds > 0.0) {
