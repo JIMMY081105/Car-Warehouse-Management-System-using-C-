@@ -49,6 +49,11 @@ static const ImVec4 COL_YELLOW     = HexColor(0xd29922);  // warning / QC
 static const ImVec4 COL_PURPLE     = HexColor(0x8957e5);  // hash values
 static const ImVec4 COL_ORANGE     = HexColor(0xdb6d28);  // nonce / dispatch
 
+// Typography slots (loaded in main()).
+static ImFont* g_fontBody = nullptr;
+static ImFont* g_fontSection = nullptr;
+static ImFont* g_fontTitle = nullptr;
+
 // =================================================================
 //  SECTION 2: GitHub Dark theme
 // =================================================================
@@ -305,6 +310,16 @@ static int ExtractFailedBlockIndex(const std::string& message) {
     return static_cast<int>(value);
 }
 
+static void DrawSectionHeading(const char* text) {
+    if (g_fontSection != nullptr) {
+        ImGui::PushFont(g_fontSection);
+    }
+    ImGui::TextColored(COL_ACCENT, "%s", text);
+    if (g_fontSection != nullptr) {
+        ImGui::PopFont();
+    }
+}
+
 // =================================================================
 //  SECTION 6: Header bar
 // =================================================================
@@ -312,12 +327,18 @@ static int ExtractFailedBlockIndex(const std::string& message) {
 static void RenderHeader(const cw1::Blockchain& chain) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16.0f, 12.0f));
-    ImGui::BeginChild("##header", ImVec2(-1.0f, 54.0f), true);
+    ImGui::BeginChild("##header", ImVec2(-1.0f, 66.0f), true);
 
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.0f);
     ImGui::TextColored(COL_ACCENT, "%s", "* ");
     ImGui::SameLine();
+    if (g_fontTitle != nullptr) {
+        ImGui::PushFont(g_fontTitle);
+    }
     ImGui::Text("Car Warehouse Blockchain");
+    if (g_fontTitle != nullptr) {
+        ImGui::PopFont();
+    }
 
     float statsWidth = 340.0f;
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - statsWidth
@@ -496,6 +517,10 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
     const auto& blocks = chain.getChain();
     size_t totalBlocks = chain.totalBlocks();
     size_t totalCars   = chain.getAllVins().size();
+    DrawSectionHeading("Dashboard");
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
 
     // ── Stat cards ────────────────────────────────────────────────
     if (ImGui::BeginTable("##stats", 4,
@@ -671,7 +696,7 @@ static const char* k_stageNames[] = {
 };
 
 static void RenderAddBlock(cw1::Blockchain& chain) {
-    ImGui::TextColored(COL_ACCENT, "Add Block to Chain");
+    DrawSectionHeading("Add Block to Chain");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
     ImGui::TextColored(COL_MUTED, "COMMON FIELDS");
@@ -838,7 +863,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
 static void RenderGlobalChain(const cw1::Blockchain& chain) {
     const auto& blocks = chain.getChain();
 
-    ImGui::TextColored(COL_ACCENT, "Global Chain");
+    DrawSectionHeading("Global Chain");
     ImGui::SameLine();
     ImGui::TextColored(COL_MUTED, " (%zu block(s))", blocks.size());
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -962,7 +987,7 @@ static void RenderGlobalChain(const cw1::Blockchain& chain) {
 // =================================================================
 
 static void RenderAuditLog(const cw1::Blockchain& chain) {
-    ImGui::TextColored(COL_ACCENT, "Audit Log");
+    DrawSectionHeading("Audit Log");
     ImGui::SameLine();
     ImGui::TextColored(COL_MUTED, " (%zu total event(s))", chain.getAuditLog().size());
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -1038,7 +1063,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
 // =================================================================
 
 static void RenderIntegrity(cw1::Blockchain& chain) {
-    ImGui::TextColored(COL_ACCENT, "Blockchain Integrity Verification");
+    DrawSectionHeading("Blockchain Integrity Verification");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
     // Primary integrity action with explicit runtime measurement.
@@ -1298,14 +1323,51 @@ int main() {
 
     // ── 3. Font (fallback to default if file absent) ──────────────
     {
-        const char* fontPath = "fonts/JetBrainsMono-Regular.ttf";
-        FILE* fp = fopen(fontPath, "rb");
-        if (fp) {
+        auto TryLoadFont = [&](const char* path, float sizePx) -> ImFont* {
+            FILE* fp = fopen(path, "rb");
+            if (fp == nullptr) {
+                return nullptr;
+            }
             fclose(fp);
-            io.Fonts->AddFontFromFileTTF(fontPath, 16.0f);
-        } else {
-            io.Fonts->AddFontDefault();
+            return io.Fonts->AddFontFromFileTTF(path, sizePx);
+        };
+
+#ifdef _WIN32
+        g_fontBody = TryLoadFont("C:/Windows/Fonts/segoeui.ttf", 16.0f);
+        g_fontSection = TryLoadFont("C:/Windows/Fonts/segoeuib.ttf", 22.0f);
+        g_fontTitle = TryLoadFont("C:/Windows/Fonts/segoeuib.ttf", 26.0f);
+#endif
+
+        if (g_fontBody == nullptr) {
+            g_fontBody = TryLoadFont("fonts/SegoeUI.ttf", 16.0f);
         }
+        if (g_fontSection == nullptr) {
+            g_fontSection = TryLoadFont("fonts/SegoeUI-Bold.ttf", 22.0f);
+        }
+        if (g_fontTitle == nullptr) {
+            g_fontTitle = TryLoadFont("fonts/SegoeUI-Bold.ttf", 26.0f);
+        }
+
+        if (g_fontBody == nullptr) {
+            g_fontBody = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 16.0f);
+        }
+        if (g_fontSection == nullptr) {
+            g_fontSection = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 22.0f);
+        }
+        if (g_fontTitle == nullptr) {
+            g_fontTitle = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 26.0f);
+        }
+
+        if (g_fontBody == nullptr) {
+            g_fontBody = io.Fonts->AddFontDefault();
+        }
+        if (g_fontSection == nullptr) {
+            g_fontSection = g_fontBody;
+        }
+        if (g_fontTitle == nullptr) {
+            g_fontTitle = g_fontSection;
+        }
+        io.FontDefault = g_fontBody;
     }
 
     // ── 4. Blockchain + demo data ─────────────────────────────────
