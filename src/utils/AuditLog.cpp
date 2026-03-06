@@ -23,6 +23,7 @@ std::string actionToString(AuditAction action) {
         case AuditAction::SEARCH_PERFORMED:  return "SEARCH_PERFORMED";
         case AuditAction::CHAIN_VIEWED:      return "CHAIN_VIEWED";
         case AuditAction::TAMPER_SIMULATED:  return "TAMPER_SIMULATED";
+        case AuditAction::PERSISTENCE_IO:    return "PERSISTENCE_IO";
         default:                             return "UNKNOWN";
     }
 }

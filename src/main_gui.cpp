@@ -8,6 +8,7 @@
 #include "imgui_impl_opengl3.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <iomanip>
@@ -138,6 +139,9 @@ static double      g_lastVerifySeconds = 0.0;
 static double      g_lastAddBlockSeconds = 0.0;
 static double      g_lastSearchSeconds = 0.0;
 static int         g_tamperIndex = -1;
+static double      g_lastSaveSeconds = 0.0;
+static double      g_lastLoadSeconds = 0.0;
+static char        g_persistPath[260] = "cw1_blockchain_data.txt";
 
 // Sidebar search cache: avoids per-frame search calls and audit-log spam.
 static std::string              g_cachedSearchQuery;
@@ -270,6 +274,22 @@ static float StageProgress(cw1::BlockStage stage) {
 
 static std::string Truncate(const std::string& s, size_t maxLen) {
     return (s.size() <= maxLen) ? s : s.substr(0, maxLen) + "...";
+}
+
+static int ExtractFailedBlockIndex(const std::string& message) {
+    const std::string needle = "block index ";
+    const std::size_t pos = message.find(needle);
+    if (pos == std::string::npos) {
+        return -1;
+    }
+
+    const char* start = message.c_str() + pos + needle.size();
+    char* end = nullptr;
+    const long value = std::strtol(start, &end, 10);
+    if (end == start || value < 0) {
+        return -1;
+    }
+    return static_cast<int>(value);
 }
 
 // =================================================================
@@ -792,6 +812,51 @@ static void RenderGlobalChain(const cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, " (%zu block(s))", blocks.size());
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
+    ImGui::TextColored(COL_MUTED, "VISUAL LINKAGE");
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
+    ImGui::BeginChild("##global_visual_link", ImVec2(-1.0f, 320.0f), true);
+    ImGui::PopStyleColor();
+
+    if (blocks.empty()) {
+        ImGui::TextColored(COL_MUTED, "No blocks in the chain.");
+    } else {
+        for (size_t i = 0; i < blocks.size(); ++i) {
+            const cw1::Block& b = blocks[i];
+            const cw1::CarRecord& rec = b.getRecord();
+
+            char cardId[32];
+            std::snprintf(cardId, sizeof(cardId), "##visual_card_%zu", i);
+
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_CARD);
+            ImGui::BeginChild(cardId, ImVec2(-1.0f, 84.0f), true,
+                        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            ImGui::PopStyleColor();
+
+            ImGui::TextColored(COL_ACCENT, "Block #%zu", b.getIndex());
+            ImGui::TextColored(COL_PURPLE, "Hash: %s",
+                               Truncate(b.getCurrentHash(), 8).c_str());
+            ImGui::TextColored(COL_PURPLE, "Prev: %s",
+                               Truncate(b.getPreviousHash(), 8).c_str());
+            ImGui::TextColored(StageColor(rec.stage), "Stage: %s",
+                               cw1::stageToString(rec.stage).c_str());
+            ImGui::TextColored(COL_ACCENT, "VIN: %s", rec.vin.c_str());
+
+            ImGui::EndChild();
+
+            if (i + 1 < blocks.size()) {
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f);
+                ImGui::TextColored(COL_MUTED, "|");
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f);
+                ImGui::TextColored(COL_MUTED, "v");
+            }
+        }
+    }
+
+    ImGui::EndChild();
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "TABULAR CHAIN DATA");
+    ImGui::Spacing();
+
     ImGuiTableFlags tf = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                          ImGuiTableFlags_ScrollY  | ImGuiTableFlags_SizingStretchProp;
     if (ImGui::BeginTable("##global", 8, tf, ImVec2(-1, -1))) {
@@ -892,6 +957,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         case cw1::AuditAction::SEARCH_PERFORMED: return COL_ACCENT;
         case cw1::AuditAction::CHAIN_VIEWED:     return COL_PURPLE;
         case cw1::AuditAction::TAMPER_SIMULATED: return COL_RED;
+        case cw1::AuditAction::PERSISTENCE_IO:   return COL_ORANGE;
         default:                                  return COL_TEXT;
         }
     };
@@ -902,6 +968,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         case cw1::AuditAction::SEARCH_PERFORMED: return "SEARCH_PERFORMED";
         case cw1::AuditAction::CHAIN_VIEWED:     return "CHAIN_VIEWED";
         case cw1::AuditAction::TAMPER_SIMULATED: return "TAMPER_SIMULATED";
+        case cw1::AuditAction::PERSISTENCE_IO:   return "PERSISTENCE_IO";
         default:                                  return "UNKNOWN";
         }
     };
@@ -940,32 +1007,33 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
 // =================================================================
 
 static void RenderIntegrity(cw1::Blockchain& chain) {
-    ImGui::TextColored(COL_ACCENT, "Blockchain Integrity");
+    ImGui::TextColored(COL_ACCENT, "Blockchain Integrity Verification");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
+    // Primary integrity action with explicit runtime measurement.
     ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
-    if (ImGui::Button("  Run Verification  ", ImVec2(200, 36))) {
-        g_lastVerifySeconds = cw1::measureSeconds([&]() {
-            g_lastVerify = chain.verifyIntegrity();
-        });
+    if (ImGui::Button("Run Verification Again##verify", ImVec2(230.0f, 36.0f))) {
+        cw1::OperationTimer timer;
+        g_lastVerify = chain.verifyIntegrity();
+        g_lastVerifySeconds = timer.elapsedSeconds();
         g_verifyDone = true;
-        PushToast((g_lastVerify.ok ? "Chain VERIFIED OK" : "Chain TAMPERED!") +
-                  std::string(" | Operation took: ") +
-                  cw1::formatSeconds(g_lastVerifySeconds) + " s",
+        PushToast(g_lastVerify.ok ? "Integrity check passed."
+                                  : "Integrity check failed.",
                   g_lastVerify.ok ? COL_GREEN_BR : COL_RED);
     }
     ImGui::PopStyleColor(3);
 
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(120);
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "Debug / Simulation Feature");
+    ImGui::SetNextItemWidth(140.0f);
     ImGui::InputInt("Tamper block index##tamper", &g_tamperIndex);
     ImGui::SameLine();
     ImGui::PushStyleColor(ImGuiCol_Button,        COL_RED);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HexColor(0xe5534b));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0xb62324));
-    if (ImGui::Button("Simulate Tamper", ImVec2(180, 36))) {
+    if (ImGui::Button("Tamper Block##payload_tamper", ImVec2(160.0f, 34.0f))) {
         const std::size_t total = chain.totalBlocks();
         if (total == 0) {
             PushToast("Tamper failed: chain is empty.", COL_RED);
@@ -977,75 +1045,134 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
                 if (requested < total) {
                     target = requested;
                 } else {
-                    PushToast("Tamper failed: index out of range.", COL_RED);
                     validIndex = false;
+                    PushToast("Tamper failed: index out of range.", COL_RED);
                 }
             }
 
             if (validIndex) {
-                std::string tamperMsg;
-                bool success = false;
-                const double tamperSeconds = cw1::measureSeconds([&]() {
-                    success = chain.tamperBlockHash(target, "", tamperMsg);
-                });
+                cw1::OperationTimer timer;
+                chain.tamperBlock(target);
+                const double tamperSeconds = timer.elapsedSeconds();
 
-                if (success) {
-                    PushToast(tamperMsg + " | Operation took: " +
-                              cw1::formatSeconds(tamperSeconds) + " s",
-                              COL_RED);
-                } else {
-                    PushToast(tamperMsg, COL_RED);
-                }
+                std::ostringstream msg;
+                msg << "Debug / Simulation Feature: payload tampered at block #"
+                    << target << " | Operation took: "
+                    << cw1::formatSeconds(tamperSeconds) << " s";
+                PushToast(msg.str(), COL_RED);
             }
         }
     }
     ImGui::PopStyleColor(3);
 
-    ImGui::Spacing(); ImGui::Spacing();
+    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "Persistence");
+    ImGui::SetNextItemWidth(420.0f);
+    ImGui::InputText("File path##persist_path", g_persistPath, sizeof(g_persistPath));
 
+    ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
+    if (ImGui::Button("Save Blockchain##save_chain", ImVec2(170.0f, 34.0f))) {
+        if (g_persistPath[0] == '\0') {
+            PushToast("Save failed: file path is empty.", COL_RED);
+        } else {
+            cw1::OperationTimer timer;
+            const bool ok = chain.saveBlockchain(g_persistPath);
+            g_lastSaveSeconds = timer.elapsedSeconds();
+            PushToast(ok ? "Save Blockchain: success." : "Save Blockchain: failed.",
+                      ok ? COL_GREEN_BR : COL_RED);
+        }
+    }
+    ImGui::PopStyleColor(3);
+
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
+    if (ImGui::Button("Load Blockchain##load_chain", ImVec2(170.0f, 34.0f))) {
+        if (g_persistPath[0] == '\0') {
+            PushToast("Load failed: file path is empty.", COL_RED);
+        } else {
+            cw1::OperationTimer timer;
+            const bool ok = chain.loadBlockchain(g_persistPath);
+            g_lastLoadSeconds = timer.elapsedSeconds();
+
+            if (ok) {
+                cw1::OperationTimer verifyTimer;
+                g_lastVerify = chain.verifyIntegrity();
+                g_lastVerifySeconds = verifyTimer.elapsedSeconds();
+                g_verifyDone = true;
+
+                if (!g_selectedVin.empty() && !chain.hasVin(g_selectedVin)) {
+                    g_selectedVin.clear();
+                    g_view = View::DASHBOARD;
+                }
+
+                PushToast("Load Blockchain: success.", COL_GREEN_BR);
+            } else {
+                PushToast("Load Blockchain: failed.", COL_RED);
+            }
+        }
+    }
+    ImGui::PopStyleColor(3);
+
+    if (g_lastSaveSeconds > 0.0) {
+        ImGui::TextColored(COL_VERY_MUTED, "Last save operation took: %s s",
+                           cw1::formatSeconds(g_lastSaveSeconds).c_str());
+    }
+    if (g_lastLoadSeconds > 0.0) {
+        ImGui::TextColored(COL_VERY_MUTED, "Last load operation took: %s s",
+                           cw1::formatSeconds(g_lastLoadSeconds).c_str());
+    }
+
+    ImGui::Spacing(); ImGui::Spacing();
     if (!g_verifyDone) {
         ImGui::TextColored(COL_MUTED, "Press Run Verification to check the chain.");
         return;
     }
 
-    // Large PASS / FAIL banner
-    ImVec4 bannerCol  = g_lastVerify.ok ? COL_GREEN : COL_RED;
-    const char* bannerTxt = g_lastVerify.ok ? "VERIFIED" : "TAMPERED";
+    const std::size_t blocksChecked = chain.totalBlocks();
 
+    // Large PASS / FAIL banner
+    const ImVec4 bannerCol = g_lastVerify.ok ? COL_GREEN : COL_RED;
+    const char* bannerTxt = g_lastVerify.ok ? "BLOCKCHAIN VERIFIED" : "INTEGRITY FAILURE";
     ImGui::PushStyleColor(ImGuiCol_ChildBg, bannerCol);
     ImGui::BeginChild("##intbanner", ImVec2(-1, 80), true);
-    ImGui::SetCursorPos(ImVec2(20, 18));
-    ImGui::SetWindowFontScale(2.0f);
+    ImGui::SetCursorPos(ImVec2(20.0f, 18.0f));
+    ImGui::SetWindowFontScale(1.7f);
     ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", bannerTxt);
     ImGui::SetWindowFontScale(1.0f);
     ImGui::EndChild();
     ImGui::PopStyleColor();
 
     ImGui::Spacing();
-    ImGui::TextColored(COL_MUTED, "Result: ");
+    ImGui::TextColored(COL_MUTED, "Integrity Status:");
+    ImGui::SameLine();
+    ImGui::TextColored(g_lastVerify.ok ? COL_GREEN_BR : COL_RED,
+                       "%s", g_lastVerify.ok ? "Verified [OK]" : "FAILED");
+
+    ImGui::TextColored(COL_MUTED, "Blocks Checked:");
+    ImGui::SameLine();
+    ImGui::TextColored(COL_TEXT, "%zu", blocksChecked);
+
+    if (!g_lastVerify.ok) {
+        const int failedIndex = ExtractFailedBlockIndex(g_lastVerify.message);
+        if (failedIndex >= 0) {
+            ImGui::TextColored(COL_MUTED, "Error Block:");
+            ImGui::SameLine();
+            ImGui::TextColored(COL_RED, "#%d", failedIndex);
+        }
+    }
+
+    ImGui::TextColored(COL_MUTED, "Verification Time:");
+    ImGui::SameLine();
+    ImGui::TextColored(COL_TEXT, "%s seconds",
+                       cw1::formatSeconds(g_lastVerifySeconds).c_str());
+
+    ImGui::TextColored(COL_MUTED, "Details:");
     ImGui::SameLine();
     ImGui::TextWrapped("%s", g_lastVerify.message.c_str());
-
-    if (g_lastVerifySeconds > 0.0) {
-        ImGui::TextColored(COL_VERY_MUTED, "Last verification operation took: %s s",
-                           cw1::formatSeconds(g_lastVerifySeconds).c_str());
-    }
-
-    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-
-    size_t total = chain.totalBlocks();
-    size_t cars  = chain.getAllVins().size();
-
-    ImGui::TextColored(COL_MUTED, "Total blocks:    ");
-    ImGui::SameLine(); ImGui::TextColored(COL_TEXT, "%zu", total);
-
-    ImGui::TextColored(COL_MUTED, "Unique vehicles: ");
-    ImGui::SameLine(); ImGui::TextColored(COL_TEXT, "%zu", cars);
-
-    if (total > 0) {
-        ImGui::Spacing();
-        ImGui::TextColored(COL_MUTED, "Block range: 0 .. %zu", total - 1);
-    }
 }
 
 // =================================================================

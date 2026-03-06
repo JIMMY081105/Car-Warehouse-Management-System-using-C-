@@ -425,17 +425,14 @@ void simulateTamper(cw1::Blockchain& chain) {
         index = static_cast<std::size_t>(parsed);
     }
 
-    const string forgedHash = prompt("Optional forged hash (blank = auto-generate)");
-
-    bool success = false;
-    string message;
     const double seconds = cw1::measureSeconds([&]() {
-        success = chain.tamperBlockHash(index, forgedHash, message);
+        chain.tamperBlock(index);
     });
 
     cout << '\n';
-    cout << "  " << (success ? "Tamper simulation applied." : "Tamper simulation failed.") << '\n';
-    cout << "  " << message << '\n';
+    cout << "  Debug / Simulation Feature executed.\n";
+    cout << "  Payload for block #" << index
+         << " was modified without recomputing hashes.\n";
     printOperationDuration(seconds);
     cout << '\n';
 }

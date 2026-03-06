@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <fstream>
+#include <iomanip>
 #include <sstream>
 #include <stdexcept>
 
@@ -156,6 +158,23 @@ ValidationResult Blockchain::verifyIntegrity() const {
     return result;
 }
 
+void Blockchain::tamperBlock(std::size_t index) {
+    if (index >= chain_.size()) {
+        std::ostringstream detail;
+        detail << "Debug / Simulation Feature: tamperBlock(" << index
+               << ") failed (index out of range).";
+        auditLog_.log(AuditAction::TAMPER_SIMULATED, detail.str());
+        return;
+    }
+
+    chain_[index].debugTamperPayloadForSimulation("Tampered Location");
+
+    std::ostringstream detail;
+    detail << "Debug / Simulation Feature: payload tampered for block #"
+           << index << " (destination set to \"Tampered Location\").";
+    auditLog_.log(AuditAction::TAMPER_SIMULATED, detail.str());
+}
+
 bool Blockchain::tamperBlockHash(std::size_t index,
                                  const std::string& forgedHash,
                                  std::string& message) {
@@ -188,6 +207,178 @@ bool Blockchain::tamperBlockHash(std::size_t index,
        << ". Stored currentHash overridden for integrity-failure demo.";
     message = ok.str();
     auditLog_.log(AuditAction::TAMPER_SIMULATED, message);
+    return true;
+}
+
+bool Blockchain::saveBlockchain(const std::string& path) const {
+    std::ofstream out(path);
+    if (!out) {
+        auditLog_.log(AuditAction::PERSISTENCE_IO,
+                      "saveBlockchain failed: cannot open file " + path);
+        return false;
+    }
+
+    out << "CW1_BLOCKCHAIN_V1\n";
+    out << chain_.size() << '\n';
+
+    for (const auto& block : chain_) {
+        const CarRecord& r = block.getRecord();
+        out << block.getIndex() << '\t'
+            << std::quoted(block.getPreviousHash()) << '\t'
+            << std::quoted(block.getCurrentHash()) << '\t'
+            << std::quoted(block.getTimestamp()) << '\t'
+            << block.getNonce() << '\t'
+            << std::quoted(r.vin) << '\t'
+            << std::quoted(r.manufacturer) << '\t'
+            << std::quoted(r.model) << '\t'
+            << std::quoted(r.color) << '\t'
+            << r.productionYear << '\t'
+            << static_cast<int>(r.stage) << '\t'
+            << std::quoted(r.factoryLocation) << '\t'
+            << std::quoted(r.warehouseLocation) << '\t'
+            << std::quoted(r.receivedBy) << '\t'
+            << std::quoted(r.inspectorId) << '\t'
+            << (r.passed ? 1 : 0) << '\t'
+            << std::quoted(r.qcNotes) << '\t'
+            << std::quoted(r.dealerId) << '\t'
+            << std::quoted(r.destination) << '\t'
+            << std::quoted(r.transportMode) << '\t'
+            << std::quoted(r.buyerId) << '\t'
+            << r.salePrice << '\t'
+            << std::quoted(r.warrantyExpiry) << '\n';
+    }
+
+    if (!out.good()) {
+        auditLog_.log(AuditAction::PERSISTENCE_IO,
+                      "saveBlockchain failed while writing file " + path);
+        return false;
+    }
+
+    auditLog_.log(AuditAction::PERSISTENCE_IO,
+                  "saveBlockchain succeeded: " + path);
+    return true;
+}
+
+bool Blockchain::loadBlockchain(const std::string& path) {
+    std::ifstream in(path);
+    if (!in) {
+        auditLog_.log(AuditAction::PERSISTENCE_IO,
+                      "loadBlockchain failed: cannot open file " + path);
+        return false;
+    }
+
+    std::string header;
+    if (!std::getline(in, header) || header != "CW1_BLOCKCHAIN_V1") {
+        auditLog_.log(AuditAction::PERSISTENCE_IO,
+                      "loadBlockchain failed: invalid file header in " + path);
+        return false;
+    }
+
+    std::string countLine;
+    if (!std::getline(in, countLine)) {
+        auditLog_.log(AuditAction::PERSISTENCE_IO,
+                      "loadBlockchain failed: missing block count in " + path);
+        return false;
+    }
+
+    std::size_t expectedCount = 0;
+    try {
+        expectedCount = static_cast<std::size_t>(std::stoull(countLine));
+    } catch (...) {
+        auditLog_.log(AuditAction::PERSISTENCE_IO,
+                      "loadBlockchain failed: invalid block count in " + path);
+        return false;
+    }
+
+    std::vector<Block> loadedChain;
+    loadedChain.reserve(expectedCount);
+    std::map<std::string, std::vector<std::size_t>> loadedIndex;
+
+    std::string line;
+    std::size_t lineNo = 2;
+    while (std::getline(in, line)) {
+        ++lineNo;
+        if (line.empty()) {
+            continue;
+        }
+
+        std::istringstream row(line);
+        std::size_t index = 0;
+        std::string previousHash;
+        std::string currentHash;
+        std::string timestamp;
+        std::uint64_t nonce = 0;
+        CarRecord record;
+        int stageInt = 0;
+        int passedInt = 0;
+
+        if (!(row >> index
+                  >> std::quoted(previousHash)
+                  >> std::quoted(currentHash)
+                  >> std::quoted(timestamp)
+                  >> nonce
+                  >> std::quoted(record.vin)
+                  >> std::quoted(record.manufacturer)
+                  >> std::quoted(record.model)
+                  >> std::quoted(record.color)
+                  >> record.productionYear
+                  >> stageInt
+                  >> std::quoted(record.factoryLocation)
+                  >> std::quoted(record.warehouseLocation)
+                  >> std::quoted(record.receivedBy)
+                  >> std::quoted(record.inspectorId)
+                  >> passedInt
+                  >> std::quoted(record.qcNotes)
+                  >> std::quoted(record.dealerId)
+                  >> std::quoted(record.destination)
+                  >> std::quoted(record.transportMode)
+                  >> std::quoted(record.buyerId)
+                  >> record.salePrice
+                  >> std::quoted(record.warrantyExpiry))) {
+            std::ostringstream detail;
+            detail << "loadBlockchain failed: parse error at line " << lineNo;
+            auditLog_.log(AuditAction::PERSISTENCE_IO, detail.str());
+            return false;
+        }
+
+        if (stageInt < static_cast<int>(BlockStage::PRODUCTION) ||
+            stageInt > static_cast<int>(BlockStage::CUSTOMER_SALE)) {
+            std::ostringstream detail;
+            detail << "loadBlockchain failed: invalid stage value at line " << lineNo;
+            auditLog_.log(AuditAction::PERSISTENCE_IO, detail.str());
+            return false;
+        }
+        record.stage = static_cast<BlockStage>(stageInt);
+        record.passed = (passedInt != 0);
+
+        loadedChain.emplace_back(index,
+                                 std::move(previousHash),
+                                 std::move(currentHash),
+                                 std::move(timestamp),
+                                 nonce,
+                                 record);
+        loadedIndex[record.vin].push_back(loadedChain.size() - 1);
+    }
+
+    if (loadedChain.size() != expectedCount) {
+        std::ostringstream detail;
+        detail << "loadBlockchain failed: expected " << expectedCount
+               << " blocks, parsed " << loadedChain.size() << ".";
+        auditLog_.log(AuditAction::PERSISTENCE_IO, detail.str());
+        return false;
+    }
+
+    const ValidationResult loadedCheck = Validation::verifyChain(loadedChain);
+    if (!loadedCheck.ok) {
+        auditLog_.log(AuditAction::PERSISTENCE_IO,
+                      "loadBlockchain failed integrity validation: " + loadedCheck.message);
+        return false;
+    }
+
+    chain_ = std::move(loadedChain);
+    vinIndex_ = std::move(loadedIndex);
+    auditLog_.log(AuditAction::PERSISTENCE_IO,
+                  "loadBlockchain succeeded: " + path);
     return true;
 }
 
