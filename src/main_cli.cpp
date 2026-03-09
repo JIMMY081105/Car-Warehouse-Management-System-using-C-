@@ -469,6 +469,62 @@ void simulateTamper(cw1::Blockchain& chain) {
     cout << '\n';
 }
 
+void deleteBlock(cw1::Blockchain& chain) {
+    const std::size_t total = chain.totalBlocks();
+    if (total == 0) {
+        cout << "\n  Cannot delete: chain is empty.\n\n";
+        return;
+    }
+
+    cout << "\n  Delete Block\n";
+    cout << "  Current chain size: " << total << " block(s)\n";
+
+    const string indexInput = prompt("Block index to delete (0-" + to_string(total - 1) + ")");
+    const int parsed = parseIntOrDefault(indexInput, -1);
+    if (parsed < 0 || static_cast<std::size_t>(parsed) >= total) {
+        cout << "  Invalid block index.\n\n";
+        return;
+    }
+    const std::size_t index = static_cast<std::size_t>(parsed);
+
+    const string mode = prompt("Soft delete (s) or Hard delete (h)?");
+    if (mode != "s" && mode != "h") {
+        cout << "  Invalid choice. Aborting.\n\n";
+        return;
+    }
+
+    string outMessage;
+    double seconds = 0.0;
+
+    if (mode == "s") {
+        seconds = cw1::measureSeconds([&]() {
+            chain.softDeleteBlock(index, outMessage);
+        });
+    } else {
+        cout << "  WARNING: Hard delete will physically remove the block and\n";
+        cout << "  re-hash all subsequent blocks. This cannot be undone.\n";
+        const string confirm = prompt("Type YES to confirm");
+        if (confirm != "YES") {
+            cout << "  Hard delete cancelled.\n\n";
+            return;
+        }
+        seconds = cw1::measureSeconds([&]() {
+            chain.hardDeleteBlock(index, outMessage);
+        });
+    }
+
+    cout << "\n  " << outMessage << '\n';
+    printOperationDuration(seconds);
+
+    cw1::ValidationResult result{};
+    const double verifySeconds = cw1::measureSeconds([&]() {
+        result = chain.verifyIntegrity();
+    });
+    cout << "  Integrity: " << (result.ok ? "PASS" : "FAIL")
+         << " - " << result.message << '\n';
+    cout << "  Verify took: " << cw1::formatSeconds(verifySeconds) << " s\n\n";
+}
+
 } // namespace
 
 int main() {
@@ -492,9 +548,10 @@ int main() {
         cout << "  6. Verify Integrity\n";
         cout << "  7. View Audit Log\n";
         cout << "  8. Tamper Simulation (Debug)\n";
-        cout << "  9. Exit\n";
+        cout << "  9. Delete Block\n";
+        cout << "  10. Exit\n";
 
-        choice = prompt("Select (1-9)");
+        choice = prompt("Select (1-10)");
 
         if (choice == "1") { viewAllCars(chain); }
         else if (choice == "2") { viewCarByVin(chain); }
@@ -504,9 +561,10 @@ int main() {
         else if (choice == "6") { verifyIntegrity(chain); }
         else if (choice == "7") { viewAuditLog(chain); }
         else if (choice == "8") { simulateTamper(chain); }
-        else if (choice == "9") { cout << "\n  Exiting.\n"; }
+        else if (choice == "9") { deleteBlock(chain); }
+        else if (choice == "10") { cout << "\n  Exiting.\n"; }
         else { cout << "  Invalid choice.\n\n"; }
-    } while (choice != "9");
+    } while (choice != "10");
 
     return 0;
 }

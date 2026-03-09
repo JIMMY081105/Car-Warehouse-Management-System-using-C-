@@ -36,18 +36,21 @@ static ImVec4 HexColor(uint32_t hex, float a = 1.0f) {
 static const ImVec4 COL_BG_MAIN    = HexColor(0x0d1117);  // main window
 static const ImVec4 COL_BG_PANEL   = HexColor(0x161b22);  // panel / sidebar
 static const ImVec4 COL_BG_CARD    = HexColor(0x21262d);  // cards / frames
+static const ImVec4 COL_BG_ELEV    = HexColor(0x1b222c);  // elevated surfaces
 static const ImVec4 COL_BG_HOVER   = HexColor(0x30363d);  // hover / borders
 static const ImVec4 COL_TEXT       = HexColor(0xe6edf3);  // primary text
 static const ImVec4 COL_MUTED      = HexColor(0x8b949e);  // secondary text
 static const ImVec4 COL_VERY_MUTED = HexColor(0x484f58);  // very muted
 static const ImVec4 COL_ACCENT     = HexColor(0x1f6feb);  // primary blue
 static const ImVec4 COL_ACCENT_HO  = HexColor(0x388bfd);  // blue hover
+static const ImVec4 COL_ACCENT_SOFT = HexColor(0x1f6feb, 0.20f);
 static const ImVec4 COL_GREEN      = HexColor(0x238636);  // success / pass
 static const ImVec4 COL_GREEN_BR   = HexColor(0x2ea043);  // green hover
 static const ImVec4 COL_RED        = HexColor(0xda3633);  // error / fail
 static const ImVec4 COL_YELLOW     = HexColor(0xd29922);  // warning / QC
 static const ImVec4 COL_PURPLE     = HexColor(0x8957e5);  // hash values
 static const ImVec4 COL_ORANGE     = HexColor(0xdb6d28);  // nonce / dispatch
+static const ImVec4 COL_BORDER_SOFT = HexColor(0x30363d, 0.80f);
 
 // Typography slots (loaded in main()).
 static ImFont* g_fontBody = nullptr;
@@ -60,17 +63,18 @@ static ImFont* g_fontTitle = nullptr;
 
 static void ApplyGitHubDarkTheme() {
     ImGuiStyle& s = ImGui::GetStyle();
-    s.WindowRounding    = 8.0f;  s.FrameRounding    = 6.0f;
-    s.PopupRounding     = 8.0f;  s.TabRounding      = 6.0f;
-    s.ScrollbarRounding = 6.0f;  s.GrabRounding     = 4.0f;
-    s.ChildRounding     = 6.0f;
-    s.FramePadding      = ImVec2(10.0f, 6.0f);
-    s.ItemSpacing       = ImVec2(10.0f, 8.0f);
+    s.WindowRounding    = 10.0f;  s.FrameRounding    = 7.0f;
+    s.PopupRounding     = 8.0f;   s.TabRounding      = 7.0f;
+    s.ScrollbarRounding = 8.0f;   s.GrabRounding     = 6.0f;
+    s.ChildRounding     = 8.0f;
+    s.FramePadding      = ImVec2(10.0f, 7.0f);
+    s.ItemSpacing       = ImVec2(10.0f, 10.0f);
     s.WindowPadding     = ImVec2(16.0f, 16.0f);
-    s.ItemInnerSpacing  = ImVec2(8.0f,  4.0f);
-    s.ScrollbarSize     = 12.0f; s.GrabMinSize      = 8.0f;
-    s.WindowBorderSize  = 1.0f;  s.FrameBorderSize  = 0.0f;
-    s.ChildBorderSize   = 1.0f;  s.PopupBorderSize  = 1.0f;
+    s.ItemInnerSpacing  = ImVec2(8.0f,  6.0f);
+    s.CellPadding       = ImVec2(10.0f, 8.0f);
+    s.ScrollbarSize     = 12.0f;  s.GrabMinSize      = 8.0f;
+    s.WindowBorderSize  = 1.0f;   s.FrameBorderSize  = 1.0f;
+    s.ChildBorderSize   = 1.0f;   s.PopupBorderSize  = 1.0f;
 
     ImVec4* c = s.Colors;
     c[ImGuiCol_Text]                  = COL_TEXT;
@@ -78,9 +82,9 @@ static void ApplyGitHubDarkTheme() {
     c[ImGuiCol_WindowBg]              = COL_BG_MAIN;
     c[ImGuiCol_ChildBg]               = COL_BG_PANEL;
     c[ImGuiCol_PopupBg]               = COL_BG_PANEL;
-    c[ImGuiCol_Border]                = COL_BG_HOVER;
+    c[ImGuiCol_Border]                = COL_BORDER_SOFT;
     c[ImGuiCol_BorderShadow]          = ImVec4(0,0,0,0);
-    c[ImGuiCol_FrameBg]               = COL_BG_CARD;
+    c[ImGuiCol_FrameBg]               = COL_BG_ELEV;
     c[ImGuiCol_FrameBgHovered]        = COL_BG_HOVER;
     c[ImGuiCol_FrameBgActive]         = HexColor(0x1f6feb, 0.35f);
     c[ImGuiCol_TitleBg]               = COL_BG_PANEL;
@@ -94,13 +98,13 @@ static void ApplyGitHubDarkTheme() {
     c[ImGuiCol_CheckMark]             = COL_ACCENT;
     c[ImGuiCol_SliderGrab]            = COL_ACCENT;
     c[ImGuiCol_SliderGrabActive]      = COL_ACCENT_HO;
-    c[ImGuiCol_Button]                = COL_BG_CARD;
+    c[ImGuiCol_Button]                = COL_BG_ELEV;
     c[ImGuiCol_ButtonHovered]         = COL_BG_HOVER;
-    c[ImGuiCol_ButtonActive]          = HexColor(0x1f6feb, 0.4f);
+    c[ImGuiCol_ButtonActive]          = COL_ACCENT_SOFT;
     c[ImGuiCol_Header]                = COL_BG_CARD;
     c[ImGuiCol_HeaderHovered]         = COL_BG_HOVER;
-    c[ImGuiCol_HeaderActive]          = HexColor(0x1f6feb, 0.4f);
-    c[ImGuiCol_Separator]             = COL_BG_HOVER;
+    c[ImGuiCol_HeaderActive]          = COL_ACCENT_SOFT;
+    c[ImGuiCol_Separator]             = COL_BORDER_SOFT;
     c[ImGuiCol_SeparatorHovered]      = COL_MUTED;
     c[ImGuiCol_SeparatorActive]       = COL_ACCENT;
     c[ImGuiCol_ResizeGrip]            = COL_BG_HOVER;
@@ -116,11 +120,11 @@ static void ApplyGitHubDarkTheme() {
     c[ImGuiCol_PlotLinesHovered]      = COL_ACCENT_HO;
     c[ImGuiCol_PlotHistogram]         = COL_ACCENT;
     c[ImGuiCol_PlotHistogramHovered]  = COL_ACCENT_HO;
-    c[ImGuiCol_TableHeaderBg]         = COL_BG_CARD;
-    c[ImGuiCol_TableBorderStrong]     = COL_BG_HOVER;
-    c[ImGuiCol_TableBorderLight]      = HexColor(0x21262d);
+    c[ImGuiCol_TableHeaderBg]         = COL_BG_ELEV;
+    c[ImGuiCol_TableBorderStrong]     = COL_BORDER_SOFT;
+    c[ImGuiCol_TableBorderLight]      = HexColor(0x30363d, 0.55f);
     c[ImGuiCol_TableRowBg]            = ImVec4(0,0,0,0);
-    c[ImGuiCol_TableRowBgAlt]         = HexColor(0x161b22, 0.5f);
+    c[ImGuiCol_TableRowBgAlt]         = HexColor(0x161b22, 0.78f);
     c[ImGuiCol_TextSelectedBg]        = HexColor(0x1f6feb, 0.3f);
     c[ImGuiCol_DragDropTarget]        = COL_ACCENT;
     c[ImGuiCol_NavHighlight]          = COL_ACCENT;
@@ -133,7 +137,7 @@ static void ApplyGitHubDarkTheme() {
 //  SECTION 3: Application state
 // =================================================================
 
-enum class View { DASHBOARD, CAR_DETAIL, ADD_BLOCK, GLOBAL_CHAIN, AUDIT_LOG, INTEGRITY };
+enum class View { DASHBOARD, CAR_DETAIL, ADD_BLOCK, GLOBAL_CHAIN, AUDIT_LOG, INTEGRITY, DELETE_BLOCK };
 
 static View        g_view        = View::DASHBOARD;
 static std::string g_selectedVin;
@@ -147,6 +151,11 @@ static int         g_tamperIndex = -1;
 static double      g_lastSaveSeconds = 0.0;
 static double      g_lastLoadSeconds = 0.0;
 static char        g_persistPath[260] = "cw1_blockchain_data.txt";
+
+// Delete block state
+static int    g_deleteBlockIndex  = -1;
+static bool   g_deleteConfirm     = false;
+static double g_lastDeleteSeconds = 0.0;
 
 // Sidebar search cache: avoids per-frame search calls and audit-log spam.
 static std::string              g_cachedSearchQuery;
@@ -320,6 +329,36 @@ static void DrawSectionHeading(const char* text) {
     }
 }
 
+static bool DrawPrimaryButton(const char* label, const ImVec2& size = ImVec2(0.0f, 0.0f)) {
+    ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
+    const bool clicked = ImGui::Button(label, size);
+    ImGui::PopStyleColor(3);
+    return clicked;
+}
+
+static bool DrawDangerButton(const char* label, const ImVec2& size = ImVec2(0.0f, 0.0f)) {
+    ImGui::PushStyleColor(ImGuiCol_Button,        HexColor(0x5d2227));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HexColor(0x7c2f35));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x94353d));
+    const bool clicked = ImGui::Button(label, size);
+    ImGui::PopStyleColor(3);
+    return clicked;
+}
+
+static void DrawMetricBadge(const char* text, ImVec4 textColor, ImVec4 bgColor) {
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 5.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
+    ImGui::PushStyleColor(ImGuiCol_Button, bgColor);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, bgColor);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, bgColor);
+    ImGui::PushStyleColor(ImGuiCol_Text, textColor);
+    ImGui::Button(text);
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar(2);
+}
+
 // =================================================================
 //  SECTION 6: Header bar
 // =================================================================
@@ -330,7 +369,7 @@ static void RenderHeader(const cw1::Blockchain& chain) {
     ImGui::BeginChild("##header", ImVec2(-1.0f, 66.0f), true);
 
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.0f);
-    ImGui::TextColored(COL_ACCENT, "%s", "* ");
+    ImGui::TextColored(COL_ACCENT, "%s", ">> ");
     ImGui::SameLine();
     if (g_fontTitle != nullptr) {
         ImGui::PushFont(g_fontTitle);
@@ -340,24 +379,25 @@ static void RenderHeader(const cw1::Blockchain& chain) {
         ImGui::PopFont();
     }
 
-    float statsWidth = 340.0f;
+    float statsWidth = 430.0f;
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - statsWidth
                     + ImGui::GetCursorPosX() - 16.0f);
 
     char badge[64];
-    snprintf(badge, sizeof(badge), "  %zu blocks  ", chain.totalBlocks());
-    ImGui::TextColored(COL_ACCENT, "%s", badge);
+    snprintf(badge, sizeof(badge), "%zu blocks", chain.totalBlocks());
+    DrawMetricBadge(badge, COL_ACCENT_HO, HexColor(0x1f6feb, 0.14f));
     ImGui::SameLine();
-    snprintf(badge, sizeof(badge), "  %zu cars  ", chain.getAllVins().size());
-    ImGui::TextColored(COL_GREEN, "%s", badge);
+    snprintf(badge, sizeof(badge), "%zu cars", chain.getAllVins().size());
+    DrawMetricBadge(badge, COL_GREEN_BR, HexColor(0x238636, 0.16f));
     ImGui::SameLine();
     if (g_verifyDone) {
-        if (g_lastVerify.ok)
-            ImGui::TextColored(COL_GREEN, "  Verified  ");
-        else
-            ImGui::TextColored(COL_RED, "  Invalid  ");
+        if (g_lastVerify.ok) {
+            DrawMetricBadge("Verified", COL_GREEN_BR, HexColor(0x238636, 0.16f));
+        } else {
+            DrawMetricBadge("Invalid", COL_RED, HexColor(0xda3633, 0.18f));
+        }
     } else {
-        ImGui::TextColored(COL_MUTED, "  Checking...  ");
+        DrawMetricBadge("Checking...", COL_MUTED, HexColor(0x30363d, 0.60f));
     }
 
     ImGui::EndChild();
@@ -374,9 +414,14 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
     ImGui::BeginChild("##sidebar", ImVec2(280.0f, -1.0f), true);
 
     // Search box
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_ELEV);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, COL_BG_HOVER);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, COL_BG_HOVER);
+    ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
     ImGui::SetNextItemWidth(-1.0f);
     ImGui::InputTextWithHint("##search", "Search VIN, brand, model...",
                              g_searchBuf, sizeof(g_searchBuf));
+    ImGui::PopStyleColor(4);
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
@@ -394,19 +439,46 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
     for (const auto& item : navItems) {
         bool active = (g_view == item.view);
         if (active) {
-            ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
+            ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT_SOFT);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
-            ImGui::PushStyleColor(ImGuiCol_Text,          ImVec4(1,1,1,1));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1f6feb, 0.35f));
+            ImGui::PushStyleColor(ImGuiCol_Text,          COL_TEXT);
         } else {
-            ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0,0,0,0));
+            ImGui::PushStyleColor(ImGuiCol_Button,        COL_BG_ELEV);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_BG_HOVER);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  COL_BG_HOVER);
             ImGui::PushStyleColor(ImGuiCol_Text,          COL_TEXT);
         }
-        if (ImGui::Button(item.label, ImVec2(-1.0f, 36.0f))) {
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+        if (ImGui::Button(item.label, ImVec2(-1.0f, 34.0f))) {
             g_view = item.view;
             g_selectedVin.clear();
         }
-        ImGui::PopStyleColor(3);
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor(4);
+    }
+
+    // Delete Block nav button (danger-styled)
+    {
+        bool active = (g_view == View::DELETE_BLOCK);
+        if (active) {
+            ImGui::PushStyleColor(ImGuiCol_Button,        HexColor(0x5d2227));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HexColor(0x7c2f35));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x94353d));
+            ImGui::PushStyleColor(ImGuiCol_Text,          COL_TEXT);
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Button,        HexColor(0x3d1519));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HexColor(0x5d2227));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x7c2f35));
+            ImGui::PushStyleColor(ImGuiCol_Text,          COL_RED);
+        }
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+        if (ImGui::Button("  Delete Block", ImVec2(-1.0f, 34.0f))) {
+            g_view = View::DELETE_BLOCK;
+            g_selectedVin.clear();
+        }
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor(4);
     }
 
     ImGui::Spacing();
@@ -522,7 +594,7 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // ── Stat cards ────────────────────────────────────────────────
+    // â”€â”€ Stat cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (ImGui::BeginTable("##stats", 4,
             ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoPadOuterX,
             ImVec2(-1, 90))) {
@@ -530,13 +602,20 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
 
         auto StatCard = [](const char* value, const char* label, ImVec4 col) {
             ImGui::TableNextColumn();
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_CARD);
-            ImGui::BeginChild(label, ImVec2(-1, 80), true);
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 8.0f);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_ELEV);
+            ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
+            ImGui::BeginChild(label, ImVec2(-1, 86), true);
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 6.0f);
+            if (g_fontSection != nullptr) {
+                ImGui::PushFont(g_fontSection);
+            }
             ImGui::TextColored(col, "%s", value);
+            if (g_fontSection != nullptr) {
+                ImGui::PopFont();
+            }
             ImGui::TextColored(COL_MUTED, "%s", label);
             ImGui::EndChild();
-            ImGui::PopStyleColor();
+            ImGui::PopStyleColor(2);
         };
 
         char buf1[32], buf2[32], buf4[32];
@@ -559,9 +638,11 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // ── Recent blocks table ────────────────────────────────────────
-    ImGuiTableFlags tflags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+    // â”€â”€ Recent blocks table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    ImGuiTableFlags tflags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH |
+                             ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_ScrollY  | ImGuiTableFlags_SizingStretchProp;
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10.0f, 8.0f));
     if (ImGui::BeginTable("##recent", 6, tflags, ImVec2(-1, -1))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("Block #",      ImGuiTableColumnFlags_WidthFixed,   60);
@@ -609,6 +690,7 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
         }
         ImGui::EndTable();
     }
+    ImGui::PopStyleVar();
 }
 
 // =================================================================
@@ -699,6 +781,12 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     DrawSectionHeading("Add Block to Chain");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_ELEV);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, COL_BG_HOVER);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, COL_BG_HOVER);
+    ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
+
     ImGui::TextColored(COL_MUTED, "COMMON FIELDS");
     ImGui::Separator(); ImGui::Spacing();
 
@@ -775,11 +863,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
 
     ImGui::Spacing(); ImGui::Spacing();
 
-    ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
-    bool submit = ImGui::Button("  Add Block  ", ImVec2(150, 36));
-    ImGui::PopStyleColor(3);
+    bool submit = DrawPrimaryButton("  Add Block  ", ImVec2(150, 36));
 
     bool canSubmit = (g_formVin[0] != '\0') &&
                      (g_formMfr[0] != '\0') &&
@@ -854,6 +938,9 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         ImGui::TextColored(COL_VERY_MUTED, "Last add-block operation took: %s s",
                            cw1::formatSeconds(g_lastAddBlockSeconds).c_str());
     }
+
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar();
 }
 
 // =================================================================
@@ -870,7 +957,7 @@ static void RenderGlobalChain(const cw1::Blockchain& chain) {
 
     ImGui::TextColored(COL_MUTED, "VISUAL LINKAGE");
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
-    ImGui::BeginChild("##global_visual_link", ImVec2(-1.0f, 320.0f), true);
+    ImGui::BeginChild("##global_visual_link", ImVec2(-1.0f, 300.0f), true);
     ImGui::PopStyleColor();
 
     if (blocks.empty()) {
@@ -879,30 +966,30 @@ static void RenderGlobalChain(const cw1::Blockchain& chain) {
         for (size_t i = 0; i < blocks.size(); ++i) {
             const cw1::Block& b = blocks[i];
             const cw1::CarRecord& rec = b.getRecord();
+            const ImVec2 cardMin = ImGui::GetCursorScreenPos();
+            const float cardWidth = ImGui::GetContentRegionAvail().x;
+            const float lineH = ImGui::GetTextLineHeightWithSpacing();
+            const float cardHeight = (lineH * 5.0f) + 20.0f;
+            const ImVec2 cardMax(cardMin.x + cardWidth, cardMin.y + cardHeight);
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            dl->AddRectFilled(cardMin, cardMax,
+                ImGui::ColorConvertFloat4ToU32(COL_BG_ELEV), 8.0f);
+            dl->AddRect(cardMin, cardMax,
+                ImGui::ColorConvertFloat4ToU32(COL_BORDER_SOFT), 8.0f);
 
-            char cardId[32];
-            std::snprintf(cardId, sizeof(cardId), "##visual_card_%zu", i);
-
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_CARD);
-            ImGui::BeginChild(cardId, ImVec2(-1.0f, 84.0f), true,
-                        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-            ImGui::PopStyleColor();
-
+            ImGui::SetCursorScreenPos(ImVec2(cardMin.x + 12.0f, cardMin.y + 9.0f));
+            ImGui::BeginGroup();
             ImGui::TextColored(COL_ACCENT, "Block #%zu", b.getIndex());
-            ImGui::TextColored(COL_PURPLE, "Hash: %s",
-                               Truncate(b.getCurrentHash(), 8).c_str());
-            ImGui::TextColored(COL_PURPLE, "Prev: %s",
-                               Truncate(b.getPreviousHash(), 8).c_str());
-            ImGui::TextColored(StageColor(rec.stage), "Stage: %s",
-                               cw1::stageToString(rec.stage).c_str());
+            ImGui::TextColored(COL_PURPLE, "Hash: %s", Truncate(b.getCurrentHash(), 8).c_str());
+            ImGui::TextColored(COL_PURPLE, "Prev: %s", Truncate(b.getPreviousHash(), 8).c_str());
+            ImGui::TextColored(StageColor(rec.stage), "Stage: %s", cw1::stageToString(rec.stage).c_str());
             ImGui::TextColored(COL_ACCENT, "VIN: %s", rec.vin.c_str());
+            ImGui::EndGroup();
 
-            ImGui::EndChild();
+            ImGui::SetCursorScreenPos(ImVec2(cardMin.x, cardMax.y + 8.0f));
 
             if (i + 1 < blocks.size()) {
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f);
-                ImGui::TextColored(COL_MUTED, "|");
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 12.0f);
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 14.0f);
                 ImGui::TextColored(COL_MUTED, "v");
             }
         }
@@ -913,8 +1000,10 @@ static void RenderGlobalChain(const cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "TABULAR CHAIN DATA");
     ImGui::Spacing();
 
-    ImGuiTableFlags tf = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+    ImGuiTableFlags tf = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH |
+                         ImGuiTableFlags_RowBg |
                          ImGuiTableFlags_ScrollY  | ImGuiTableFlags_SizingStretchProp;
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10.0f, 8.0f));
     if (ImGui::BeginTable("##global", 8, tf, ImVec2(-1, -1))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("Block #",      ImGuiTableColumnFlags_WidthFixed,   60);
@@ -978,6 +1067,7 @@ static void RenderGlobalChain(const cw1::Blockchain& chain) {
         }
         ImGui::EndTable();
     }
+    ImGui::PopStyleVar();
     LogViewOnce(chain, View::GLOBAL_CHAIN, "",
                 "Global chain viewed");
 }
@@ -1014,6 +1104,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         case cw1::AuditAction::CHAIN_VIEWED:     return COL_PURPLE;
         case cw1::AuditAction::TAMPER_SIMULATED: return COL_RED;
         case cw1::AuditAction::PERSISTENCE_IO:   return COL_ORANGE;
+        case cw1::AuditAction::BLOCK_DELETED:    return COL_RED;
         default:                                  return COL_TEXT;
         }
     };
@@ -1025,12 +1116,15 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         case cw1::AuditAction::CHAIN_VIEWED:     return "CHAIN_VIEWED";
         case cw1::AuditAction::TAMPER_SIMULATED: return "TAMPER_SIMULATED";
         case cw1::AuditAction::PERSISTENCE_IO:   return "PERSISTENCE_IO";
+        case cw1::AuditAction::BLOCK_DELETED:    return "BLOCK_DELETED";
         default:                                  return "UNKNOWN";
         }
     };
 
-    ImGuiTableFlags tf = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+    ImGuiTableFlags tf = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH |
+                         ImGuiTableFlags_RowBg |
                          ImGuiTableFlags_ScrollY  | ImGuiTableFlags_SizingStretchProp;
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10.0f, 8.0f));
     if (ImGui::BeginTable("##auditlog", 3, tf, ImVec2(-1, -1))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthStretch, 2.0f);
@@ -1056,6 +1150,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
         }
         ImGui::EndTable();
     }
+    ImGui::PopStyleVar();
 }
 
 // =================================================================
@@ -1067,10 +1162,7 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
     // Primary integrity action with explicit runtime measurement.
-    ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
-    if (ImGui::Button("Run Verification Again##verify", ImVec2(230.0f, 36.0f))) {
+    if (DrawPrimaryButton("Run Verification Again##verify", ImVec2(230.0f, 36.0f))) {
         cw1::OperationTimer timer;
         g_lastVerify = chain.verifyIntegrity();
         g_lastVerifySeconds = timer.elapsedSeconds();
@@ -1079,17 +1171,13 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
                                   : "Integrity check failed.",
                   g_lastVerify.ok ? COL_GREEN_BR : COL_RED);
     }
-    ImGui::PopStyleColor(3);
 
     ImGui::Spacing();
     ImGui::TextColored(COL_MUTED, "Debug / Simulation Feature");
     ImGui::SetNextItemWidth(140.0f);
     ImGui::InputInt("Tamper block index##tamper", &g_tamperIndex);
     ImGui::SameLine();
-    ImGui::PushStyleColor(ImGuiCol_Button,        COL_RED);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HexColor(0xe5534b));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0xb62324));
-    if (ImGui::Button("Tamper Block##payload_tamper", ImVec2(160.0f, 34.0f))) {
+    if (DrawDangerButton("Tamper Block##payload_tamper", ImVec2(160.0f, 34.0f))) {
         const std::size_t total = chain.totalBlocks();
         if (total == 0) {
             PushToast("Tamper failed: chain is empty.", COL_RED);
@@ -1119,17 +1207,13 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
             }
         }
     }
-    ImGui::PopStyleColor(3);
 
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
     ImGui::TextColored(COL_MUTED, "Persistence");
     ImGui::SetNextItemWidth(420.0f);
     ImGui::InputText("File path##persist_path", g_persistPath, sizeof(g_persistPath));
 
-    ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
-    if (ImGui::Button("Save Blockchain##save_chain", ImVec2(170.0f, 34.0f))) {
+    if (DrawPrimaryButton("Save Blockchain##save_chain", ImVec2(170.0f, 34.0f))) {
         if (g_persistPath[0] == '\0') {
             PushToast("Save failed: file path is empty.", COL_RED);
         } else {
@@ -1140,13 +1224,9 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
                       ok ? COL_GREEN_BR : COL_RED);
         }
     }
-    ImGui::PopStyleColor(3);
 
     ImGui::SameLine();
-    ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL_ACCENT_HO);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  HexColor(0x1158c7));
-    if (ImGui::Button("Load Blockchain##load_chain", ImVec2(170.0f, 34.0f))) {
+    if (DrawPrimaryButton("Load Blockchain##load_chain", ImVec2(170.0f, 34.0f))) {
         if (g_persistPath[0] == '\0') {
             PushToast("Load failed: file path is empty.", COL_RED);
         } else {
@@ -1171,7 +1251,6 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
             }
         }
     }
-    ImGui::PopStyleColor(3);
 
     if (g_lastSaveSeconds > 0.0) {
         ImGui::TextColored(COL_VERY_MUTED, "Last save operation took: %s s",
@@ -1191,16 +1270,17 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     const std::size_t blocksChecked = chain.totalBlocks();
 
     // Large PASS / FAIL banner
-    const ImVec4 bannerCol = g_lastVerify.ok ? COL_GREEN : COL_RED;
+    const ImVec4 bannerCol = g_lastVerify.ok ? HexColor(0x1b4d30) : HexColor(0x5a2429);
     const char* bannerTxt = g_lastVerify.ok ? "BLOCKCHAIN VERIFIED" : "INTEGRITY FAILURE";
     ImGui::PushStyleColor(ImGuiCol_ChildBg, bannerCol);
+    ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
     ImGui::BeginChild("##intbanner", ImVec2(-1, 80), true);
     ImGui::SetCursorPos(ImVec2(20.0f, 18.0f));
     ImGui::SetWindowFontScale(1.7f);
     ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", bannerTxt);
     ImGui::SetWindowFontScale(1.0f);
     ImGui::EndChild();
-    ImGui::PopStyleColor();
+    ImGui::PopStyleColor(2);
 
     ImGui::Spacing();
     ImGui::TextColored(COL_MUTED, "Integrity Status:");
@@ -1229,6 +1309,89 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "Details:");
     ImGui::SameLine();
     ImGui::TextWrapped("%s", g_lastVerify.message.c_str());
+}
+
+// =================================================================
+//  SECTION 13b: Delete Block view
+// =================================================================
+
+static void RenderDeleteBlock(cw1::Blockchain& chain) {
+    DrawSectionHeading("Delete Block");
+    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+    ImGui::TextColored(COL_MUTED, "Chain size: %zu block(s)", chain.totalBlocks());
+    ImGui::Spacing();
+
+    ImGui::TextColored(COL_MUTED, "Block index to delete:");
+    ImGui::SetNextItemWidth(160.0f);
+    ImGui::InputInt("##delete_block_index", &g_deleteBlockIndex);
+    ImGui::Spacing();
+
+    // Soft delete button
+    if (DrawDangerButton("Soft Delete##soft_del", ImVec2(180.0f, 36.0f))) {
+        if (g_deleteBlockIndex < 0 ||
+            static_cast<std::size_t>(g_deleteBlockIndex) >= chain.totalBlocks()) {
+            PushToast("Invalid block index.", COL_RED);
+        } else {
+            std::string msg;
+            cw1::OperationTimer timer;
+            const bool ok = chain.softDeleteBlock(
+                static_cast<std::size_t>(g_deleteBlockIndex), msg);
+            g_lastDeleteSeconds = timer.elapsedSeconds();
+
+            PushToast(ok ? msg : ("Soft delete failed: " + msg),
+                      ok ? COL_GREEN_BR : COL_RED);
+
+            // Re-verify after delete
+            cw1::OperationTimer vt;
+            g_lastVerify = chain.verifyIntegrity();
+            g_lastVerifySeconds = vt.elapsedSeconds();
+            g_verifyDone = true;
+            g_deleteConfirm = false;
+        }
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // Hard delete section
+    ImGui::TextColored(COL_RED, "HARD DELETE (destructive)");
+    ImGui::Spacing();
+
+    ImGui::Checkbox("I confirm hard delete##hd_confirm", &g_deleteConfirm);
+    ImGui::Spacing();
+
+    ImGui::BeginDisabled(!g_deleteConfirm);
+    if (DrawDangerButton("Hard Delete##hard_del", ImVec2(180.0f, 36.0f))) {
+        if (g_deleteBlockIndex < 0 ||
+            static_cast<std::size_t>(g_deleteBlockIndex) >= chain.totalBlocks()) {
+            PushToast("Invalid block index.", COL_RED);
+        } else {
+            std::string msg;
+            cw1::OperationTimer timer;
+            const bool ok = chain.hardDeleteBlock(
+                static_cast<std::size_t>(g_deleteBlockIndex), msg);
+            g_lastDeleteSeconds = timer.elapsedSeconds();
+
+            PushToast(ok ? msg : ("Hard delete failed: " + msg),
+                      ok ? COL_GREEN_BR : COL_RED);
+
+            // Re-verify after delete
+            cw1::OperationTimer vt;
+            g_lastVerify = chain.verifyIntegrity();
+            g_lastVerifySeconds = vt.elapsedSeconds();
+            g_verifyDone = true;
+            g_deleteConfirm = false;
+        }
+    }
+    ImGui::EndDisabled();
+
+    if (g_lastDeleteSeconds > 0.0) {
+        ImGui::Spacing();
+        ImGui::TextColored(COL_VERY_MUTED, "Last delete operation took: %s s",
+                           cw1::formatSeconds(g_lastDeleteSeconds).c_str());
+    }
 }
 
 // =================================================================
@@ -1293,7 +1456,7 @@ static void RenderToasts(float deltaTime) {
 // =================================================================
 
 int main() {
-    // ── 1. GLFW ───────────────────────────────────────────────────
+    // â”€â”€ 1. GLFW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (!glfwInit()) return 1;
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -1309,7 +1472,7 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    // ── 2. ImGui ──────────────────────────────────────────────────
+    // â”€â”€ 2. ImGui â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -1321,7 +1484,7 @@ int main() {
 
     ApplyGitHubDarkTheme();
 
-    // ── 3. Font (fallback to default if file absent) ──────────────
+    // â”€â”€ 3. Font (fallback to default if file absent) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         auto TryLoadFont = [&](const char* path, float sizePx) -> ImFont* {
             FILE* fp = fopen(path, "rb");
@@ -1370,7 +1533,7 @@ int main() {
         io.FontDefault = g_fontBody;
     }
 
-    // ── 4. Blockchain + demo data ─────────────────────────────────
+    // â”€â”€ 4. Blockchain + demo data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     cw1::Blockchain chain;
     loadDemoData(chain);
     g_lastVerifySeconds = cw1::measureSeconds([&]() {
@@ -1378,7 +1541,7 @@ int main() {
     });
     g_verifyDone = true;
 
-    // ── 5. Main loop ──────────────────────────────────────────────
+    // â”€â”€ 5. Main loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -1425,6 +1588,7 @@ int main() {
         case View::GLOBAL_CHAIN: RenderGlobalChain(chain);  break;
         case View::AUDIT_LOG:    RenderAuditLog(chain);     break;
         case View::INTEGRITY:    RenderIntegrity(chain);    break;
+        case View::DELETE_BLOCK: RenderDeleteBlock(chain);  break;
         }
 
         ImGui::EndChild();
@@ -1433,7 +1597,7 @@ int main() {
         // Toast overlay (rendered after main window)
         RenderToasts(io.DeltaTime);
 
-        // ── Draw ──────────────────────────────────────────────────
+        // â”€â”€ Draw â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ImGui::Render();
         int dispW, dispH;
         glfwGetFramebufferSize(window, &dispW, &dispH);
@@ -1444,7 +1608,7 @@ int main() {
         glfwSwapBuffers(window);
     }
 
-    // ── 6. Cleanup ────────────────────────────────────────────────
+    // â”€â”€ 6. Cleanup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

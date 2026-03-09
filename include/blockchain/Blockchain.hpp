@@ -74,6 +74,18 @@ public:
                          const std::string& forgedHash,
                          std::string& message);
 
+    // -- Block deletion --------------------------------------------------
+
+    /// Soft delete: replace block payload with a DELETED tombstone record.
+    /// The block stays in the chain. Hash chain is NOT broken.
+    /// Returns false if index is out of range.
+    bool softDeleteBlock(std::size_t index, std::string& outMessage);
+
+    /// Hard delete: physically erase the block from chain_ at the given index.
+    /// Re-indexes and re-hashes all subsequent blocks. Rebuilds vinIndex_.
+    /// Returns false if index is out of range or chain would become empty.
+    bool hardDeleteBlock(std::size_t index, std::string& outMessage);
+
     /// Save blockchain to disk. Returns true on success.
     bool saveBlockchain(const std::string& path) const;
 

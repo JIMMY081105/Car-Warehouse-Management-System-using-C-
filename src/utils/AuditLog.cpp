@@ -24,6 +24,7 @@ std::string actionToString(AuditAction action) {
         case AuditAction::CHAIN_VIEWED:      return "CHAIN_VIEWED";
         case AuditAction::TAMPER_SIMULATED:  return "TAMPER_SIMULATED";
         case AuditAction::PERSISTENCE_IO:    return "PERSISTENCE_IO";
+        case AuditAction::BLOCK_DELETED:     return "BLOCK_DELETED";
         default:                             return "UNKNOWN";
     }
 }

@@ -95,6 +95,18 @@ void Block::debugTamperPayloadForSimulation(const std::string& marker) {
     record_.destination = marker;
 }
 
+void Block::setIndex(std::size_t newIndex) {
+    index_ = newIndex;
+}
+
+void Block::setPreviousHash(std::string newPrev) {
+    previousHash_ = std::move(newPrev);
+}
+
+void Block::setRecord(CarRecord newRecord) {
+    record_ = std::move(newRecord);
+}
+
 std::uint64_t Block::generateNonce() {
     static thread_local std::mt19937_64 engine{std::random_device{}()};
     static thread_local std::uniform_int_distribution<std::uint64_t> dist;

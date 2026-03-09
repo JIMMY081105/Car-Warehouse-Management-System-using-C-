@@ -18,7 +18,8 @@ enum class AuditAction {
     SEARCH_PERFORMED,   // A search function was called
     CHAIN_VIEWED,       // The chain or a car record was displayed
     TAMPER_SIMULATED,   // Debug/admin tamper simulation executed
-    PERSISTENCE_IO      // Save/load operations
+    PERSISTENCE_IO,     // Save/load operations
+    BLOCK_DELETED       // A block was soft- or hard-deleted
 };
 
 /// Convert an AuditAction enum value to a human-readable string.

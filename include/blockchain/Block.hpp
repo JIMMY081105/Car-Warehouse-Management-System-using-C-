@@ -43,6 +43,13 @@ public:
     /// intentionally mutates payload data without updating hash.
     void debugTamperPayloadForSimulation(const std::string& marker);
 
+    /// Admin/chain-repair mutators for hard-delete re-indexing.
+    void setIndex(std::size_t newIndex);
+    void setPreviousHash(std::string newPrev);
+
+    /// Replace the stored record (used by soft-delete tombstone).
+    void setRecord(CarRecord newRecord);
+
 private:
     static std::uint64_t generateNonce();
 
