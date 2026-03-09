@@ -1,20 +1,20 @@
-// AuditLog.cpp -- Implementation of the hand-written singly linked list
-// used for audit logging in the Car Warehouse Blockchain system.
-//
-// Coursework requirement: demonstrates:
-//   1. Singly Linked List  -- manual node management, head/tail pointers,
-//      O(1) tail append, O(n) traversal/deletion.
-//   2. Array of Pointers   -- getRecentEntries() returns a raw new[] array
-//      of const AuditEntry* that the caller must delete[].
+
+
+
+
+
+
+
+
 
 #include "utils/AuditLog.hpp"
 #include "utils/TimeUtil.hpp"
 
-#include <algorithm>  // std::min
+#include <algorithm>  
 
 namespace cw1 {
 
-// ── Helper ────────────────────────────────────────────────────────
+
 
 std::string actionToString(AuditAction action) {
     switch (action) {
@@ -29,33 +29,33 @@ std::string actionToString(AuditAction action) {
     }
 }
 
-// ── AuditLog constructor / destructor ─────────────────────────────
+
 
 AuditLog::AuditLog()
     : head_(nullptr), tail_(nullptr), count_(0) {
-    // Linked list starts empty: both head and tail are null.
+    
 }
 
 AuditLog::~AuditLog() {
-    // Traverse the linked list and delete every node to avoid memory leaks.
+    
     clear();
 }
 
-// ── Core linked list operations ───────────────────────────────────
+
 
 void AuditLog::log(AuditAction action, const std::string& details) {
-    // Allocate a new node on the heap (demonstrates new/delete pattern).
+    
     AuditEntry* node = new AuditEntry(action, details, TimeUtil::nowIso8601());
 
     if (tail_ == nullptr) {
-        // List is empty: new node becomes both head and tail.
+        
         head_ = node;
         tail_ = node;
     } else {
-        // Append at the tail -- O(1) because we maintain a tail pointer.
-        // Without the tail pointer this would be O(n) traversal.
-        tail_->next = node;  // Link old tail to new node
-        tail_ = node;        // Advance tail to the new node
+        
+        
+        tail_->next = node;  
+        tail_ = node;        
     }
 
     ++count_;
@@ -70,29 +70,29 @@ const AuditEntry* AuditLog::head() const noexcept {
 }
 
 void AuditLog::clear() {
-    // Traverse linked list from head, deleting each node.
-    // Classic linked-list deletion: save next before freeing current.
+    
+    
     AuditEntry* current = head_;
     while (current != nullptr) {
-        AuditEntry* next = current->next;  // Save next before delete
-        delete current;                    // Free the current node
-        current = next;                    // Advance to saved next
+        AuditEntry* next = current->next;  
+        delete current;                    
+        current = next;                    
     }
     head_  = nullptr;
     tail_  = nullptr;
     count_ = 0;
 }
 
-// ── Array of Pointers ─────────────────────────────────────────────
+
 
 const AuditEntry** AuditLog::getRecentEntries(std::size_t maxCount,
                                               std::size_t& outCount) const {
-    // Demonstrates: Array of Pointers (raw pointer array, manual memory
-    // management). The returned array is a heap-allocated array whose
-    // elements are pointers into the linked list (not copies). The caller
-    // must delete[] the array but must NOT delete the pointed-to nodes.
+    
+    
+    
+    
 
-    // Determine how many entries we can actually return.
+    
     std::size_t actualCount = (maxCount < count_) ? maxCount : count_;
     outCount = actualCount;
 
@@ -100,26 +100,26 @@ const AuditEntry** AuditLog::getRecentEntries(std::size_t maxCount,
         return nullptr;
     }
 
-    // Allocate the raw array of pointers on the heap.
-    // This is the "Array of Pointers" data structure for the coursework.
+    
+    
     const AuditEntry** arr = new const AuditEntry*[actualCount];
 
-    // Skip the first (count_ - actualCount) nodes to reach the start of
-    // the last actualCount entries. This requires a linear traversal from
-    // the head because we only have a singly linked list (no random access).
+    
+    
+    
     std::size_t skipCount = count_ - actualCount;
     const AuditEntry* node = head_;
     for (std::size_t i = 0; i < skipCount; ++i) {
-        node = node->next;  // Advance through nodes we want to skip
+        node = node->next;  
     }
 
-    // Fill the array with pointers to the remaining (most recent) nodes.
+    
     for (std::size_t i = 0; i < actualCount; ++i) {
-        arr[i] = node;      // Store pointer to node (not a copy of the node)
-        node = node->next;  // Advance linked list pointer
+        arr[i] = node;      
+        node = node->next;  
     }
 
-    return arr;  // Caller must delete[] this array
+    return arr;  
 }
 
 RecentEntryArray::RecentEntryArray(const AuditLog& log, std::size_t maxCount)
@@ -173,4 +173,4 @@ const AuditEntry* const* RecentEntryArray::end() const noexcept {
     return data_ == nullptr ? nullptr : (data_ + count_);
 }
 
-} // namespace cw1
+} 

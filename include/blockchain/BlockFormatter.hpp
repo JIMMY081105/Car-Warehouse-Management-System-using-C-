@@ -9,8 +9,8 @@
 
 namespace cw1 {
 
-/// Canonical block formatter used by both CLI and GUI.
-/// Keeps screenshot output consistent with coursework block requirements.
+
+
 inline std::string formatBlockForDisplay(const Block& block) {
     const CarRecord& record = block.getRecord();
     const bool isGenesis = (block.getIndex() == 0);
@@ -68,4 +68,4 @@ inline std::string formatBlockForDisplay(const Block& block) {
     return out.str();
 }
 
-} // namespace cw1
+} 

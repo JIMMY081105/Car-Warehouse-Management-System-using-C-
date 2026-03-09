@@ -1,7 +1,3 @@
-// main_gui.cpp -- ImGui/GLFW/OpenGL3 GUI for the Car Warehouse Blockchain.
-// GitHub Dark theme, 3-panel layout (header | sidebar | content area).
-// Views: Dashboard, Car Detail, Add Block, Global Chain, Audit Log, Integrity.
-
 #include <GLFW/glfw3.h>
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -21,11 +17,11 @@
 #include "blockchain/BlockStage.hpp"
 #include "utils/OperationTimer.hpp"
 
-// =================================================================
-//  SECTION 1: Color palette (GitHub Dark)
-// =================================================================
 
-/// Convert packed RGB hex to ImVec4 RGBA float.
+
+
+
+
 static ImVec4 HexColor(uint32_t hex, float a = 1.0f) {
     return ImVec4(
         static_cast<float>((hex >> 16) & 0xFF) / 255.0f,
@@ -33,33 +29,33 @@ static ImVec4 HexColor(uint32_t hex, float a = 1.0f) {
         static_cast<float>( hex        & 0xFF) / 255.0f, a);
 }
 
-static const ImVec4 COL_BG_MAIN    = HexColor(0x0d1117);  // main window
-static const ImVec4 COL_BG_PANEL   = HexColor(0x161b22);  // panel / sidebar
-static const ImVec4 COL_BG_CARD    = HexColor(0x21262d);  // cards / frames
-static const ImVec4 COL_BG_ELEV    = HexColor(0x1b222c);  // elevated surfaces
-static const ImVec4 COL_BG_HOVER   = HexColor(0x30363d);  // hover / borders
-static const ImVec4 COL_TEXT       = HexColor(0xe6edf3);  // primary text
-static const ImVec4 COL_MUTED      = HexColor(0x8b949e);  // secondary text
-static const ImVec4 COL_VERY_MUTED = HexColor(0x484f58);  // very muted
-static const ImVec4 COL_ACCENT     = HexColor(0x1f6feb);  // primary blue
-static const ImVec4 COL_ACCENT_HO  = HexColor(0x388bfd);  // blue hover
+static const ImVec4 COL_BG_MAIN    = HexColor(0x0d1117);  
+static const ImVec4 COL_BG_PANEL   = HexColor(0x161b22);  
+static const ImVec4 COL_BG_CARD    = HexColor(0x21262d);  
+static const ImVec4 COL_BG_ELEV    = HexColor(0x1b222c);  
+static const ImVec4 COL_BG_HOVER   = HexColor(0x30363d);  
+static const ImVec4 COL_TEXT       = HexColor(0xe6edf3);  
+static const ImVec4 COL_MUTED      = HexColor(0x8b949e);  
+static const ImVec4 COL_VERY_MUTED = HexColor(0x484f58);  
+static const ImVec4 COL_ACCENT     = HexColor(0x1f6feb);  
+static const ImVec4 COL_ACCENT_HO  = HexColor(0x388bfd);  
 static const ImVec4 COL_ACCENT_SOFT = HexColor(0x1f6feb, 0.20f);
-static const ImVec4 COL_GREEN      = HexColor(0x238636);  // success / pass
-static const ImVec4 COL_GREEN_BR   = HexColor(0x2ea043);  // green hover
-static const ImVec4 COL_RED        = HexColor(0xda3633);  // error / fail
-static const ImVec4 COL_YELLOW     = HexColor(0xd29922);  // warning / QC
-static const ImVec4 COL_PURPLE     = HexColor(0x8957e5);  // hash values
-static const ImVec4 COL_ORANGE     = HexColor(0xdb6d28);  // nonce / dispatch
+static const ImVec4 COL_GREEN      = HexColor(0x238636);  
+static const ImVec4 COL_GREEN_BR   = HexColor(0x2ea043);  
+static const ImVec4 COL_RED        = HexColor(0xda3633);  
+static const ImVec4 COL_YELLOW     = HexColor(0xd29922);  
+static const ImVec4 COL_PURPLE     = HexColor(0x8957e5);  
+static const ImVec4 COL_ORANGE     = HexColor(0xdb6d28);  
 static const ImVec4 COL_BORDER_SOFT = HexColor(0x30363d, 0.80f);
 
-// Typography slots (loaded in main()).
+
 static ImFont* g_fontBody = nullptr;
 static ImFont* g_fontSection = nullptr;
 static ImFont* g_fontTitle = nullptr;
 
-// =================================================================
-//  SECTION 2: GitHub Dark theme
-// =================================================================
+
+
+
 
 static void ApplyGitHubDarkTheme() {
     ImGuiStyle& s = ImGui::GetStyle();
@@ -133,9 +129,9 @@ static void ApplyGitHubDarkTheme() {
     c[ImGuiCol_ModalWindowDimBg]      = HexColor(0x0d1117, 0.6f);
 }
 
-// =================================================================
-//  SECTION 3: Application state
-// =================================================================
+
+
+
 
 enum class View { DASHBOARD, CAR_DETAIL, ADD_BLOCK, GLOBAL_CHAIN, AUDIT_LOG, INTEGRITY, DELETE_BLOCK };
 
@@ -152,21 +148,21 @@ static double      g_lastSaveSeconds = 0.0;
 static double      g_lastLoadSeconds = 0.0;
 static char        g_persistPath[260] = "cw1_blockchain_data.txt";
 
-// Delete block state
+
 static int    g_deleteBlockIndex  = -1;
 static bool   g_deleteConfirm     = false;
 static double g_lastDeleteSeconds = 0.0;
 
-// Sidebar search cache: avoids per-frame search calls and audit-log spam.
+
 static std::string              g_cachedSearchQuery;
 static std::vector<std::string> g_cachedSearchVins;
 
-// Guard to prevent per-frame audit log spam.
-// We only log a CHAIN_VIEWED event once when the user first switches to a view.
+
+
 static View        g_lastLoggedView = View::DASHBOARD;
 static std::string g_lastLoggedVin;
 
-/// Log a CHAIN_VIEWED event only once per view switch (not every frame).
+
 static void LogViewOnce(const cw1::Blockchain& chain, View currentView,
                         const std::string& vin, const std::string& details) {
     if (currentView != g_lastLoggedView || vin != g_lastLoggedVin) {
@@ -176,14 +172,14 @@ static void LogViewOnce(const cw1::Blockchain& chain, View currentView,
     }
 }
 
-// Toast notification system
+
 struct Toast { std::string msg; float remainingSecs; ImVec4 color; };
 static std::vector<Toast> g_toasts;
 static void PushToast(const std::string& msg, ImVec4 color, float dur = 3.0f) {
     g_toasts.push_back({msg, dur, color});
 }
 
-// Add-block form state
+
 static int    g_formStage           = 0;
 static char   g_formVin[64]         = {};
 static char   g_formMfr[64]         = {};
@@ -207,9 +203,9 @@ static char   g_formSupplierId[64]  = {};
 static char   g_formRetailerId[64]  = {};
 static int    g_auditN              = 20;
 
-// =================================================================
-//  SECTION 4: Demo data (no cout, no sleep_for)
-// =================================================================
+
+
+
 
 static void loadDemoData(cw1::Blockchain& chain) {
     { cw1::CarRecord r;
@@ -280,9 +276,9 @@ static void loadDemoData(cw1::Blockchain& chain) {
       chain.addBlock(r); }
 }
 
-// =================================================================
-//  SECTION 5: Helper utilities
-// =================================================================
+
+
+
 
 static ImVec4 StageColor(cw1::BlockStage stage) {
     switch (stage) {
@@ -359,9 +355,9 @@ static void DrawMetricBadge(const char* text, ImVec4 textColor, ImVec4 bgColor) 
     ImGui::PopStyleVar(2);
 }
 
-// =================================================================
-//  SECTION 6: Header bar
-// =================================================================
+
+
+
 
 static void RenderHeader(const cw1::Blockchain& chain) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
@@ -405,15 +401,15 @@ static void RenderHeader(const cw1::Blockchain& chain) {
     ImGui::PopStyleColor();
 }
 
-// =================================================================
-//  SECTION 7: Left sidebar
-// =================================================================
+
+
+
 
 static void RenderSidebar(const cw1::Blockchain& chain) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
     ImGui::BeginChild("##sidebar", ImVec2(280.0f, -1.0f), true);
 
-    // Search box
+    
     ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_ELEV);
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, COL_BG_HOVER);
     ImGui::PushStyleColor(ImGuiCol_FrameBgActive, COL_BG_HOVER);
@@ -426,7 +422,7 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // Navigation buttons
+    
     struct NavItem { const char* label; View view; };
     static const NavItem navItems[] = {
         { "  Dashboard",        View::DASHBOARD    },
@@ -458,7 +454,7 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
         ImGui::PopStyleColor(4);
     }
 
-    // Delete Block nav button (danger-styled)
+    
     {
         bool active = (g_view == View::DELETE_BLOCK);
         if (active) {
@@ -485,14 +481,14 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // Car list header
+    
     auto allVins = chain.getAllVins();
     ImGui::TextColored(COL_MUTED, "VEHICLES (%zu)", allVins.size());
     ImGui::Spacing();
 
-    // Build filtered list.
-    // Search is run only when query text changes to keep timing meaningful
-    // and avoid writing audit log entries every frame.
+    
+    
+    
     std::vector<std::string> displayVins;
     const std::string query(g_searchBuf);
     if (!query.empty()) {
@@ -533,7 +529,7 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
         bool        sel    = (vin == g_selectedVin);
         cw1::BlockStage st = chain.getLatestStage(vin);
 
-        // Blue left border for selected card
+        
         if (sel) {
             ImVec2 p = ImGui::GetCursorScreenPos();
             ImGui::GetWindowDrawList()->AddRectFilled(
@@ -579,11 +575,11 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
 }
 
 
-// =================================================================
 
-// =================================================================
-//  SECTION 8: Dashboard view
-// =================================================================
+
+
+
+
 
 static void RenderDashboard(const cw1::Blockchain& chain) {
     const auto& blocks = chain.getChain();
@@ -594,7 +590,7 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // â”€â”€ Stat cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    
     if (ImGui::BeginTable("##stats", 4,
             ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_NoPadOuterX,
             ImVec2(-1, 90))) {
@@ -638,7 +634,7 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // â”€â”€ Recent blocks table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    
     ImGuiTableFlags tflags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH |
                              ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_ScrollY  | ImGuiTableFlags_SizingStretchProp;
@@ -653,7 +649,7 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
         ImGui::TableSetupColumn("Timestamp",    ImGuiTableColumnFlags_WidthStretch, 2.5f);
         ImGui::TableHeadersRow();
 
-        // Most-recent first
+        
         size_t count = blocks.size();
         for (size_t ri = 0; ri < count; ++ri) {
             size_t i = count - 1 - ri;
@@ -693,9 +689,9 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
     ImGui::PopStyleVar();
 }
 
-// =================================================================
-//  SECTION 9: Car Detail view
-// =================================================================
+
+
+
 
 static void RenderCarDetail(const cw1::Blockchain& chain) {
     if (ImGui::Button("< Back")) {
@@ -720,7 +716,7 @@ static void RenderCarDetail(const cw1::Blockchain& chain) {
         return;
     }
 
-    // Car header from first block
+    
     const cw1::CarRecord& first = history.front()->getRecord();
     ImGui::TextColored(COL_TEXT, "%s %s  (%d)   %s",
         first.manufacturer.c_str(), first.model.c_str(),
@@ -748,7 +744,7 @@ static void RenderCarDetail(const cw1::Blockchain& chain) {
         if (!open) continue;
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_CARD);
-        // Use hdrLabel as unique child ID
+        
         ImGui::BeginChild(hdrLabel, ImVec2(-1, 0), true);
 
         ImGui::TextColored(COL_MUTED, "Canonical Block Output");
@@ -768,9 +764,9 @@ static void RenderCarDetail(const cw1::Blockchain& chain) {
                 "Car detail viewed: " + g_selectedVin);
 }
 
-// =================================================================
-//  SECTION 10: Add Block form
-// =================================================================
+
+
+
 
 static const char* k_stageNames[] = {
     "PRODUCTION", "WAREHOUSE_INTAKE", "QUALITY_CHECK",
@@ -794,7 +790,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     ImGui::Combo("Stage##addstage", &g_formStage, k_stageNames, 5);
     ImGui::Spacing();
 
-    // Helper: label + InputText on one row
+    
     auto LabelText = [](const char* lbl, char* buf, size_t sz) {
         ImGui::TextColored(COL_MUTED, "%-18s", lbl);
         ImGui::SameLine();
@@ -804,7 +800,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     };
 
     LabelText("VIN",          g_formVin,   sizeof(g_formVin));
-    // VIN status badge
+    
     ImGui::SameLine(0, 12);
     if (g_formVin[0] != '\0') {
         if (chain.hasVin(std::string(g_formVin)))
@@ -830,27 +826,27 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     ImGui::Separator(); ImGui::Spacing();
 
     switch (g_formStage) {
-    case 0: // PRODUCTION
+    case 0: 
         LabelText("Factory Location", g_formFactory, sizeof(g_formFactory));
         break;
-    case 1: // WAREHOUSE_INTAKE
+    case 1: 
         LabelText("Warehouse",  g_formWarehouse,   sizeof(g_formWarehouse));
         LabelText("Received By",g_formReceivedBy,  sizeof(g_formReceivedBy));
         LabelText("Supplier ID", g_formSupplierId, sizeof(g_formSupplierId));
         break;
-    case 2: // QUALITY_CHECK
+    case 2: 
         LabelText("Inspector ID", g_formInspector, sizeof(g_formInspector));
         ImGui::TextColored(COL_MUTED, "%-18s", "Passed");
         ImGui::SameLine();
         ImGui::Checkbox("##add_passed", &g_formPassed);
         LabelText("QC Notes", g_formQcNotes, sizeof(g_formQcNotes));
         break;
-    case 3: // DEALER_DISPATCH
+    case 3: 
         LabelText("Dealer ID",    g_formDealerId,   sizeof(g_formDealerId));
         LabelText("Destination",  g_formDestination,sizeof(g_formDestination));
         LabelText("Transport",    g_formTransport,  sizeof(g_formTransport));
         break;
-    case 4: // CUSTOMER_SALE
+    case 4: 
         LabelText("Buyer ID",     g_formBuyerId, sizeof(g_formBuyerId));
         LabelText("Retailer ID",  g_formRetailerId, sizeof(g_formRetailerId));
         ImGui::TextColored(COL_MUTED, "%-18s", "Sale Price (MYR)");
@@ -920,7 +916,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
                   " | Operation took: " + cw1::formatSeconds(seconds) + " s",
                   COL_GREEN_BR);
 
-        // Clear all form buffers
+        
         g_formVin[0]    = '\0'; g_formMfr[0]         = '\0';
         g_formModel[0]  = '\0'; g_formColor[0]        = '\0';
         g_formYear      = 2025;
@@ -943,9 +939,9 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     ImGui::PopStyleVar();
 }
 
-// =================================================================
-//  SECTION 11: Global Chain view
-// =================================================================
+
+
+
 
 static void RenderGlobalChain(const cw1::Blockchain& chain) {
     const auto& blocks = chain.getChain();
@@ -1072,9 +1068,9 @@ static void RenderGlobalChain(const cw1::Blockchain& chain) {
                 "Global chain viewed");
 }
 
-// =================================================================
-//  SECTION 12: Audit Log view
-// =================================================================
+
+
+
 
 static void RenderAuditLog(const cw1::Blockchain& chain) {
     DrawSectionHeading("Audit Log");
@@ -1092,7 +1088,7 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "entries");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    // Retrieve via Array-of-Pointers through RAII wrapper.
+    
     cw1::RecentEntryArray entries(chain.getAuditLog(),
                                   static_cast<std::size_t>(g_auditN));
 
@@ -1153,15 +1149,15 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
     ImGui::PopStyleVar();
 }
 
-// =================================================================
-//  SECTION 13: Integrity check view
-// =================================================================
+
+
+
 
 static void RenderIntegrity(cw1::Blockchain& chain) {
     DrawSectionHeading("Blockchain Integrity Verification");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    // Primary integrity action with explicit runtime measurement.
+    
     if (DrawPrimaryButton("Run Verification Again##verify", ImVec2(230.0f, 36.0f))) {
         cw1::OperationTimer timer;
         g_lastVerify = chain.verifyIntegrity();
@@ -1269,7 +1265,7 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
 
     const std::size_t blocksChecked = chain.totalBlocks();
 
-    // Large PASS / FAIL banner
+    
     const ImVec4 bannerCol = g_lastVerify.ok ? HexColor(0x1b4d30) : HexColor(0x5a2429);
     const char* bannerTxt = g_lastVerify.ok ? "BLOCKCHAIN VERIFIED" : "INTEGRITY FAILURE";
     ImGui::PushStyleColor(ImGuiCol_ChildBg, bannerCol);
@@ -1311,9 +1307,9 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     ImGui::TextWrapped("%s", g_lastVerify.message.c_str());
 }
 
-// =================================================================
-//  SECTION 13b: Delete Block view
-// =================================================================
+
+
+
 
 static void RenderDeleteBlock(cw1::Blockchain& chain) {
     DrawSectionHeading("Delete Block");
@@ -1327,7 +1323,7 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
     ImGui::InputInt("##delete_block_index", &g_deleteBlockIndex);
     ImGui::Spacing();
 
-    // Soft delete button
+    
     if (DrawDangerButton("Soft Delete##soft_del", ImVec2(180.0f, 36.0f))) {
         if (g_deleteBlockIndex < 0 ||
             static_cast<std::size_t>(g_deleteBlockIndex) >= chain.totalBlocks()) {
@@ -1342,7 +1338,7 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
             PushToast(ok ? msg : ("Soft delete failed: " + msg),
                       ok ? COL_GREEN_BR : COL_RED);
 
-            // Re-verify after delete
+            
             cw1::OperationTimer vt;
             g_lastVerify = chain.verifyIntegrity();
             g_lastVerifySeconds = vt.elapsedSeconds();
@@ -1355,7 +1351,7 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // Hard delete section
+    
     ImGui::TextColored(COL_RED, "HARD DELETE (destructive)");
     ImGui::Spacing();
 
@@ -1377,7 +1373,7 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
             PushToast(ok ? msg : ("Hard delete failed: " + msg),
                       ok ? COL_GREEN_BR : COL_RED);
 
-            // Re-verify after delete
+            
             cw1::OperationTimer vt;
             g_lastVerify = chain.verifyIntegrity();
             g_lastVerifySeconds = vt.elapsedSeconds();
@@ -1394,12 +1390,12 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
     }
 }
 
-// =================================================================
-//  SECTION 14: Toast renderer
-// =================================================================
+
+
+
 
 static void RenderToasts(float deltaTime) {
-    // Remove expired toasts first
+    
     g_toasts.erase(
         std::remove_if(g_toasts.begin(), g_toasts.end(),
                        [](const Toast& t) { return t.remainingSecs <= 0.0f; }),
@@ -1415,7 +1411,7 @@ static void RenderToasts(float deltaTime) {
     for (size_t i = 0; i < g_toasts.size(); ++i) {
         Toast& t = g_toasts[i];
 
-        // Alpha fade-out in last 0.5 s
+        
         float alpha = (t.remainingSecs < 0.5f) ? (t.remainingSecs / 0.5f) : 1.0f;
         if (alpha < 0.0f) alpha = 0.0f;
 
@@ -1451,12 +1447,12 @@ static void RenderToasts(float deltaTime) {
     }
 }
 
-// =================================================================
-//  SECTION 15: main()
-// =================================================================
+
+
+
 
 int main() {
-    // â”€â”€ 1. GLFW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    
     if (!glfwInit()) return 1;
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -1472,7 +1468,7 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    // â”€â”€ 2. ImGui â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -1484,7 +1480,7 @@ int main() {
 
     ApplyGitHubDarkTheme();
 
-    // â”€â”€ 3. Font (fallback to default if file absent) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    
     {
         auto TryLoadFont = [&](const char* path, float sizePx) -> ImFont* {
             FILE* fp = fopen(path, "rb");
@@ -1533,7 +1529,7 @@ int main() {
         io.FontDefault = g_fontBody;
     }
 
-    // â”€â”€ 4. Blockchain + demo data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    
     cw1::Blockchain chain;
     loadDemoData(chain);
     g_lastVerifySeconds = cw1::measureSeconds([&]() {
@@ -1541,7 +1537,7 @@ int main() {
     });
     g_verifyDone = true;
 
-    // â”€â”€ 5. Main loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -1549,7 +1545,7 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Full-screen root window
+        
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(io.DisplaySize);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, COL_BG_MAIN);
@@ -1565,7 +1561,7 @@ int main() {
         RenderHeader(chain);
         ImGui::Spacing();
 
-        // Sidebar
+        
         ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
         ImGui::BeginChild("##sbwrap", ImVec2(280, -1), false);
         ImGui::PopStyleColor();
@@ -1574,7 +1570,7 @@ int main() {
 
         ImGui::SameLine();
 
-        // Content area
+        
         ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_MAIN);
         ImGui::BeginChild("##content", ImVec2(-1, -1), false,
                           ImGuiWindowFlags_HorizontalScrollbar);
@@ -1594,21 +1590,21 @@ int main() {
         ImGui::EndChild();
         ImGui::End();
 
-        // Toast overlay (rendered after main window)
+        
         RenderToasts(io.DeltaTime);
 
-        // â”€â”€ Draw â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        
         ImGui::Render();
         int dispW, dispH;
         glfwGetFramebufferSize(window, &dispW, &dispH);
         glViewport(0, 0, dispW, dispH);
-        glClearColor(0.051f, 0.067f, 0.090f, 1.0f);  // #0d1117
+        glClearColor(0.051f, 0.067f, 0.090f, 1.0f);  
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
     }
 
-    // â”€â”€ 6. Cleanup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

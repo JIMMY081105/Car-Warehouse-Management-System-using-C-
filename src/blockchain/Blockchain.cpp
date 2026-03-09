@@ -11,7 +11,7 @@ namespace cw1 {
 
 namespace {
 
-/// Case-insensitive substring search.
+
 bool containsIgnoreCase(const std::string& haystack, const std::string& needle) {
     if (needle.empty()) return true;
     if (needle.size() > haystack.size()) return false;
@@ -29,22 +29,22 @@ bool containsIgnoreCase(const std::string& haystack, const std::string& needle) 
     return h.find(n) != std::string::npos;
 }
 
-} // namespace
+} 
 
-// -- Core operations --------------------------------------------------
+
 
 void Blockchain::addBlock(const CarRecord& record) {
-    // 1. Determine the previous hash (genesis uses "0").
+    
     const std::string prevHash =
         chain_.empty() ? "0" : chain_.back().getCurrentHash();
 
-    // 2. Create the block and append to the global chain.
+    
     chain_.emplace_back(chain_.size(), prevHash, record);
 
-    // 3. Update the VIN index.
+    
     vinIndex_[record.vin].push_back(chain_.size() - 1);
 
-    // 4. Log the block addition to the audit trail.
+    
     const Block& added = chain_.back();
     std::ostringstream detail;
     detail << "Added block #" << added.getIndex()
@@ -61,7 +61,7 @@ std::size_t Blockchain::totalBlocks() const noexcept {
     return chain_.size();
 }
 
-// -- Per-car lookups --------------------------------------------------
+
 
 std::vector<const Block*> Blockchain::getCarHistory(const std::string& vin) const {
     std::vector<const Block*> history;
@@ -93,11 +93,11 @@ BlockStage Blockchain::getLatestStage(const std::string& vin) const {
     if (it == vinIndex_.end() || it->second.empty()) {
         throw std::runtime_error("VIN not found: " + vin);
     }
-    // The last index in the vector is the most recent event for this car.
+    
     return chain_[it->second.back()].getRecord().stage;
 }
 
-// -- Search / filter --------------------------------------------------
+
 
 std::vector<const Block*> Blockchain::searchByBrand(const std::string& brand) const {
     std::vector<const Block*> results;
@@ -106,7 +106,7 @@ std::vector<const Block*> Blockchain::searchByBrand(const std::string& brand) co
             results.push_back(&block);
         }
     }
-    // Log the search in the audit trail (auditLog_ is mutable -- see header).
+    
     std::ostringstream detail;
     detail << "searchByBrand(\"" << brand << "\") -> " << results.size() << " result(s)";
     auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
@@ -120,7 +120,7 @@ std::vector<const Block*> Blockchain::searchByStage(BlockStage stage) const {
             results.push_back(&block);
         }
     }
-    // Log the search in the audit trail (auditLog_ is mutable -- see header).
+    
     std::ostringstream detail;
     detail << "searchByStage(" << stageToString(stage) << ") -> " << results.size() << " result(s)";
     auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
@@ -139,18 +139,18 @@ std::vector<const Block*> Blockchain::searchGeneral(const std::string& query) co
             results.push_back(&block);
         }
     }
-    // Log the search in the audit trail (auditLog_ is mutable -- see header).
+    
     std::ostringstream detail;
     detail << "searchGeneral(\"" << query << "\") -> " << results.size() << " result(s)";
     auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
     return results;
 }
 
-// -- Integrity --------------------------------------------------------
+
 
 ValidationResult Blockchain::verifyIntegrity() const {
     ValidationResult result = Validation::verifyChain(chain_);
-    // Log the integrity check result in the audit trail.
+    
     std::ostringstream detail;
     detail << "verifyIntegrity() -> " << (result.ok ? "PASS" : "FAIL")
            << ": " << result.message;
@@ -210,7 +210,7 @@ bool Blockchain::tamperBlockHash(std::size_t index,
     return true;
 }
 
-// -- Block deletion ---------------------------------------------------
+
 
 bool Blockchain::softDeleteBlock(std::size_t index, std::string& outMessage) {
     if (index >= chain_.size()) {
@@ -223,7 +223,7 @@ bool Blockchain::softDeleteBlock(std::size_t index, std::string& outMessage) {
 
     const std::string originalVin = chain_[index].getRecord().vin;
 
-    // Build tombstone record preserving the original VIN.
+    
     CarRecord tombstone;
     tombstone.vin            = originalVin;
     tombstone.manufacturer   = "[DELETED]";
@@ -248,7 +248,7 @@ bool Blockchain::softDeleteBlock(std::size_t index, std::string& outMessage) {
     tombstone.warrantyExpiry    = "";
 
     chain_[index].setRecord(std::move(tombstone));
-    // Intentionally do NOT recompute hash -- integrity check will flag this.
+    
 
     std::ostringstream detail;
     detail << "Soft delete block #" << index
@@ -276,16 +276,16 @@ bool Blockchain::hardDeleteBlock(std::size_t index, std::string& outMessage) {
     const std::string deletedVin = chain_[index].getRecord().vin;
     const std::size_t cascadeStart = index;
 
-    // Erase the block.
+    
     chain_.erase(chain_.begin() + static_cast<std::ptrdiff_t>(index));
 
-    // Re-index and re-hash from the erased position onwards.
+    
     for (std::size_t i = cascadeStart; i < chain_.size(); ++i) {
         chain_[i].setIndex(i);
 
         if (i == 0) {
-            // New genesis block: compute hash with previousHash as "0",
-            // then set previousHash = currentHash (genesis rule).
+            
+            
             chain_[i].setPreviousHash("0");
             chain_[i].debugOverrideCurrentHash(chain_[i].computeHash());
             chain_[i].setPreviousHash(chain_[i].getCurrentHash());
@@ -295,7 +295,7 @@ bool Blockchain::hardDeleteBlock(std::size_t index, std::string& outMessage) {
         }
     }
 
-    // Rebuild vinIndex_ from scratch.
+    
     vinIndex_.clear();
     for (std::size_t i = 0; i < chain_.size(); ++i) {
         vinIndex_[chain_[i].getRecord().vin].push_back(i);
@@ -490,12 +490,12 @@ bool Blockchain::loadBlockchain(const std::string& path) {
     return true;
 }
 
-// -- Audit log --------------------------------------------------------
+
 
 AuditLog& Blockchain::getAuditLog() const noexcept {
-    // auditLog_ is mutable, so we can return a non-const reference from
-    // a const method. This lets callers log CHAIN_VIEWED events even when
-    // they only hold a const Blockchain&.
+    
+    
+    
     return auditLog_;
 }
 
@@ -503,4 +503,4 @@ AuditLog& Blockchain::getAuditLog() noexcept {
     return auditLog_;
 }
 
-} // namespace cw1
+} 

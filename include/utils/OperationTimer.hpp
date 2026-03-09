@@ -8,7 +8,7 @@
 
 namespace cw1 {
 
-/// Lightweight stopwatch for operation runtime reporting.
+
 class OperationTimer {
 public:
     using Clock = std::chrono::steady_clock;
@@ -37,4 +37,4 @@ inline std::string formatSeconds(double seconds) {
     return out.str();
 }
 
-} // namespace cw1
+} 

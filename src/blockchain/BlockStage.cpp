@@ -18,7 +18,7 @@ std::string stageToString(BlockStage stage) {
 }
 
 BlockStage stringToStage(const std::string& text) {
-    // Work with a lowercase copy for case-insensitive matching.
+    
     std::string lower = text;
     std::transform(lower.begin(), lower.end(), lower.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -32,4 +32,4 @@ BlockStage stringToStage(const std::string& text) {
     throw std::invalid_argument("Unknown stage: " + text);
 }
 
-} // namespace cw1
+} 

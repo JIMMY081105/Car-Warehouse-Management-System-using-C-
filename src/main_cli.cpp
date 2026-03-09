@@ -525,7 +525,7 @@ void deleteBlock(cw1::Blockchain& chain) {
     cout << "  Verify took: " << cw1::formatSeconds(verifySeconds) << " s\n\n";
 }
 
-} // namespace
+} 
 
 int main() {
     cw1::Blockchain chain;

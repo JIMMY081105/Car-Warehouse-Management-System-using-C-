@@ -25,4 +25,4 @@ std::string sha256(const std::string& input) {
     return output.str();
 }
 
-} // namespace cw1::HashUtil
+} 

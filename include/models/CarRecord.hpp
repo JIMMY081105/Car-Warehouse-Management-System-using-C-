@@ -6,47 +6,47 @@
 
 namespace cw1 {
 
-/// Represents a single event/record attached to a block.
-/// Common fields are always present; stage-specific fields are filled
-/// depending on which lifecycle stage the block represents.
+
+
+
 struct CarRecord {
-    // ── Common fields (every block has these) ──────────────────────
+    
     std::string vin;
     std::string manufacturer;
     std::string model;
     std::string color;
     int         productionYear = 0;
     BlockStage  stage          = BlockStage::PRODUCTION;
-    std::string manufacturerId;  // e.g. "MFR-2522"
+    std::string manufacturerId;  
 
-    // ── Stage-specific fields (filled as needed) ───────────────────
-    // PRODUCTION
-    std::string factoryLocation;   // e.g. "Shah Alam Plant"
+    
+    
+    std::string factoryLocation;   
 
-    // WAREHOUSE_INTAKE
-    std::string warehouseLocation; // e.g. "WH-A1"
-    std::string receivedBy;        // staff name / ID
-    std::string supplierId;        // e.g. "SUP-197588"
+    
+    std::string warehouseLocation; 
+    std::string receivedBy;        
+    std::string supplierId;        
 
-    // QUALITY_CHECK
-    std::string inspectorId;       // e.g. "QC-007"
-    bool        passed = false;    // QC result
-    std::string qcNotes;           // remarks
+    
+    std::string inspectorId;       
+    bool        passed = false;    
+    std::string qcNotes;           
 
-    // DEALER_DISPATCH
-    std::string dealerId;          // e.g. "DLR-KL-01"
-    std::string destination;       // city / address
-    std::string transportMode;     // "Truck", "Rail", etc.
+    
+    std::string dealerId;          
+    std::string destination;       
+    std::string transportMode;     
 
-    // CUSTOMER_SALE
-    std::string buyerId;           // e.g. "CUST-88201"
-    std::string retailerId;        // e.g. "RTL-91428"
-    double      salePrice = 0.0;   // MYR
-    std::string warrantyExpiry;    // ISO date string
+    
+    std::string buyerId;           
+    std::string retailerId;        
+    double      salePrice = 0.0;   
+    std::string warrantyExpiry;    
 
-    // ── Serialisation ──────────────────────────────────────────────
-    /// Deterministic pipe-delimited string used as hash input.
+    
+    
     std::string serialize() const;
 };
 
-} // namespace cw1
+} 

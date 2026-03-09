@@ -6,7 +6,7 @@ namespace cw1 {
 
 namespace {
 
-/// Escape pipe and backslash so the serialised string is unambiguous.
+
 std::string escapeField(const std::string& value) {
     std::string escaped;
     escaped.reserve(value.size());
@@ -19,12 +19,12 @@ std::string escapeField(const std::string& value) {
     return escaped;
 }
 
-} // namespace
+} 
 
 std::string CarRecord::serialize() const {
     std::ostringstream out;
 
-    // Common fields
+    
     out << "vin=" << escapeField(vin)
         << "|manufacturer=" << escapeField(manufacturer)
         << "|model=" << escapeField(model)
@@ -33,8 +33,8 @@ std::string CarRecord::serialize() const {
         << "|stage=" << escapeField(stageToString(stage))
         << "|manufacturerId=" << escapeField(manufacturerId);
 
-    // Stage-specific fields — include all so that the hash is deterministic
-    // regardless of which fields happen to be empty.
+    
+    
     out << "|factoryLocation=" << escapeField(factoryLocation)
         << "|warehouseLocation=" << escapeField(warehouseLocation)
         << "|receivedBy=" << escapeField(receivedBy)
@@ -53,4 +53,4 @@ std::string CarRecord::serialize() const {
     return out.str();
 }
 
-} // namespace cw1
+} 

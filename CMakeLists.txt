@@ -6,15 +6,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# ── Options ───────────────────────────────────────────────────────
+
 option(BUILD_CLI "Build the terminal CLI version" ON)
 option(BUILD_GUI "Build the ImGui GUI version"   ON)
 
-# ── External packages ─────────────────────────────────────────────
+
 find_package(OpenSSL REQUIRED)
 find_package(OpenGL REQUIRED)
 
-# GLFW: prefer system installation, fall back to the cloned subdirectory
+
 find_package(glfw3 QUIET)
 if(NOT glfw3_FOUND)
     message(STATUS "System glfw3 not found -- using third_party/glfw")
@@ -25,7 +25,7 @@ if(NOT glfw3_FOUND)
     add_subdirectory(third_party/glfw)
 endif()
 
-# ── Shared backend sources (blockchain engine) ────────────────────
+
 set(BACKEND_SOURCES
     src/models/CarRecord.cpp
     src/blockchain/Block.cpp
@@ -37,7 +37,7 @@ set(BACKEND_SOURCES
     src/utils/TimeUtil.cpp
 )
 
-# ── ImGui sources ─────────────────────────────────────────────────
+
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui)
 set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui.cpp
@@ -49,7 +49,7 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
-# ── CLI executable ────────────────────────────────────────────────
+
 if(BUILD_CLI)
     add_executable(car_warehouse_cli
         src/main_cli.cpp
@@ -68,7 +68,7 @@ if(BUILD_CLI)
     endif()
 endif()
 
-# ── GUI executable ────────────────────────────────────────────────
+
 if(BUILD_GUI)
     add_executable(car_warehouse_gui
         src/main_gui.cpp
@@ -87,7 +87,7 @@ if(BUILD_GUI)
             glfw
             OpenGL::GL
     )
-    # Copy font file next to the executable so the runtime path works
+
     add_custom_command(TARGET car_warehouse_gui POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory
             $<TARGET_FILE_DIR:car_warehouse_gui>/fonts
