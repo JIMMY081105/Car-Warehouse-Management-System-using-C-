@@ -10,6 +10,7 @@ namespace cw1 {
 struct ValidationResult {
     bool        ok;
     std::string message;
+    std::vector<std::size_t> failedIndices;
 };
 
 namespace Validation {

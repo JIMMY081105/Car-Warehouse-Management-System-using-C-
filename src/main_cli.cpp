@@ -241,6 +241,66 @@ void viewCarByVin(const cw1::Blockchain& chain) {
         "Viewed blockchain for " + vin + " (" + to_string(history.size()) + " blocks)");
 }
 
+const char* k_manufacturers[] = {
+    "Perodua", "Proton", "Toyota", "Honda", "Nissan", "Mazda",
+    "Mitsubishi", "Suzuki", "Hyundai", "Kia", "BMW", "Mercedes-Benz",
+    "Volkswagen", "Subaru", "Isuzu", "Ford", "Lexus", "Volvo"
+};
+constexpr int k_mfrCount = 18;
+
+const char* k_models_perodua[]  = {"Myvi","Axia","Bezza","Aruz","Ativa","Alza"};
+const char* k_models_proton[]   = {"Saga","Persona","X50","X70","X90","Iriz","Exora","S70"};
+const char* k_models_toyota[]   = {"Vios","Camry","Yaris","Corolla Cross","Hilux","Innova","Rush","Fortuner","Veloz"};
+const char* k_models_honda[]    = {"City","Civic","HR-V","CR-V","Accord","BR-V","WR-V"};
+const char* k_models_nissan[]   = {"Almera","X-Trail","Navara","Serena","Kicks"};
+const char* k_models_mazda[]    = {"Mazda 2","Mazda 3","CX-3","CX-5","CX-8","CX-30","BT-50","MX-5"};
+const char* k_models_mitsubishi[] = {"Triton","Xpander","Outlander","ASX"};
+const char* k_models_suzuki[]   = {"Swift","Vitara","Jimny","S-Cross","Ertiga","XL7"};
+const char* k_models_hyundai[]  = {"Kona","Tucson","Santa Fe","Stargazer","Ioniq 5","Ioniq 6","Palisade"};
+const char* k_models_kia[]      = {"Seltos","Sportage","Carnival","Cerato","EV6","EV9"};
+const char* k_models_bmw[]      = {"3 Series","5 Series","X1","X3","X5","iX","i4","i5"};
+const char* k_models_merc[]     = {"A-Class","C-Class","E-Class","GLA","GLC","GLE","EQA","EQB","EQE"};
+const char* k_models_vw[]       = {"Golf","Tiguan","Arteon","ID.4","T-Cross","Passat"};
+const char* k_models_subaru[]   = {"XV","Forester","Outback","WRX","BRZ"};
+const char* k_models_isuzu[]    = {"D-Max","MU-X"};
+const char* k_models_ford[]     = {"Ranger","Everest","Territory"};
+const char* k_models_lexus[]    = {"NX","RX","ES","UX","IS","LC"};
+const char* k_models_volvo[]    = {"XC40","XC60","XC90","S60","S90","C40","EX30"};
+
+struct ModelList { const char** models; int count; };
+const ModelList k_modelsByMfr[] = {
+    {k_models_perodua,6},{k_models_proton,8},{k_models_toyota,9},
+    {k_models_honda,7},{k_models_nissan,5},{k_models_mazda,8},
+    {k_models_mitsubishi,4},{k_models_suzuki,6},{k_models_hyundai,7},
+    {k_models_kia,6},{k_models_bmw,8},{k_models_merc,9},
+    {k_models_vw,6},{k_models_subaru,5},{k_models_isuzu,2},
+    {k_models_ford,3},{k_models_lexus,6},{k_models_volvo,7},
+};
+
+const char* k_colors[] = {
+    "White","Black","Silver","Grey","Red","Blue",
+    "Brown","Green","Yellow","Orange","Beige","Maroon"
+};
+constexpr int k_colorCount = 12;
+
+const char* k_transportModes[] = {"Truck","Trailer","Car Carrier","Self-Drive"};
+constexpr int k_transportCount = 4;
+
+int pickFromList(const char* label, const char* const* items, int count) {
+    cout << "\n  " << label << ":\n";
+    for (int i = 0; i < count; ++i) {
+        cout << "  " << (i + 1) << ". " << items[i] << '\n';
+    }
+    int choice;
+    do {
+        choice = parseIntOrDefault(prompt("Select (1-" + to_string(count) + ")"), 0);
+        if (choice < 1 || choice > count) {
+            cout << "  Invalid. Please enter 1-" << count << ".\n";
+        }
+    } while (choice < 1 || choice > count);
+    return choice - 1;
+}
+
 void addNewCarStage(cw1::Blockchain& chain) {
     cout << "\n  Select lifecycle stage to add:\n";
     cout << "  1. Production\n";
@@ -260,9 +320,17 @@ void addNewCarStage(cw1::Blockchain& chain) {
 
     cw1::CarRecord r;
     r.vin = prompt("VIN");
-    r.manufacturer = prompt("Manufacturer");
-    r.model = prompt("Model");
-    r.color = prompt("Color");
+
+    int mfrIdx = pickFromList("Manufacturer", k_manufacturers, k_mfrCount);
+    r.manufacturer = k_manufacturers[mfrIdx];
+
+    const ModelList& ml = k_modelsByMfr[mfrIdx];
+    int modelIdx = pickFromList("Model", ml.models, ml.count);
+    r.model = ml.models[modelIdx];
+
+    int colorIdx = pickFromList("Color", k_colors, k_colorCount);
+    r.color = k_colors[colorIdx];
+
     r.productionYear = parseIntOrDefault(prompt("Production Year"), 0);
     r.manufacturerId = prompt("Manufacturer ID");
 
@@ -283,12 +351,14 @@ void addNewCarStage(cw1::Blockchain& chain) {
             r.passed = (prompt("Passed? (y/n)") == "y");
             r.qcNotes = prompt("QC Notes");
             break;
-        case 4:
+        case 4: {
             r.stage = cw1::BlockStage::DEALER_DISPATCH;
             r.dealerId = prompt("Dealer ID");
             r.destination = prompt("Destination");
-            r.transportMode = prompt("Transport Mode");
+            int tIdx = pickFromList("Transport Mode", k_transportModes, k_transportCount);
+            r.transportMode = k_transportModes[tIdx];
             break;
+        }
         case 5:
             r.stage = cw1::BlockStage::CUSTOMER_SALE;
             r.buyerId = prompt("Buyer ID");
@@ -302,14 +372,6 @@ void addNewCarStage(cw1::Blockchain& chain) {
 
     if (r.vin.empty()) {
         cout << "  Error: VIN is required.\n\n";
-        return;
-    }
-    if (r.manufacturer.empty()) {
-        cout << "  Error: Manufacturer is required.\n\n";
-        return;
-    }
-    if (r.model.empty()) {
-        cout << "  Error: Model is required.\n\n";
         return;
     }
     if (r.productionYear < 1900 || r.productionYear > 2030) {
@@ -378,6 +440,13 @@ void verifyIntegrity(const cw1::Blockchain& chain) {
 
     cout << "\n  Integrity: " << (result.ok ? "PASS" : "FAIL")
          << " - " << result.message << '\n';
+    if (!result.ok && !result.failedIndices.empty()) {
+        cout << "  Failed block(s):";
+        for (std::size_t idx : result.failedIndices) {
+            cout << " #" << idx;
+        }
+        cout << '\n';
+    }
     printOperationDuration(seconds);
     cout << '\n';
 }
@@ -535,7 +604,24 @@ int main() {
     cout << "    Hybrid Architecture (Global + Index)\n";
     cout << "  ========================================\n\n";
 
-    loadDemoData(chain);
+    chain.openDatabase("cw1_blockchain.db");
+    bool loadedFromDB = false;
+    if (chain.isDatabaseOpen()) {
+        loadedFromDB = chain.loadFromDB() && chain.totalBlocks() > 0;
+    }
+    if (!loadedFromDB) {
+        loadDemoData(chain);
+        if (chain.isDatabaseOpen()) {
+            chain.saveToDB();
+        }
+    } else {
+        const auto vins = chain.getAllVins();
+        cout << "  Loaded " << vins.size() << " cars, "
+             << chain.totalBlocks() << " total blocks from database.\n\n";
+        const auto result = chain.verifyIntegrity();
+        cout << "  Integrity: " << (result.ok ? "PASS" : "FAIL")
+             << " - " << result.message << "\n\n";
+    }
 
     string choice;
     do {

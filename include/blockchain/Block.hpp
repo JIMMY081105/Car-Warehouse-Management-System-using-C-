@@ -20,7 +20,8 @@ public:
           std::string currentHash,
           std::string timestamp,
           std::uint64_t nonce,
-          CarRecord record);
+          CarRecord record,
+          std::string sha3Hash = "");
 
     std::size_t         getIndex()        const noexcept override;
     const std::string&  getCurrentHash()  const noexcept override;
@@ -28,9 +29,12 @@ public:
     const std::string&  getTimestamp()    const noexcept override;
     std::uint64_t       getNonce()        const noexcept;
     const CarRecord&    getRecord()       const noexcept;
+    const std::string&  getSha3Hash()     const noexcept;
 
-    
+
     std::string computeHash() const override;
+
+    std::string computeSha3Hash() const;
 
     
     std::string toString() const override;
@@ -56,6 +60,7 @@ private:
     std::size_t    index_;
     std::string    currentHash_;
     std::string    previousHash_;
+    std::string    sha3Hash_;
     std::string    timestamp_;
     std::uint64_t  nonce_;
     CarRecord      record_;

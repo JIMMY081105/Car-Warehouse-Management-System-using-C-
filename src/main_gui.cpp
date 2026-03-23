@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iomanip>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -138,15 +139,12 @@ enum class View { DASHBOARD, CAR_DETAIL, ADD_BLOCK, GLOBAL_CHAIN, AUDIT_LOG, INT
 static View        g_view        = View::DASHBOARD;
 static std::string g_selectedVin;
 static char        g_searchBuf[256] = {};
-static cw1::ValidationResult g_lastVerify = {false, "Not yet verified"};
+static cw1::ValidationResult g_lastVerify = {false, "Not yet verified", {}};
 static bool        g_verifyDone = false;
 static double      g_lastVerifySeconds = 0.0;
 static double      g_lastAddBlockSeconds = 0.0;
 static double      g_lastSearchSeconds = 0.0;
 static int         g_tamperIndex = -1;
-static double      g_lastSaveSeconds = 0.0;
-static double      g_lastLoadSeconds = 0.0;
-static char        g_persistPath[260] = "cw1_blockchain_data.txt";
 
 
 static int    g_deleteBlockIndex  = -1;
@@ -182,9 +180,9 @@ static void PushToast(const std::string& msg, ImVec4 color, float dur = 3.0f) {
 
 static int    g_formStage           = 0;
 static char   g_formVin[64]         = {};
-static char   g_formMfr[64]         = {};
-static char   g_formModel[64]       = {};
-static char   g_formColor[64]       = {};
+static int    g_formMfrIndex        = 0;
+static int    g_formModelIndex      = 0;
+static int    g_formColorIndex      = 0;
 static int    g_formYear            = 2025;
 static char   g_formFactory[128]    = {};
 static char   g_formWarehouse[64]   = {};
@@ -194,7 +192,7 @@ static bool   g_formPassed          = true;
 static char   g_formQcNotes[256]    = {};
 static char   g_formDealerId[64]    = {};
 static char   g_formDestination[64] = {};
-static char   g_formTransport[64]   = {};
+static int    g_formTransportIndex  = 0;
 static char   g_formBuyerId[64]     = {};
 static double g_formSalePrice       = 0.0;
 static char   g_formWarranty[32]    = {};
@@ -202,6 +200,19 @@ static char   g_formMfrId[64]       = {};
 static char   g_formSupplierId[64]  = {};
 static char   g_formRetailerId[64]  = {};
 static int    g_auditN              = 20;
+
+// -- Immutability demo state --
+static bool                    g_tempGenerating   = false;
+static float                   g_tempAccumulator  = 0.0f;
+static float                   g_tempInterval     = 5.0f;
+static std::vector<cw1::Block> g_tempChain;
+static cw1::ValidationResult   g_tempVerify       = {false, "Not verified", {}};
+static bool                    g_tempVerifyDone   = false;
+static double                  g_tempVerifySeconds = 0.0;
+static int                     g_tempTamperIndex  = -1;
+static int                     g_tempDeleteIndex  = -1;
+static std::size_t             g_tempRealCount    = 0;
+
 
 
 
@@ -497,7 +508,7 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
             g_cachedSearchVins.clear();
 
             const double seconds = cw1::measureSeconds([&]() {
-                const auto hits = chain.searchGeneral(query);
+                const auto hits = chain.searchBySQL(query);
                 std::vector<std::string> seen;
                 for (const auto* blk : hits) {
                     const std::string& vin = blk->getRecord().vin;
@@ -663,6 +674,12 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
 
             ImGui::TableNextColumn();
             ImGui::TextColored(COL_PURPLE, "%s", Truncate(b.getCurrentHash(), 12).c_str());
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::TextColored(COL_PURPLE, "SHA-256:  %s", b.getCurrentHash().c_str());
+                ImGui::TextColored(COL_ORANGE, "SHA3-128: %s", b.getSha3Hash().c_str());
+                ImGui::EndTooltip();
+            }
 
             ImGui::TableNextColumn();
             char selId[80];
@@ -773,6 +790,51 @@ static const char* k_stageNames[] = {
     "DEALER_DISPATCH", "CUSTOMER_SALE"
 };
 
+static const char* k_manufacturers[] = {
+    "Perodua", "Proton", "Toyota", "Honda", "Nissan", "Mazda",
+    "Mitsubishi", "Suzuki", "Hyundai", "Kia", "BMW", "Mercedes-Benz",
+    "Volkswagen", "Subaru", "Isuzu", "Ford", "Lexus", "Volvo"
+};
+
+struct ModelList { const char** models; int count; };
+
+static const char* k_models_perodua[]  = {"Myvi","Axia","Bezza","Aruz","Ativa","Alza"};
+static const char* k_models_proton[]   = {"Saga","Persona","X50","X70","X90","Iriz","Exora","S70"};
+static const char* k_models_toyota[]   = {"Vios","Camry","Yaris","Corolla Cross","Hilux","Innova","Rush","Fortuner","Veloz"};
+static const char* k_models_honda[]    = {"City","Civic","HR-V","CR-V","Accord","BR-V","WR-V"};
+static const char* k_models_nissan[]   = {"Almera","X-Trail","Navara","Serena","Kicks"};
+static const char* k_models_mazda[]    = {"Mazda 2","Mazda 3","CX-3","CX-5","CX-8","CX-30","BT-50","MX-5"};
+static const char* k_models_mitsubishi[] = {"Triton","Xpander","Outlander","ASX"};
+static const char* k_models_suzuki[]   = {"Swift","Vitara","Jimny","S-Cross","Ertiga","XL7"};
+static const char* k_models_hyundai[]  = {"Kona","Tucson","Santa Fe","Stargazer","Ioniq 5","Ioniq 6","Palisade"};
+static const char* k_models_kia[]      = {"Seltos","Sportage","Carnival","Cerato","EV6","EV9"};
+static const char* k_models_bmw[]      = {"3 Series","5 Series","X1","X3","X5","iX","i4","i5"};
+static const char* k_models_merc[]     = {"A-Class","C-Class","E-Class","GLA","GLC","GLE","EQA","EQB","EQE"};
+static const char* k_models_vw[]       = {"Golf","Tiguan","Arteon","ID.4","T-Cross","Passat"};
+static const char* k_models_subaru[]   = {"XV","Forester","Outback","WRX","BRZ"};
+static const char* k_models_isuzu[]    = {"D-Max","MU-X"};
+static const char* k_models_ford[]     = {"Ranger","Everest","Territory"};
+static const char* k_models_lexus[]    = {"NX","RX","ES","UX","IS","LC"};
+static const char* k_models_volvo[]    = {"XC40","XC60","XC90","S60","S90","C40","EX30"};
+
+static const ModelList k_modelsByMfr[] = {
+    {k_models_perodua,    6}, {k_models_proton,     8}, {k_models_toyota,    9},
+    {k_models_honda,      7}, {k_models_nissan,     5}, {k_models_mazda,     8},
+    {k_models_mitsubishi, 4}, {k_models_suzuki,     6}, {k_models_hyundai,   7},
+    {k_models_kia,        6}, {k_models_bmw,        8}, {k_models_merc,      9},
+    {k_models_vw,         6}, {k_models_subaru,     5}, {k_models_isuzu,     2},
+    {k_models_ford,       3}, {k_models_lexus,      6}, {k_models_volvo,     7},
+};
+
+static const char* k_colors[] = {
+    "White","Black","Silver","Grey","Red","Blue",
+    "Brown","Green","Yellow","Orange","Beige","Maroon"
+};
+
+static const char* k_transportModes[] = {
+    "Truck","Trailer","Car Carrier","Self-Drive"
+};
+
 static void RenderAddBlock(cw1::Blockchain& chain) {
     DrawSectionHeading("Add Block to Chain");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -809,9 +871,23 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
             ImGui::TextColored(COL_ACCENT,   "[* New VIN]");
     }
 
-    LabelText("Manufacturer", g_formMfr,   sizeof(g_formMfr));
-    LabelText("Model",        g_formModel, sizeof(g_formModel));
-    LabelText("Color",        g_formColor, sizeof(g_formColor));
+    ImGui::TextColored(COL_MUTED, "%-18s", "Manufacturer");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(300);
+    if (ImGui::Combo("##add_Manufacturer", &g_formMfrIndex, k_manufacturers, IM_ARRAYSIZE(k_manufacturers))) {
+        g_formModelIndex = 0;
+    }
+
+    ImGui::TextColored(COL_MUTED, "%-18s", "Model");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(300);
+    const ModelList& ml = k_modelsByMfr[g_formMfrIndex];
+    ImGui::Combo("##add_Model", &g_formModelIndex, ml.models, ml.count);
+
+    ImGui::TextColored(COL_MUTED, "%-18s", "Color");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(300);
+    ImGui::Combo("##add_Color", &g_formColorIndex, k_colors, IM_ARRAYSIZE(k_colors));
 
     ImGui::TextColored(COL_MUTED, "%-18s", "Production Year");
     ImGui::SameLine();
@@ -841,10 +917,13 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         ImGui::Checkbox("##add_passed", &g_formPassed);
         LabelText("QC Notes", g_formQcNotes, sizeof(g_formQcNotes));
         break;
-    case 3: 
+    case 3:
         LabelText("Dealer ID",    g_formDealerId,   sizeof(g_formDealerId));
         LabelText("Destination",  g_formDestination,sizeof(g_formDestination));
-        LabelText("Transport",    g_formTransport,  sizeof(g_formTransport));
+        ImGui::TextColored(COL_MUTED, "%-18s", "Transport Mode");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(300);
+        ImGui::Combo("##add_Transport", &g_formTransportIndex, k_transportModes, IM_ARRAYSIZE(k_transportModes));
         break;
     case 4: 
         LabelText("Buyer ID",     g_formBuyerId, sizeof(g_formBuyerId));
@@ -861,21 +940,19 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
 
     bool submit = DrawPrimaryButton("  Add Block  ", ImVec2(150, 36));
 
-    bool canSubmit = (g_formVin[0] != '\0') &&
-                     (g_formMfr[0] != '\0') &&
-                     (g_formModel[0] != '\0');
+    bool canSubmit = (g_formVin[0] != '\0');
 
     if (!canSubmit) {
         ImGui::SameLine();
-        ImGui::TextColored(COL_RED, "  VIN, Manufacturer, and Model are required.");
+        ImGui::TextColored(COL_RED, "  VIN is required.");
     }
 
     if (submit && canSubmit) {
         cw1::CarRecord r;
         r.vin            = g_formVin;
-        r.manufacturer   = g_formMfr;
-        r.model          = g_formModel;
-        r.color          = g_formColor;
+        r.manufacturer   = k_manufacturers[g_formMfrIndex];
+        r.model          = k_modelsByMfr[g_formMfrIndex].models[g_formModelIndex];
+        r.color          = k_colors[g_formColorIndex];
         r.productionYear = g_formYear;
         r.stage          = static_cast<cw1::BlockStage>(g_formStage);
         r.manufacturerId = g_formMfrId;
@@ -897,7 +974,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         case 3:
             r.dealerId      = g_formDealerId;
             r.destination   = g_formDestination;
-            r.transportMode = g_formTransport;
+            r.transportMode = k_transportModes[g_formTransportIndex];
             break;
         case 4:
             r.buyerId        = g_formBuyerId;
@@ -916,15 +993,15 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
                   " | Operation took: " + cw1::formatSeconds(seconds) + " s",
                   COL_GREEN_BR);
 
-        
-        g_formVin[0]    = '\0'; g_formMfr[0]         = '\0';
-        g_formModel[0]  = '\0'; g_formColor[0]        = '\0';
+
+        g_formVin[0]    = '\0';
+        g_formMfrIndex  = 0;  g_formModelIndex = 0;  g_formColorIndex = 0;
         g_formYear      = 2025;
         g_formFactory[0]= '\0'; g_formWarehouse[0]    = '\0';
         g_formReceivedBy[0]= '\0'; g_formInspector[0] = '\0';
         g_formPassed    = true;  g_formQcNotes[0]     = '\0';
         g_formDealerId[0]= '\0'; g_formDestination[0] = '\0';
-        g_formTransport[0]= '\0'; g_formBuyerId[0]    = '\0';
+        g_formTransportIndex = 0; g_formBuyerId[0]    = '\0';
         g_formSalePrice = 0.0;   g_formWarranty[0]    = '\0';
         g_formMfrId[0] = '\0'; g_formSupplierId[0] = '\0'; g_formRetailerId[0] = '\0';
     }
@@ -1025,7 +1102,8 @@ static void RenderGlobalChain(const cw1::Blockchain& chain) {
             ImGui::TextColored(COL_PURPLE, "%s", Truncate(b.getCurrentHash(), 12).c_str());
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
-                ImGui::TextColored(COL_PURPLE, "%s", b.getCurrentHash().c_str());
+                ImGui::TextColored(COL_PURPLE, "SHA-256:  %s", b.getCurrentHash().c_str());
+                ImGui::TextColored(COL_ORANGE, "SHA3-128: %s", b.getSha3Hash().c_str());
                 ImGui::EndTooltip();
             }
 
@@ -1204,59 +1282,6 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
         }
     }
 
-    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-    ImGui::TextColored(COL_MUTED, "Persistence");
-    ImGui::SetNextItemWidth(420.0f);
-    ImGui::InputText("File path##persist_path", g_persistPath, sizeof(g_persistPath));
-
-    if (DrawPrimaryButton("Save Blockchain##save_chain", ImVec2(170.0f, 34.0f))) {
-        if (g_persistPath[0] == '\0') {
-            PushToast("Save failed: file path is empty.", COL_RED);
-        } else {
-            cw1::OperationTimer timer;
-            const bool ok = chain.saveBlockchain(g_persistPath);
-            g_lastSaveSeconds = timer.elapsedSeconds();
-            PushToast(ok ? "Save Blockchain: success." : "Save Blockchain: failed.",
-                      ok ? COL_GREEN_BR : COL_RED);
-        }
-    }
-
-    ImGui::SameLine();
-    if (DrawPrimaryButton("Load Blockchain##load_chain", ImVec2(170.0f, 34.0f))) {
-        if (g_persistPath[0] == '\0') {
-            PushToast("Load failed: file path is empty.", COL_RED);
-        } else {
-            cw1::OperationTimer timer;
-            const bool ok = chain.loadBlockchain(g_persistPath);
-            g_lastLoadSeconds = timer.elapsedSeconds();
-
-            if (ok) {
-                cw1::OperationTimer verifyTimer;
-                g_lastVerify = chain.verifyIntegrity();
-                g_lastVerifySeconds = verifyTimer.elapsedSeconds();
-                g_verifyDone = true;
-
-                if (!g_selectedVin.empty() && !chain.hasVin(g_selectedVin)) {
-                    g_selectedVin.clear();
-                    g_view = View::DASHBOARD;
-                }
-
-                PushToast("Load Blockchain: success.", COL_GREEN_BR);
-            } else {
-                PushToast("Load Blockchain: failed.", COL_RED);
-            }
-        }
-    }
-
-    if (g_lastSaveSeconds > 0.0) {
-        ImGui::TextColored(COL_VERY_MUTED, "Last save operation took: %s s",
-                           cw1::formatSeconds(g_lastSaveSeconds).c_str());
-    }
-    if (g_lastLoadSeconds > 0.0) {
-        ImGui::TextColored(COL_VERY_MUTED, "Last load operation took: %s s",
-                           cw1::formatSeconds(g_lastLoadSeconds).c_str());
-    }
-
     ImGui::Spacing(); ImGui::Spacing();
     if (!g_verifyDone) {
         ImGui::TextColored(COL_MUTED, "Press Run Verification to check the chain.");
@@ -1305,6 +1330,306 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "Details:");
     ImGui::SameLine();
     ImGui::TextWrapped("%s", g_lastVerify.message.c_str());
+
+    if (!g_lastVerify.ok && !g_lastVerify.failedIndices.empty()) {
+        ImGui::Spacing();
+        ImGui::TextColored(COL_RED, "Failed block(s):");
+        for (std::size_t fi : g_lastVerify.failedIndices) {
+            ImGui::SameLine();
+            ImGui::TextColored(COL_RED, " #%zu", fi);
+        }
+    }
+
+    // ===================================================================
+    // Immutability Demonstration Section
+    // ===================================================================
+    ImGui::Spacing(); ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    DrawSectionHeading("Immutability Demonstration");
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "Demonstrates blockchain immutability by generating temporary blocks,");
+    ImGui::TextColored(COL_MUTED, "allowing tampering, and showing exactly which blocks fail verification.");
+    ImGui::Spacing();
+
+    // 1. Start/Stop Toggle Button
+    if (!g_tempGenerating) {
+        ImGui::PushStyleColor(ImGuiCol_Button,        HexColor(0x1b4d30));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  HexColor(0x238636));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   HexColor(0x2ea043));
+        if (ImGui::Button("Start Generating Temp Blocks##tempstart", ImVec2(280.0f, 36.0f))) {
+            g_tempChain = chain.getChain();
+            g_tempRealCount = g_tempChain.size();
+            g_tempGenerating = true;
+            g_tempAccumulator = 0.0f;
+            g_tempVerifyDone = false;
+            g_tempTamperIndex = -1;
+            g_tempDeleteIndex = -1;
+            PushToast("Temp chain snapshot taken. Auto-generation started.", COL_GREEN_BR);
+        }
+        ImGui::PopStyleColor(3);
+    } else {
+        if (DrawDangerButton("Stop Generating##tempstop", ImVec2(220.0f, 36.0f))) {
+            g_tempGenerating = false;
+            PushToast("Temp block auto-generation stopped.", COL_YELLOW);
+        }
+    }
+
+    // 2. Status display
+    if (!g_tempChain.empty()) {
+        ImGui::Spacing();
+        std::size_t genCount = g_tempChain.size() - g_tempRealCount;
+        ImGui::TextColored(COL_TEXT, "Temp chain: %zu blocks (%zu real + %zu generated)  |  Generating: %s",
+                           g_tempChain.size(), g_tempRealCount, genCount,
+                           g_tempGenerating ? "ON" : "OFF");
+    }
+
+    // 3. Interval slider
+    if (g_tempGenerating || !g_tempChain.empty()) {
+        ImGui::Spacing();
+        ImGui::SetNextItemWidth(240.0f);
+        ImGui::SliderFloat("Generation interval (s)##tempinterval", &g_tempInterval, 1.0f, 10.0f, "%.1f s");
+    }
+
+    // 4. Tamper controls for temp chain
+    if (!g_tempChain.empty()) {
+        ImGui::Spacing(); ImGui::Spacing();
+        ImGui::TextColored(COL_MUTED, "TAMPER TEMP CHAIN");
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::SetNextItemWidth(140.0f);
+        ImGui::InputInt("Tamper temp block index##temptamperidx", &g_tempTamperIndex);
+        ImGui::SameLine();
+
+        bool tamperValid = (g_tempTamperIndex >= 0 &&
+                            static_cast<std::size_t>(g_tempTamperIndex) < g_tempChain.size());
+
+        ImGui::BeginDisabled(!tamperValid);
+        if (DrawDangerButton("Tamper Data##temptamperdata", ImVec2(140.0f, 34.0f))) {
+            g_tempChain[static_cast<std::size_t>(g_tempTamperIndex)]
+                .debugTamperPayloadForSimulation("TAMPERED-IMMUTABILITY-DEMO");
+            PushToast("Temp block #" + std::to_string(g_tempTamperIndex) + " payload tampered.", COL_RED);
+        }
+        ImGui::SameLine();
+        if (DrawDangerButton("Tamper Hash##temptamperhash", ImVec2(140.0f, 34.0f))) {
+            g_tempChain[static_cast<std::size_t>(g_tempTamperIndex)]
+                .debugOverrideCurrentHash("000000000000tampered");
+            PushToast("Temp block #" + std::to_string(g_tempTamperIndex) + " hash overridden.", COL_RED);
+        }
+        ImGui::EndDisabled();
+
+        // 5. Delete temp block control
+        ImGui::Spacing();
+        ImGui::SetNextItemWidth(140.0f);
+        ImGui::InputInt("Delete temp block index##tempdelidx", &g_tempDeleteIndex);
+        ImGui::SameLine();
+
+        bool delValid = (g_tempDeleteIndex >= 0 &&
+                         static_cast<std::size_t>(g_tempDeleteIndex) < g_tempChain.size() &&
+                         g_tempChain.size() > 1);
+
+        ImGui::BeginDisabled(!delValid);
+        if (DrawDangerButton("Delete Temp Block##tempdel", ImVec2(180.0f, 34.0f))) {
+            std::size_t di = static_cast<std::size_t>(g_tempDeleteIndex);
+            g_tempChain.erase(g_tempChain.begin() + static_cast<std::ptrdiff_t>(di));
+            // Re-index without fixing hashes -- deliberately breaks the chain.
+            for (std::size_t ri = di; ri < g_tempChain.size(); ++ri) {
+                g_tempChain[ri].setIndex(ri);
+            }
+            if (g_tempRealCount > g_tempChain.size()) {
+                g_tempRealCount = g_tempChain.size();
+            }
+            PushToast("Temp block #" + std::to_string(g_tempDeleteIndex) +
+                      " deleted (chain links NOT repaired).", COL_RED);
+        }
+        ImGui::EndDisabled();
+
+        // 6. Verify temp chain button
+        ImGui::Spacing(); ImGui::Spacing();
+        if (DrawPrimaryButton("Verify Temp Chain##tempverify", ImVec2(220.0f, 36.0f))) {
+            cw1::OperationTimer timer;
+            g_tempVerify = cw1::Validation::verifyChain(g_tempChain);
+            g_tempVerifySeconds = timer.elapsedSeconds();
+            g_tempVerifyDone = true;
+            PushToast(g_tempVerify.ok ? "Temp chain verified OK."
+                                      : "Temp chain integrity FAILED.",
+                      g_tempVerify.ok ? COL_GREEN_BR : COL_RED);
+        }
+
+        // 7. Verification result display
+        if (g_tempVerifyDone) {
+            ImGui::Spacing();
+            const ImVec4 tBannerCol = g_tempVerify.ok ? HexColor(0x1b4d30) : HexColor(0x5a2429);
+            const char* tBannerTxt = g_tempVerify.ok ? "TEMP CHAIN VERIFIED" : "TEMP CHAIN INTEGRITY FAILURE";
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, tBannerCol);
+            ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
+            ImGui::BeginChild("##tempintbanner", ImVec2(-1, 60), true);
+            ImGui::SetCursorPos(ImVec2(20.0f, 14.0f));
+            ImGui::SetWindowFontScale(1.4f);
+            ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", tBannerTxt);
+            ImGui::SetWindowFontScale(1.0f);
+            ImGui::EndChild();
+            ImGui::PopStyleColor(2);
+
+            ImGui::TextColored(COL_MUTED, "Verification Time:");
+            ImGui::SameLine();
+            ImGui::TextColored(COL_TEXT, "%s seconds",
+                               cw1::formatSeconds(g_tempVerifySeconds).c_str());
+
+            ImGui::TextColored(COL_MUTED, "Result:");
+            ImGui::SameLine();
+            ImGui::TextWrapped("%s", g_tempVerify.message.c_str());
+
+            if (!g_tempVerify.ok && !g_tempVerify.failedIndices.empty()) {
+                ImGui::Spacing();
+                ImGui::TextColored(COL_RED, "Failed blocks detail:");
+                ImGui::Spacing();
+
+                ImGuiTableFlags detFlags = ImGuiTableFlags_BordersInnerV |
+                                           ImGuiTableFlags_BordersInnerH |
+                                           ImGuiTableFlags_RowBg |
+                                           ImGuiTableFlags_SizingStretchProp;
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8.0f, 6.0f));
+                if (ImGui::BeginTable("##tempfaildetail", 4, detFlags, ImVec2(-1, 0))) {
+                    ImGui::TableSetupColumn("Block #",       ImGuiTableColumnFlags_WidthFixed, 70);
+                    ImGui::TableSetupColumn("Stored Hash",   ImGuiTableColumnFlags_WidthStretch, 2.0f);
+                    ImGui::TableSetupColumn("Expected Hash", ImGuiTableColumnFlags_WidthStretch, 2.0f);
+                    ImGui::TableSetupColumn("Failure Type",  ImGuiTableColumnFlags_WidthStretch, 1.5f);
+                    ImGui::TableHeadersRow();
+
+                    for (std::size_t fi : g_tempVerify.failedIndices) {
+                        if (fi >= g_tempChain.size()) continue;
+                        const cw1::Block& fb = g_tempChain[fi];
+                        std::string expected = fb.computeHash();
+                        std::string failType;
+
+                        if (fb.getCurrentHash() != expected) {
+                            failType = "Hash mismatch";
+                        } else if (fb.getSha3Hash() != fb.computeSha3Hash()) {
+                            failType = "SHA3-128 mismatch";
+                        } else if (fi == 0 && fb.getPreviousHash() != fb.getCurrentHash()) {
+                            failType = "Genesis rule";
+                        } else if (fi > 0) {
+                            failType = "Chain link mismatch";
+                        }
+
+                        ImGui::TableNextRow();
+                        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                                               ImGui::ColorConvertFloat4ToU32(HexColor(0x5a2429, 0.4f)));
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextColored(COL_RED, "#%zu", fi);
+                        ImGui::TableNextColumn();
+                        ImGui::TextColored(COL_MUTED, "%s", Truncate(fb.getCurrentHash(), 16).c_str());
+                        ImGui::TableNextColumn();
+                        ImGui::TextColored(COL_MUTED, "%s", Truncate(expected, 16).c_str());
+                        ImGui::TableNextColumn();
+                        ImGui::TextColored(COL_RED, "%s", failType.c_str());
+                    }
+                    ImGui::EndTable();
+                }
+                ImGui::PopStyleVar();
+            }
+        }
+
+        // 8. Temp chain block table
+        ImGui::Spacing(); ImGui::Spacing();
+        ImGui::TextColored(COL_MUTED, "TEMP CHAIN BLOCKS");
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGuiTableFlags tcFlags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH |
+                                  ImGuiTableFlags_RowBg |
+                                  ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10.0f, 8.0f));
+        if (ImGui::BeginTable("##tempchaintable", 7, tcFlags, ImVec2(-1, 300))) {
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn("Block #",       ImGuiTableColumnFlags_WidthFixed, 60);
+            ImGui::TableSetupColumn("Hash (SHA-256)", ImGuiTableColumnFlags_WidthStretch, 2.0f);
+            ImGui::TableSetupColumn("Hash (SHA3-128)",ImGuiTableColumnFlags_WidthStretch, 1.5f);
+            ImGui::TableSetupColumn("Prev Hash",     ImGuiTableColumnFlags_WidthStretch, 2.0f);
+            ImGui::TableSetupColumn("VIN",           ImGuiTableColumnFlags_WidthStretch, 1.5f);
+            ImGui::TableSetupColumn("Stage",         ImGuiTableColumnFlags_WidthStretch, 1.5f);
+            ImGui::TableSetupColumn("Status",        ImGuiTableColumnFlags_WidthFixed, 70);
+            ImGui::TableHeadersRow();
+
+            for (std::size_t ti = 0; ti < g_tempChain.size(); ++ti) {
+                const cw1::Block& tb = g_tempChain[ti];
+                const cw1::CarRecord& trec = tb.getRecord();
+
+                bool isFailed = false;
+                if (g_tempVerifyDone) {
+                    for (std::size_t fi : g_tempVerify.failedIndices) {
+                        if (fi == ti) { isFailed = true; break; }
+                    }
+                }
+
+                ImGui::TableNextRow();
+                if (isFailed) {
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
+                                           ImGui::ColorConvertFloat4ToU32(HexColor(0x5a2429, 0.35f)));
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::Text("%zu", tb.getIndex());
+
+                ImGui::TableNextColumn();
+                ImGui::TextColored(COL_PURPLE, "%s", Truncate(tb.getCurrentHash(), 12).c_str());
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::TextColored(COL_PURPLE, "%s", tb.getCurrentHash().c_str());
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::TextColored(COL_ORANGE, "%s", Truncate(tb.getSha3Hash(), 12).c_str());
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::TextColored(COL_ORANGE, "%s", tb.getSha3Hash().c_str());
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::TextColored(COL_PURPLE, "%s", Truncate(tb.getPreviousHash(), 12).c_str());
+
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", trec.vin.c_str());
+
+                ImGui::TableNextColumn();
+                ImGui::TextColored(StageColor(trec.stage), "%s",
+                                   cw1::stageToString(trec.stage).c_str());
+
+                ImGui::TableNextColumn();
+                if (g_tempVerifyDone) {
+                    if (isFailed) {
+                        ImGui::TextColored(COL_RED, "FAILED");
+                    } else {
+                        ImGui::TextColored(COL_GREEN_BR, "OK");
+                    }
+                } else {
+                    ImGui::TextColored(COL_MUTED, "--");
+                }
+            }
+            ImGui::EndTable();
+        }
+        ImGui::PopStyleVar();
+    }
+
+    // 9. Reset button
+    if (!g_tempChain.empty()) {
+        ImGui::Spacing();
+        if (ImGui::Button("Clear Temp Chain##tempclear", ImVec2(180.0f, 34.0f))) {
+            g_tempChain.clear();
+            g_tempGenerating = false;
+            g_tempVerifyDone = false;
+            g_tempAccumulator = 0.0f;
+            g_tempRealCount = 0;
+            g_tempTamperIndex = -1;
+            g_tempDeleteIndex = -1;
+            PushToast("Temp chain cleared.", COL_MUTED);
+        }
+    }
 }
 
 
@@ -1529,9 +1854,19 @@ int main() {
         io.FontDefault = g_fontBody;
     }
 
-    
+
     cw1::Blockchain chain;
-    loadDemoData(chain);
+    chain.openDatabase("cw1_blockchain.db");
+    bool loadedFromDB = false;
+    if (chain.isDatabaseOpen()) {
+        loadedFromDB = chain.loadFromDB() && chain.totalBlocks() > 0;
+    }
+    if (!loadedFromDB) {
+        loadDemoData(chain);
+        if (chain.isDatabaseOpen()) {
+            chain.saveToDB();
+        }
+    }
     g_lastVerifySeconds = cw1::measureSeconds([&]() {
         g_lastVerify = chain.verifyIntegrity();
     });
@@ -1545,7 +1880,64 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        
+        // -- Temp block auto-generation --
+        if (g_tempGenerating && !g_tempChain.empty()) {
+            g_tempAccumulator += io.DeltaTime;
+            if (g_tempAccumulator >= g_tempInterval) {
+                g_tempAccumulator -= g_tempInterval;
+
+                static std::mt19937 rng{std::random_device{}()};
+                constexpr int mfrCount = 18;
+                constexpr int colorCount = 12;
+                const int mfrIdx = static_cast<int>(rng() % static_cast<unsigned>(mfrCount));
+                const ModelList& ml = k_modelsByMfr[mfrIdx];
+                const int modelIdx = static_cast<int>(rng() % static_cast<unsigned>(ml.count));
+                const int colorIdx = static_cast<int>(rng() % static_cast<unsigned>(colorCount));
+
+                cw1::CarRecord r;
+                r.vin = "TEMP-" + std::to_string(g_tempChain.size());
+                r.manufacturer = k_manufacturers[mfrIdx];
+                r.model = ml.models[modelIdx];
+                r.color = k_colors[colorIdx];
+                r.productionYear = 2024 + static_cast<int>(rng() % 3);
+                r.manufacturerId = "MFR-TEMP";
+                r.stage = static_cast<cw1::BlockStage>(rng() % 5);
+
+                switch (r.stage) {
+                case cw1::BlockStage::PRODUCTION:
+                    r.factoryLocation = "Demo Factory";
+                    break;
+                case cw1::BlockStage::WAREHOUSE_INTAKE:
+                    r.warehouseLocation = "WH-TEMP";
+                    r.receivedBy = "Demo Receiver";
+                    r.supplierId = "SUP-TEMP";
+                    break;
+                case cw1::BlockStage::QUALITY_CHECK:
+                    r.inspectorId = "QC-TEMP";
+                    r.passed = (rng() % 2 == 0);
+                    r.qcNotes = "Auto-generated QC";
+                    break;
+                case cw1::BlockStage::DEALER_DISPATCH:
+                    r.dealerId = "DLR-TEMP";
+                    r.destination = "Demo City";
+                    r.transportMode = k_transportModes[rng() % 4];
+                    break;
+                case cw1::BlockStage::CUSTOMER_SALE:
+                    r.buyerId = "CUST-TEMP";
+                    r.retailerId = "RTL-TEMP";
+                    r.salePrice = 30000.0 + static_cast<double>(rng() % 70000);
+                    r.warrantyExpiry = "2030-01-01";
+                    break;
+                }
+
+                const std::string prevHash = g_tempChain.back().getCurrentHash();
+                g_tempChain.emplace_back(g_tempChain.size(), prevHash, r);
+                PushToast("Temp block #" + std::to_string(g_tempChain.size() - 1) +
+                          " generated (not saved to DB)", COL_ACCENT);
+            }
+        }
+
+
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(io.DisplaySize);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, COL_BG_MAIN);

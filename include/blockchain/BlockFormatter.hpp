@@ -23,6 +23,7 @@ inline std::string formatBlockForDisplay(const Block& block) {
         << " | Stage: " << stageToString(record.stage) << '\n';
     out << "----------------------------------------------------------------------\n";
     out << "Current Hash : " << block.getCurrentHash() << '\n';
+    out << "SHA3-128 Hash: " << block.getSha3Hash() << '\n';
     out << "Previous Hash: " << block.getPreviousHash() << '\n';
     if (isGenesis) {
         out << "Genesis Rule : previousHash == currentHash -> "

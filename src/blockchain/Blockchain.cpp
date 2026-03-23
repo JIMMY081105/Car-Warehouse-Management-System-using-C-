@@ -7,6 +7,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "utils/TimeUtil.hpp"
+
 namespace cw1 {
 
 namespace {
@@ -44,13 +46,20 @@ void Blockchain::addBlock(const CarRecord& record) {
     
     vinIndex_[record.vin].push_back(chain_.size() - 1);
 
-    
+
     const Block& added = chain_.back();
     std::ostringstream detail;
     detail << "Added block #" << added.getIndex()
            << " for " << record.vin
            << " (" << stageToString(record.stage) << ")";
     auditLog_.log(AuditAction::BLOCK_ADDED, detail.str());
+
+    // Mirror to SQLite if a database is open.
+    if (db_ && db_->isOpen()) {
+        db_->upsertBlock(chain_.back());
+        db_->insertAuditEntry(AuditAction::BLOCK_ADDED, detail.str(),
+                              TimeUtil::nowIso8601());
+    }
 }
 
 const std::vector<Block>& Blockchain::getChain() const noexcept {
@@ -150,11 +159,17 @@ std::vector<const Block*> Blockchain::searchGeneral(const std::string& query) co
 
 ValidationResult Blockchain::verifyIntegrity() const {
     ValidationResult result = Validation::verifyChain(chain_);
-    
+
     std::ostringstream detail;
     detail << "verifyIntegrity() -> " << (result.ok ? "PASS" : "FAIL")
            << ": " << result.message;
     auditLog_.log(AuditAction::INTEGRITY_CHECK, detail.str());
+
+    // Mirror to SQLite if a database is open.
+    if (db_ && db_->isOpen()) {
+        db_->insertAuditEntry(AuditAction::INTEGRITY_CHECK, detail.str(),
+                              TimeUtil::nowIso8601());
+    }
     return result;
 }
 
@@ -164,6 +179,10 @@ void Blockchain::tamperBlock(std::size_t index) {
         detail << "Debug / Simulation Feature: tamperBlock(" << index
                << ") failed (index out of range).";
         auditLog_.log(AuditAction::TAMPER_SIMULATED, detail.str());
+        if (db_ && db_->isOpen()) {
+            db_->insertAuditEntry(AuditAction::TAMPER_SIMULATED, detail.str(),
+                                  TimeUtil::nowIso8601());
+        }
         return;
     }
 
@@ -173,6 +192,12 @@ void Blockchain::tamperBlock(std::size_t index) {
     detail << "Debug / Simulation Feature: payload tampered for block #"
            << index << " (destination set to \"Tampered Location\").";
     auditLog_.log(AuditAction::TAMPER_SIMULATED, detail.str());
+
+    // Mirror to SQLite if a database is open.
+    if (db_ && db_->isOpen()) {
+        db_->insertAuditEntry(AuditAction::TAMPER_SIMULATED, detail.str(),
+                              TimeUtil::nowIso8601());
+    }
 }
 
 bool Blockchain::tamperBlockHash(std::size_t index,
@@ -248,7 +273,6 @@ bool Blockchain::softDeleteBlock(std::size_t index, std::string& outMessage) {
     tombstone.warrantyExpiry    = "";
 
     chain_[index].setRecord(std::move(tombstone));
-    
 
     std::ostringstream detail;
     detail << "Soft delete block #" << index
@@ -256,6 +280,13 @@ bool Blockchain::softDeleteBlock(std::size_t index, std::string& outMessage) {
            << " (tombstone applied, hash now invalid)";
     outMessage = detail.str();
     auditLog_.log(AuditAction::BLOCK_DELETED, outMessage);
+
+    // Mirror to SQLite if a database is open.
+    if (db_ && db_->isOpen()) {
+        db_->upsertBlock(chain_[index]);
+        db_->insertAuditEntry(AuditAction::BLOCK_DELETED, outMessage,
+                              TimeUtil::nowIso8601());
+    }
     return true;
 }
 
@@ -309,6 +340,11 @@ bool Blockchain::hardDeleteBlock(std::size_t index, std::string& outMessage) {
            << " subsequent blocks. Chain length now: " << chain_.size();
     outMessage = detail.str();
     auditLog_.log(AuditAction::BLOCK_DELETED, outMessage);
+
+    // Full resync to SQLite if a database is open.
+    if (db_ && db_->isOpen()) {
+        db_->fullResync(chain_, auditLog_);
+    }
     return true;
 }
 
@@ -350,7 +386,8 @@ bool Blockchain::saveBlockchain(const std::string& path) const {
             << std::quoted(r.warrantyExpiry)
             << '\t' << std::quoted(r.manufacturerId)
             << '\t' << std::quoted(r.supplierId)
-            << '\t' << std::quoted(r.retailerId) << '\n';
+            << '\t' << std::quoted(r.retailerId)
+            << '\t' << std::quoted(block.getSha3Hash()) << '\n';
 
     }
     if (!out.good()) {
@@ -459,12 +496,17 @@ bool Blockchain::loadBlockchain(const std::string& path) {
         record.stage = static_cast<BlockStage>(stageInt);
         record.passed = (passedInt != 0);
 
+        // Try to read optional SHA3-128 hash (backward compatible).
+        std::string sha3Hash;
+        row >> std::quoted(sha3Hash); // empty if field not present
+
         loadedChain.emplace_back(index,
                                  std::move(previousHash),
                                  std::move(currentHash),
                                  std::move(timestamp),
                                  nonce,
-                                 record);
+                                 record,
+                                 std::move(sha3Hash));
         loadedIndex[record.vin].push_back(loadedChain.size() - 1);
     }
 
@@ -503,4 +545,96 @@ AuditLog& Blockchain::getAuditLog() noexcept {
     return auditLog_;
 }
 
-} 
+// ---------------------------------------------------------------------------
+// SQLite database integration
+// ---------------------------------------------------------------------------
+
+bool Blockchain::openDatabase(const std::string& dbPath) {
+    db_ = std::make_unique<DatabaseManager>(dbPath);
+    if (!db_->isOpen()) {
+        auditLog_.log(AuditAction::PERSISTENCE_IO,
+                      "openDatabase failed: " + db_->lastError());
+        db_.reset();
+        return false;
+    }
+    auditLog_.log(AuditAction::PERSISTENCE_IO,
+                  "openDatabase succeeded: " + dbPath);
+    return true;
+}
+
+bool Blockchain::isDatabaseOpen() const noexcept {
+    return db_ && db_->isOpen();
+}
+
+bool Blockchain::saveToDB() {
+    if (!isDatabaseOpen()) return false;
+
+    bool ok = db_->fullResync(chain_, auditLog_);
+    std::string msg = ok ? "saveToDB succeeded"
+                         : ("saveToDB failed: " + db_->lastError());
+    auditLog_.log(AuditAction::PERSISTENCE_IO, msg);
+    if (isDatabaseOpen()) {
+        db_->insertAuditEntry(AuditAction::PERSISTENCE_IO, msg,
+                              TimeUtil::nowIso8601());
+    }
+    return ok;
+}
+
+bool Blockchain::loadFromDB() {
+    if (!isDatabaseOpen()) return false;
+
+    std::vector<Block> loaded = db_->loadAllBlocks();
+    if (loaded.empty() && !db_->lastError().empty()) {
+        auditLog_.log(AuditAction::PERSISTENCE_IO,
+                      "loadFromDB failed: " + db_->lastError());
+        return false;
+    }
+
+    // Rebuild vinIndex from loaded blocks.
+    std::map<std::string, std::vector<std::size_t>> loadedIndex;
+    for (std::size_t i = 0; i < loaded.size(); ++i) {
+        loadedIndex[loaded[i].getRecord().vin].push_back(i);
+    }
+
+    chain_ = std::move(loaded);
+    vinIndex_ = std::move(loadedIndex);
+
+    // Verify integrity after loading.
+    ValidationResult result = Validation::verifyChain(chain_);
+    auditLog_.log(AuditAction::PERSISTENCE_IO,
+                  "loadFromDB: " + std::string(result.ok ? "PASS" : "FAIL") +
+                  " - " + result.message);
+    return result.ok;
+}
+
+std::vector<const Block*> Blockchain::searchBySQL(const std::string& query) const {
+    // Fall back to searchGeneral() if no DB is open.
+    if (!isDatabaseOpen()) {
+        return searchGeneral(query);
+    }
+
+    std::vector<std::size_t> indices = db_->searchBlocksSQL(query);
+    std::vector<const Block*> results;
+    results.reserve(indices.size());
+    for (std::size_t idx : indices) {
+        if (idx < chain_.size()) {
+            results.push_back(&chain_[idx]);
+        }
+    }
+
+    std::ostringstream detail;
+    detail << "searchBySQL(\"" << query << "\") -> " << results.size()
+           << " result(s)";
+    auditLog_.log(AuditAction::SEARCH_PERFORMED, detail.str());
+    if (isDatabaseOpen()) {
+        db_->insertAuditEntry(AuditAction::SEARCH_PERFORMED, detail.str(),
+                              TimeUtil::nowIso8601());
+    }
+    return results;
+}
+
+const DatabaseManager* Blockchain::getDatabase() const noexcept {
+    return db_.get();
+}
+
+}

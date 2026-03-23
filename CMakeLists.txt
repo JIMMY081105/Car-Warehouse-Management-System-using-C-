@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(COMP2034_CW1_CarWarehouseBlockchain LANGUAGES CXX)
+project(COMP2034_CW1_CarWarehouseBlockchain LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,6 +26,14 @@ if(NOT glfw3_FOUND)
 endif()
 
 
+add_library(sqlite3_lib STATIC third_party/sqlite/sqlite3.c)
+target_include_directories(sqlite3_lib PUBLIC third_party/sqlite)
+if(MSVC)
+    target_compile_options(sqlite3_lib PRIVATE /W0)
+else()
+    target_compile_options(sqlite3_lib PRIVATE -w)
+endif()
+
 set(BACKEND_SOURCES
     src/models/CarRecord.cpp
     src/blockchain/Block.cpp
@@ -35,6 +43,7 @@ set(BACKEND_SOURCES
     src/utils/AuditLog.cpp
     src/utils/HashUtil.cpp
     src/utils/TimeUtil.cpp
+    src/utils/DatabaseManager.cpp
 )
 
 
@@ -56,10 +65,14 @@ if(BUILD_CLI)
         ${BACKEND_SOURCES}
     )
     target_include_directories(car_warehouse_cli
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            third_party/sqlite
     )
     target_link_libraries(car_warehouse_cli
-        PRIVATE OpenSSL::Crypto
+        PRIVATE
+            OpenSSL::Crypto
+            sqlite3_lib
     )
     if(MSVC)
         target_compile_options(car_warehouse_cli PRIVATE /W4 /permissive-)
@@ -80,12 +93,14 @@ if(BUILD_GUI)
             ${CMAKE_CURRENT_SOURCE_DIR}/include
             ${IMGUI_DIR}
             ${IMGUI_DIR}/backends
+            third_party/sqlite
     )
     target_link_libraries(car_warehouse_gui
         PRIVATE
             OpenSSL::Crypto
             glfw
             OpenGL::GL
+            sqlite3_lib
     )
 
     add_custom_command(TARGET car_warehouse_gui POST_BUILD

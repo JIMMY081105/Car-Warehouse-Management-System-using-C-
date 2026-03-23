@@ -16,12 +16,8 @@ Block::Block(std::size_t index, std::string previousHash, CarRecord record)
       nonce_(generateNonce()),
       record_(std::move(record)) {
     currentHash_ = computeHash();
+    sha3Hash_    = computeSha3Hash();
 
-    
-    
-    
-    
-    
     if (index_ == 0 && previousHash_ == "0") {
         previousHash_ = currentHash_;
     }
@@ -32,13 +28,20 @@ Block::Block(std::size_t index,
              std::string currentHash,
              std::string timestamp,
              std::uint64_t nonce,
-             CarRecord record)
+             CarRecord record,
+             std::string sha3Hash)
     : index_(index),
       currentHash_(std::move(currentHash)),
       previousHash_(std::move(previousHash)),
       timestamp_(std::move(timestamp)),
       nonce_(nonce),
-      record_(std::move(record)) {}
+      record_(std::move(record)) {
+    if (sha3Hash.empty()) {
+        sha3Hash_ = computeSha3Hash();
+    } else {
+        sha3Hash_ = std::move(sha3Hash);
+    }
+}
 
 std::size_t Block::getIndex() const noexcept {
     return index_;
@@ -64,6 +67,10 @@ const CarRecord& Block::getRecord() const noexcept {
     return record_;
 }
 
+const std::string& Block::getSha3Hash() const noexcept {
+    return sha3Hash_;
+}
+
 std::string Block::computeHash() const {
     std::ostringstream payload;
     
@@ -74,6 +81,13 @@ std::string Block::computeHash() const {
     const std::string prevForHash = (index_ == 0) ? std::string("0") : previousHash_;
     payload << index_ << prevForHash << timestamp_ << nonce_ << record_.serialize();
     return HashUtil::sha256(payload.str());
+}
+
+std::string Block::computeSha3Hash() const {
+    std::ostringstream payload;
+    const std::string prevForHash = (index_ == 0) ? std::string("0") : previousHash_;
+    payload << index_ << prevForHash << timestamp_ << nonce_ << record_.serialize();
+    return HashUtil::sha3_128(payload.str());
 }
 
 std::string Block::toString() const {

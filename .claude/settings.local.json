@@ -57,7 +57,26 @@
       "Bash(cmake --build build --config Release -j4)",
       "Bash(\"/c/Users/User/OneDrive -:*)",
       "Bash(ls \"/c/Users/User/OneDrive - University of Nottingham Malaysia/Documents/year 2 sem 2/c++/cw1/build/\"*.exe)",
-      "Bash(\"c:\\\\Users\\\\User\\\\OneDrive - University of Nottingham Malaysia\\\\Documents\\\\year 2 sem 2\\\\c++\\\\cw1\\\\include\\\\blockchain\\\\BlockBase.hpp\")"
+      "Bash(\"c:\\\\Users\\\\User\\\\OneDrive - University of Nottingham Malaysia\\\\Documents\\\\year 2 sem 2\\\\c++\\\\cw1\\\\include\\\\blockchain\\\\BlockBase.hpp\")",
+      "Bash(cmake --build . --target car_warehouse_gui --clean-first)",
+      "Bash(curl -L -o sqlite-amalgamation.zip \"https://www.sqlite.org/2024/sqlite-amalgamation-3470200.zip\")",
+      "Bash(unzip -o sqlite-amalgamation.zip)",
+      "Bash(cmake .. -G \"MinGW Makefiles\")",
+      "Bash(cmake .. -G \"MinGW Makefiles\" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++)",
+      "Bash(rm -f CMakeCache.txt)",
+      "Bash(rm -rf CMakeFiles)",
+      "Bash(cmake --version)",
+      "Read(//c/msys64/mingw64/bin/**)",
+      "Bash(where cmake)",
+      "Bash(pacman -S --noconfirm mingw-w64-x86_64-cmake)",
+      "Bash(/c/msys64/usr/bin/pacman -S --noconfirm mingw-w64-x86_64-cmake)",
+      "Bash(/c/msys64/mingw64/bin/cmake .. -G \"MinGW Makefiles\")",
+      "Bash(/c/msys64/mingw64/bin/cmake --build .)",
+      "Bash(cmake --build .)",
+      "Bash(openssl version:*)",
+      "Bash(pkg-config --modversion openssl)",
+      "Read(//mingw64/include/**)",
+      "Read(//mingw64/include/openssl/**)"
     ]
   }
 }
