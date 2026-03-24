@@ -599,6 +599,13 @@ bool Blockchain::loadFromDB() {
     chain_ = std::move(loaded);
     vinIndex_ = std::move(loadedIndex);
 
+    // Restore audit log entries from the database.
+    auto dbAudit = db_->loadAuditLog();
+    for (const auto& entry : dbAudit) {
+        AuditAction act = stringToAction(std::get<0>(entry));
+        auditLog_.log(act, std::get<1>(entry), std::get<2>(entry));
+    }
+
     // Verify integrity after loading.
     ValidationResult result = Validation::verifyChain(chain_);
     auditLog_.log(AuditAction::PERSISTENCE_IO,

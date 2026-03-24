@@ -144,7 +144,6 @@ static bool        g_verifyDone = false;
 static double      g_lastVerifySeconds = 0.0;
 static double      g_lastAddBlockSeconds = 0.0;
 static double      g_lastSearchSeconds = 0.0;
-static int         g_tamperIndex = -1;
 
 
 static int    g_deleteBlockIndex  = -1;
@@ -182,6 +181,7 @@ static int    g_formStage           = 0;
 static char   g_formVin[64]         = {};
 static int    g_formMfrIndex        = 0;
 static int    g_formModelIndex      = 0;
+static int    g_formBranchIndex     = 0;
 static int    g_formColorIndex      = 0;
 static int    g_formYear            = 2025;
 static char   g_formFactory[128]    = {};
@@ -212,6 +212,8 @@ static double                  g_tempVerifySeconds = 0.0;
 static int                     g_tempTamperIndex  = -1;
 static int                     g_tempDeleteIndex  = -1;
 static std::size_t             g_tempRealCount    = 0;
+static std::size_t             g_tempPrevCount    = 0;   // track for new-block animation
+static float                   g_tempNewBlockAnim = 1.0f; // 0..1 fade-in alpha
 
 
 
@@ -418,7 +420,7 @@ static void RenderHeader(const cw1::Blockchain& chain) {
 
 static void RenderSidebar(const cw1::Blockchain& chain) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
-    ImGui::BeginChild("##sidebar", ImVec2(280.0f, -1.0f), true);
+    ImGui::BeginChild("##sidebar", ImVec2(-1.0f, -1.0f), true);
 
     
     ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_ELEV);
@@ -649,8 +651,9 @@ static void RenderDashboard(const cw1::Blockchain& chain) {
     ImGuiTableFlags tflags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH |
                              ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_ScrollY  | ImGuiTableFlags_SizingStretchProp;
-    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10.0f, 8.0f));
-    if (ImGui::BeginTable("##recent", 6, tflags, ImVec2(-1, -1))) {
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8.0f, 5.0f));
+    float availH = ImGui::GetContentRegionAvail().y;
+    if (ImGui::BeginTable("##recent", 6, tflags, ImVec2(-1, availH > 0 ? availH : 400))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("Block #",      ImGuiTableColumnFlags_WidthFixed,   60);
         ImGui::TableSetupColumn("Hash",         ImGuiTableColumnFlags_WidthStretch, 2.0f);
@@ -826,6 +829,163 @@ static const ModelList k_modelsByMfr[] = {
     {k_models_ford,       3}, {k_models_lexus,      6}, {k_models_volvo,     7},
 };
 
+// ── Branch / factory locations per manufacturer (5 Malaysia + 1 origin) ──
+struct BranchList { const char** branches; int count; };
+
+static const char* k_branches_perodua[] = {
+    "Rawang, Selangor, Malaysia",
+    "Sendayan, Negeri Sembilan, Malaysia",
+    "Sg. Choh, Selangor, Malaysia",
+    "Georgetown, Penang, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Serendah, Selangor, Malaysia"          // origin: Malaysia
+};
+static const char* k_branches_proton[] = {
+    "Tanjung Malim, Perak, Malaysia",
+    "Shah Alam, Selangor, Malaysia",
+    "Subang Jaya, Selangor, Malaysia",
+    "Kuala Terengganu, Terengganu, Malaysia",
+    "Batu Kawan, Penang, Malaysia",
+    "Glenmarie, Selangor, Malaysia"         // origin: Malaysia
+};
+static const char* k_branches_toyota[] = {
+    "Shah Alam, Selangor, Malaysia",
+    "Bukit Raja, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Kota Kinabalu, Sabah, Malaysia",
+    "Kuching, Sarawak, Malaysia",
+    "Toyota City, Aichi, Japan"             // origin: Japan
+};
+static const char* k_branches_honda[] = {
+    "Pegoh, Melaka, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Ipoh, Perak, Malaysia",
+    "Kota Kinabalu, Sabah, Malaysia",
+    "Kuantan, Pahang, Malaysia",
+    "Minato, Tokyo, Japan"                  // origin: Japan
+};
+static const char* k_branches_nissan[] = {
+    "Serendah, Selangor, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Kuching, Sarawak, Malaysia",
+    "Georgetown, Penang, Malaysia",
+    "Yokohama, Kanagawa, Japan"             // origin: Japan
+};
+static const char* k_branches_mazda[] = {
+    "Kulim, Kedah, Malaysia",
+    "Shah Alam, Selangor, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Kuching, Sarawak, Malaysia",
+    "Hiroshima, Hiroshima, Japan"           // origin: Japan
+};
+static const char* k_branches_mitsubishi[] = {
+    "Pekan, Pahang, Malaysia",
+    "Shah Alam, Selangor, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Kota Kinabalu, Sabah, Malaysia",
+    "Okazaki, Aichi, Japan"                 // origin: Japan
+};
+static const char* k_branches_suzuki[] = {
+    "Shah Alam, Selangor, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Georgetown, Penang, Malaysia",
+    "Kuching, Sarawak, Malaysia",
+    "Hamamatsu, Shizuoka, Japan"            // origin: Japan
+};
+static const char* k_branches_hyundai[] = {
+    "Kulim, Kedah, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Shah Alam, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Kuching, Sarawak, Malaysia",
+    "Ulsan, Gyeongsang, South Korea"        // origin: South Korea
+};
+static const char* k_branches_kia[] = {
+    "Gurun, Kedah, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Shah Alam, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Kota Kinabalu, Sabah, Malaysia",
+    "Hwaseong, Gyeonggi, South Korea"       // origin: South Korea
+};
+static const char* k_branches_bmw[] = {
+    "Kulim, Kedah, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Shah Alam, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Georgetown, Penang, Malaysia",
+    "Munich, Bavaria, Germany"              // origin: Germany
+};
+static const char* k_branches_merc[] = {
+    "Pekan, Pahang, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Shah Alam, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Georgetown, Penang, Malaysia",
+    "Stuttgart, Baden-Wurttemberg, Germany"  // origin: Germany
+};
+static const char* k_branches_vw[] = {
+    "Pekan, Pahang, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Shah Alam, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Kuching, Sarawak, Malaysia",
+    "Wolfsburg, Lower Saxony, Germany"      // origin: Germany
+};
+static const char* k_branches_subaru[] = {
+    "Shah Alam, Selangor, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Georgetown, Penang, Malaysia",
+    "Kuching, Sarawak, Malaysia",
+    "Ota, Gunma, Japan"                     // origin: Japan
+};
+static const char* k_branches_isuzu[] = {
+    "Pekan, Pahang, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Shah Alam, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Kota Kinabalu, Sabah, Malaysia",
+    "Fujisawa, Kanagawa, Japan"             // origin: Japan
+};
+static const char* k_branches_ford[] = {
+    "Shah Alam, Selangor, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Kuching, Sarawak, Malaysia",
+    "Georgetown, Penang, Malaysia",
+    "Dearborn, Michigan, United States"     // origin: USA
+};
+static const char* k_branches_lexus[] = {
+    "Shah Alam, Selangor, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Georgetown, Penang, Malaysia",
+    "Kota Kinabalu, Sabah, Malaysia",
+    "Tahara, Aichi, Japan"                  // origin: Japan
+};
+static const char* k_branches_volvo[] = {
+    "Shah Alam, Selangor, Malaysia",
+    "Petaling Jaya, Selangor, Malaysia",
+    "Johor Bahru, Johor, Malaysia",
+    "Georgetown, Penang, Malaysia",
+    "Kuching, Sarawak, Malaysia",
+    "Gothenburg, Vastra Gotaland, Sweden"   // origin: Sweden
+};
+
+static const BranchList k_branchesByMfr[] = {
+    {k_branches_perodua,    6}, {k_branches_proton,     6}, {k_branches_toyota,    6},
+    {k_branches_honda,      6}, {k_branches_nissan,     6}, {k_branches_mazda,     6},
+    {k_branches_mitsubishi, 6}, {k_branches_suzuki,     6}, {k_branches_hyundai,   6},
+    {k_branches_kia,        6}, {k_branches_bmw,        6}, {k_branches_merc,      6},
+    {k_branches_vw,         6}, {k_branches_subaru,     6}, {k_branches_isuzu,     6},
+    {k_branches_ford,       6}, {k_branches_lexus,      6}, {k_branches_volvo,     6},
+};
+
 static const char* k_colors[] = {
     "White","Black","Silver","Grey","Red","Blue",
     "Brown","Green","Yellow","Orange","Beige","Maroon"
@@ -861,14 +1021,17 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         ImGui::InputText(id, buf, sz);
     };
 
-    LabelText("VIN",          g_formVin,   sizeof(g_formVin));
-    
+    LabelText("Car Plate Number", g_formVin,   sizeof(g_formVin));
+
     ImGui::SameLine(0, 12);
     if (g_formVin[0] != '\0') {
-        if (chain.hasVin(std::string(g_formVin)))
-            ImGui::TextColored(COL_GREEN_BR, "[+ Existing VIN]");
+        // Build the full VIN with prefix for lookup
+        std::string fullVin = g_formVin;
+        if (fullVin.substr(0, 3) != "VIN") fullVin = "VIN" + fullVin;
+        if (chain.hasVin(fullVin))
+            ImGui::TextColored(COL_GREEN_BR, "[+ Existing: %s]", fullVin.c_str());
         else
-            ImGui::TextColored(COL_ACCENT,   "[* New VIN]");
+            ImGui::TextColored(COL_ACCENT,   "[* New: %s]", fullVin.c_str());
     }
 
     ImGui::TextColored(COL_MUTED, "%-18s", "Manufacturer");
@@ -876,6 +1039,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     ImGui::SetNextItemWidth(300);
     if (ImGui::Combo("##add_Manufacturer", &g_formMfrIndex, k_manufacturers, IM_ARRAYSIZE(k_manufacturers))) {
         g_formModelIndex = 0;
+        g_formBranchIndex = 0;
     }
 
     ImGui::TextColored(COL_MUTED, "%-18s", "Model");
@@ -883,6 +1047,12 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     ImGui::SetNextItemWidth(300);
     const ModelList& ml = k_modelsByMfr[g_formMfrIndex];
     ImGui::Combo("##add_Model", &g_formModelIndex, ml.models, ml.count);
+
+    ImGui::TextColored(COL_MUTED, "%-18s", "Branch");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(380);
+    const BranchList& bl = k_branchesByMfr[g_formMfrIndex];
+    ImGui::Combo("##add_Branch", &g_formBranchIndex, bl.branches, bl.count);
 
     ImGui::TextColored(COL_MUTED, "%-18s", "Color");
     ImGui::SameLine();
@@ -902,9 +1072,13 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     ImGui::Separator(); ImGui::Spacing();
 
     switch (g_formStage) {
-    case 0: 
-        LabelText("Factory Location", g_formFactory, sizeof(g_formFactory));
+    case 0: {
+        const char* selBranch = k_branchesByMfr[g_formMfrIndex].branches[g_formBranchIndex];
+        ImGui::TextColored(COL_MUTED, "%-18s", "Factory Location");
+        ImGui::SameLine();
+        ImGui::TextColored(COL_ACCENT, "%s", selBranch);
         break;
+    }
     case 1: 
         LabelText("Warehouse",  g_formWarehouse,   sizeof(g_formWarehouse));
         LabelText("Received By",g_formReceivedBy,  sizeof(g_formReceivedBy));
@@ -944,12 +1118,17 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
 
     if (!canSubmit) {
         ImGui::SameLine();
-        ImGui::TextColored(COL_RED, "  VIN is required.");
+        ImGui::TextColored(COL_RED, "  Car Plate Number is required.");
     }
 
     if (submit && canSubmit) {
         cw1::CarRecord r;
-        r.vin            = g_formVin;
+        // Auto-prepend "VIN" if the user didn't type it
+        {
+            std::string raw = g_formVin;
+            if (raw.substr(0, 3) != "VIN") raw = "VIN" + raw;
+            r.vin = raw;
+        }
         r.manufacturer   = k_manufacturers[g_formMfrIndex];
         r.model          = k_modelsByMfr[g_formMfrIndex].models[g_formModelIndex];
         r.color          = k_colors[g_formColorIndex];
@@ -959,7 +1138,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
 
         switch (g_formStage) {
         case 0:
-            r.factoryLocation  = g_formFactory;
+            r.factoryLocation  = k_branchesByMfr[g_formMfrIndex].branches[g_formBranchIndex];
             break;
         case 1:
             r.warehouseLocation = g_formWarehouse;
@@ -989,13 +1168,13 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         });
         g_lastAddBlockSeconds = seconds;
         PushToast("Block #" + std::to_string(chain.totalBlocks() - 1) +
-                  " added for " + std::string(g_formVin) +
+                  " added for " + r.vin +
                   " | Operation took: " + cw1::formatSeconds(seconds) + " s",
                   COL_GREEN_BR);
 
 
         g_formVin[0]    = '\0';
-        g_formMfrIndex  = 0;  g_formModelIndex = 0;  g_formColorIndex = 0;
+        g_formMfrIndex  = 0;  g_formModelIndex = 0;  g_formBranchIndex = 0;  g_formColorIndex = 0;
         g_formYear      = 2025;
         g_formFactory[0]= '\0'; g_formWarehouse[0]    = '\0';
         g_formReceivedBy[0]= '\0'; g_formInspector[0] = '\0';
@@ -1232,125 +1411,15 @@ static void RenderAuditLog(const cw1::Blockchain& chain) {
 
 
 static void RenderIntegrity(cw1::Blockchain& chain) {
-    DrawSectionHeading("Blockchain Integrity Verification");
+    DrawSectionHeading("Blockchain Characteristics: Immutability");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    
-    if (DrawPrimaryButton("Run Verification Again##verify", ImVec2(230.0f, 36.0f))) {
-        cw1::OperationTimer timer;
-        g_lastVerify = chain.verifyIntegrity();
-        g_lastVerifySeconds = timer.elapsedSeconds();
-        g_verifyDone = true;
-        PushToast(g_lastVerify.ok ? "Integrity check passed."
-                                  : "Integrity check failed.",
-                  g_lastVerify.ok ? COL_GREEN_BR : COL_RED);
+    // Initialize temp chain from real chain on first visit (so chain is always visible)
+    if (g_tempChain.empty() && !g_tempGenerating) {
+        g_tempChain = chain.getChain();
+        g_tempRealCount = g_tempChain.size();
+        g_tempPrevCount = g_tempChain.size();
     }
-
-    ImGui::Spacing();
-    ImGui::TextColored(COL_MUTED, "Debug / Simulation Feature");
-    ImGui::SetNextItemWidth(140.0f);
-    ImGui::InputInt("Tamper block index##tamper", &g_tamperIndex);
-    ImGui::SameLine();
-    if (DrawDangerButton("Tamper Block##payload_tamper", ImVec2(160.0f, 34.0f))) {
-        const std::size_t total = chain.totalBlocks();
-        if (total == 0) {
-            PushToast("Tamper failed: chain is empty.", COL_RED);
-        } else {
-            std::size_t target = total - 1;
-            bool validIndex = true;
-            if (g_tamperIndex >= 0) {
-                const std::size_t requested = static_cast<std::size_t>(g_tamperIndex);
-                if (requested < total) {
-                    target = requested;
-                } else {
-                    validIndex = false;
-                    PushToast("Tamper failed: index out of range.", COL_RED);
-                }
-            }
-
-            if (validIndex) {
-                cw1::OperationTimer timer;
-                chain.tamperBlock(target);
-                const double tamperSeconds = timer.elapsedSeconds();
-
-                std::ostringstream msg;
-                msg << "Debug / Simulation Feature: payload tampered at block #"
-                    << target << " | Operation took: "
-                    << cw1::formatSeconds(tamperSeconds) << " s";
-                PushToast(msg.str(), COL_RED);
-            }
-        }
-    }
-
-    ImGui::Spacing(); ImGui::Spacing();
-    if (!g_verifyDone) {
-        ImGui::TextColored(COL_MUTED, "Press Run Verification to check the chain.");
-        return;
-    }
-
-    const std::size_t blocksChecked = chain.totalBlocks();
-
-    
-    const ImVec4 bannerCol = g_lastVerify.ok ? HexColor(0x1b4d30) : HexColor(0x5a2429);
-    const char* bannerTxt = g_lastVerify.ok ? "BLOCKCHAIN VERIFIED" : "INTEGRITY FAILURE";
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, bannerCol);
-    ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
-    ImGui::BeginChild("##intbanner", ImVec2(-1, 80), true);
-    ImGui::SetCursorPos(ImVec2(20.0f, 18.0f));
-    ImGui::SetWindowFontScale(1.7f);
-    ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", bannerTxt);
-    ImGui::SetWindowFontScale(1.0f);
-    ImGui::EndChild();
-    ImGui::PopStyleColor(2);
-
-    ImGui::Spacing();
-    ImGui::TextColored(COL_MUTED, "Integrity Status:");
-    ImGui::SameLine();
-    ImGui::TextColored(g_lastVerify.ok ? COL_GREEN_BR : COL_RED,
-                       "%s", g_lastVerify.ok ? "Verified [OK]" : "FAILED");
-
-    ImGui::TextColored(COL_MUTED, "Blocks Checked:");
-    ImGui::SameLine();
-    ImGui::TextColored(COL_TEXT, "%zu", blocksChecked);
-
-    if (!g_lastVerify.ok) {
-        const int failedIndex = ExtractFailedBlockIndex(g_lastVerify.message);
-        if (failedIndex >= 0) {
-            ImGui::TextColored(COL_MUTED, "Error Block:");
-            ImGui::SameLine();
-            ImGui::TextColored(COL_RED, "#%d", failedIndex);
-        }
-    }
-
-    ImGui::TextColored(COL_MUTED, "Verification Time:");
-    ImGui::SameLine();
-    ImGui::TextColored(COL_TEXT, "%s seconds",
-                       cw1::formatSeconds(g_lastVerifySeconds).c_str());
-
-    ImGui::TextColored(COL_MUTED, "Details:");
-    ImGui::SameLine();
-    ImGui::TextWrapped("%s", g_lastVerify.message.c_str());
-
-    if (!g_lastVerify.ok && !g_lastVerify.failedIndices.empty()) {
-        ImGui::Spacing();
-        ImGui::TextColored(COL_RED, "Failed block(s):");
-        for (std::size_t fi : g_lastVerify.failedIndices) {
-            ImGui::SameLine();
-            ImGui::TextColored(COL_RED, " #%zu", fi);
-        }
-    }
-
-    // ===================================================================
-    // Immutability Demonstration Section
-    // ===================================================================
-    ImGui::Spacing(); ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-    DrawSectionHeading("Immutability Demonstration");
-    ImGui::Spacing();
-    ImGui::TextColored(COL_MUTED, "Demonstrates blockchain immutability by generating temporary blocks,");
-    ImGui::TextColored(COL_MUTED, "allowing tampering, and showing exactly which blocks fail verification.");
-    ImGui::Spacing();
 
     // 1. Start/Stop Toggle Button
     if (!g_tempGenerating) {
@@ -1360,12 +1429,13 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
         if (ImGui::Button("Start Generating Temp Blocks##tempstart", ImVec2(280.0f, 36.0f))) {
             g_tempChain = chain.getChain();
             g_tempRealCount = g_tempChain.size();
+            g_tempPrevCount = g_tempChain.size();
             g_tempGenerating = true;
             g_tempAccumulator = 0.0f;
             g_tempVerifyDone = false;
             g_tempTamperIndex = -1;
             g_tempDeleteIndex = -1;
-            PushToast("Temp chain snapshot taken. Auto-generation started.", COL_GREEN_BR);
+            PushToast("Auto-generation started.", COL_GREEN_BR);
         }
         ImGui::PopStyleColor(3);
     } else {
@@ -1452,8 +1522,8 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
             g_tempVerify = cw1::Validation::verifyChain(g_tempChain);
             g_tempVerifySeconds = timer.elapsedSeconds();
             g_tempVerifyDone = true;
-            PushToast(g_tempVerify.ok ? "Temp chain verified OK."
-                                      : "Temp chain integrity FAILED.",
+            PushToast(g_tempVerify.ok ? "Blockchain verified OK."
+                                      : "Blockchain integrity FAILED.",
                       g_tempVerify.ok ? COL_GREEN_BR : COL_RED);
         }
 
@@ -1461,7 +1531,7 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
         if (g_tempVerifyDone) {
             ImGui::Spacing();
             const ImVec4 tBannerCol = g_tempVerify.ok ? HexColor(0x1b4d30) : HexColor(0x5a2429);
-            const char* tBannerTxt = g_tempVerify.ok ? "TEMP CHAIN VERIFIED" : "TEMP CHAIN INTEGRITY FAILURE";
+            const char* tBannerTxt = g_tempVerify.ok ? "BLOCKCHAIN VERIFIED" : "BLOCKCHAIN INTEGRITY FAILURE";
             ImGui::PushStyleColor(ImGuiCol_ChildBg, tBannerCol);
             ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
             ImGui::BeginChild("##tempintbanner", ImVec2(-1, 60), true);
@@ -1525,7 +1595,7 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
                         ImGui::TableNextColumn();
                         ImGui::TextColored(COL_MUTED, "%s", Truncate(expected, 16).c_str());
                         ImGui::TableNextColumn();
-                        ImGui::TextColored(COL_RED, "%s", failType.c_str());
+                        ImGui::TextColored(COL_RED, "X  %s", failType.c_str());
                     }
                     ImGui::EndTable();
                 }
@@ -1533,26 +1603,42 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
             }
         }
 
-        // 8. Temp chain block table
+        // 8. Temp chain -- horizontal scrolling chain view
         ImGui::Spacing(); ImGui::Spacing();
         ImGui::TextColored(COL_MUTED, "TEMP CHAIN BLOCKS");
         ImGui::Separator();
         ImGui::Spacing();
 
-        ImGuiTableFlags tcFlags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH |
-                                  ImGuiTableFlags_RowBg |
-                                  ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
-        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10.0f, 8.0f));
-        if (ImGui::BeginTable("##tempchaintable", 7, tcFlags, ImVec2(-1, 300))) {
-            ImGui::TableSetupScrollFreeze(0, 1);
-            ImGui::TableSetupColumn("Block #",       ImGuiTableColumnFlags_WidthFixed, 60);
-            ImGui::TableSetupColumn("Hash (SHA-256)", ImGuiTableColumnFlags_WidthStretch, 2.0f);
-            ImGui::TableSetupColumn("Hash (SHA3-128)",ImGuiTableColumnFlags_WidthStretch, 1.5f);
-            ImGui::TableSetupColumn("Prev Hash",     ImGuiTableColumnFlags_WidthStretch, 2.0f);
-            ImGui::TableSetupColumn("VIN",           ImGuiTableColumnFlags_WidthStretch, 1.5f);
-            ImGui::TableSetupColumn("Stage",         ImGuiTableColumnFlags_WidthStretch, 1.5f);
-            ImGui::TableSetupColumn("Status",        ImGuiTableColumnFlags_WidthFixed, 70);
-            ImGui::TableHeadersRow();
+        // Detect new blocks for fade-in animation
+        bool scrollToEnd = false;
+        if (g_tempChain.size() != g_tempPrevCount) {
+            if (g_tempChain.size() > g_tempPrevCount) {
+                g_tempNewBlockAnim = 0.0f; // start fade-in
+                scrollToEnd = true;
+            }
+            g_tempPrevCount = g_tempChain.size();
+        }
+        // Advance animation (0 -> 1 over ~0.5s)
+        if (g_tempNewBlockAnim < 1.0f) {
+            g_tempNewBlockAnim += ImGui::GetIO().DeltaTime * 2.0f;
+            if (g_tempNewBlockAnim > 1.0f) g_tempNewBlockAnim = 1.0f;
+        }
+
+        const float cardW = 170.0f;
+        const float cardH = 130.0f;
+        const float arrowW = 30.0f;
+        const float chainHeight = cardH + 20.0f;
+
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
+        ImGui::BeginChild("##tempchainscroll", ImVec2(-1.0f, chainHeight), true,
+                          ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::PopStyleColor();
+
+        if (g_tempChain.empty()) {
+            ImGui::TextColored(COL_MUTED, "No blocks in temp chain.");
+        } else {
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            const float startY = ImGui::GetCursorScreenPos().y + 5.0f;
 
             for (std::size_t ti = 0; ti < g_tempChain.size(); ++ti) {
                 const cw1::Block& tb = g_tempChain[ti];
@@ -1565,55 +1651,92 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
                     }
                 }
 
-                ImGui::TableNextRow();
-                if (isFailed) {
-                    ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0,
-                                           ImGui::ColorConvertFloat4ToU32(HexColor(0x5a2429, 0.35f)));
-                }
+                // Fade-in for the newest block
+                bool isNewest = (ti == g_tempChain.size() - 1);
+                float alpha = (isNewest && g_tempNewBlockAnim < 1.0f) ? g_tempNewBlockAnim : 1.0f;
 
-                ImGui::TableNextColumn();
-                ImGui::Text("%zu", tb.getIndex());
+                ImVec2 cardMin = ImGui::GetCursorScreenPos();
+                cardMin.y = startY;
+                ImVec2 cardMax(cardMin.x + cardW, cardMin.y + cardH);
 
-                ImGui::TableNextColumn();
-                ImGui::TextColored(COL_PURPLE, "%s", Truncate(tb.getCurrentHash(), 12).c_str());
-                if (ImGui::IsItemHovered()) {
-                    ImGui::BeginTooltip();
-                    ImGui::TextColored(COL_PURPLE, "%s", tb.getCurrentHash().c_str());
-                    ImGui::EndTooltip();
-                }
+                // Card background
+                ImVec4 bgCol = isFailed ? HexColor(0x5a2429, 0.6f * alpha) : HexColor(0x21262d, alpha);
+                ImVec4 borderCol = isFailed ? HexColor(0xda3633, 0.8f * alpha) : HexColor(0x30363d, 0.8f * alpha);
+                dl->AddRectFilled(cardMin, cardMax,
+                    ImGui::ColorConvertFloat4ToU32(bgCol), 6.0f);
+                dl->AddRect(cardMin, cardMax,
+                    ImGui::ColorConvertFloat4ToU32(borderCol), 6.0f);
 
-                ImGui::TableNextColumn();
-                ImGui::TextColored(COL_ORANGE, "%s", Truncate(tb.getSha3Hash(), 12).c_str());
-                if (ImGui::IsItemHovered()) {
-                    ImGui::BeginTooltip();
-                    ImGui::TextColored(COL_ORANGE, "%s", tb.getSha3Hash().c_str());
-                    ImGui::EndTooltip();
-                }
+                // Card content
+                ImGui::SetCursorScreenPos(ImVec2(cardMin.x + 8.0f, cardMin.y + 6.0f));
+                ImGui::BeginGroup();
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 2.0f));
 
-                ImGui::TableNextColumn();
-                ImGui::TextColored(COL_PURPLE, "%s", Truncate(tb.getPreviousHash(), 12).c_str());
+                ImGui::TextColored(ImVec4(COL_ACCENT.x, COL_ACCENT.y, COL_ACCENT.z, alpha),
+                                   "Block #%zu", tb.getIndex());
+                ImGui::TextColored(ImVec4(COL_PURPLE.x, COL_PURPLE.y, COL_PURPLE.z, alpha),
+                                   "Hash: %s", Truncate(tb.getCurrentHash(), 10).c_str());
+                ImGui::TextColored(ImVec4(COL_PURPLE.x, COL_PURPLE.y, COL_PURPLE.z, alpha * 0.7f),
+                                   "Prev: %s", Truncate(tb.getPreviousHash(), 10).c_str());
+                ImGui::TextColored(ImVec4(COL_TEXT.x, COL_TEXT.y, COL_TEXT.z, alpha),
+                                   "%s", trec.vin.c_str());
+                ImGui::TextColored(ImVec4(StageColor(trec.stage).x, StageColor(trec.stage).y,
+                                          StageColor(trec.stage).z, alpha),
+                                   "%s", cw1::stageToString(trec.stage).c_str());
 
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", trec.vin.c_str());
-
-                ImGui::TableNextColumn();
-                ImGui::TextColored(StageColor(trec.stage), "%s",
-                                   cw1::stageToString(trec.stage).c_str());
-
-                ImGui::TableNextColumn();
+                // Status line
                 if (g_tempVerifyDone) {
-                    if (isFailed) {
-                        ImGui::TextColored(COL_RED, "FAILED");
-                    } else {
-                        ImGui::TextColored(COL_GREEN_BR, "OK");
-                    }
-                } else {
-                    ImGui::TextColored(COL_MUTED, "--");
+                    if (isFailed)
+                        ImGui::TextColored(ImVec4(COL_RED.x, COL_RED.y, COL_RED.z, alpha), "FAILED");
+                    else
+                        ImGui::TextColored(ImVec4(COL_GREEN_BR.x, COL_GREEN_BR.y, COL_GREEN_BR.z, alpha), "OK");
+                }
+
+                ImGui::PopStyleVar();
+                ImGui::EndGroup();
+
+                // Tooltip on hover with full hashes
+                if (ImGui::IsMouseHoveringRect(cardMin, cardMax)) {
+                    ImGui::BeginTooltip();
+                    ImGui::TextColored(COL_ACCENT, "Block #%zu", tb.getIndex());
+                    ImGui::TextColored(COL_PURPLE, "SHA-256:  %s", tb.getCurrentHash().c_str());
+                    ImGui::TextColored(COL_ORANGE, "SHA3-128: %s", tb.getSha3Hash().c_str());
+                    ImGui::TextColored(COL_PURPLE, "Prev:     %s", tb.getPreviousHash().c_str());
+                    ImGui::EndTooltip();
+                }
+
+                // Move cursor past the card
+                ImGui::SetCursorScreenPos(ImVec2(cardMax.x, startY));
+
+                // Draw arrow to next block
+                if (ti + 1 < g_tempChain.size()) {
+                    float arrowCenterY = startY + cardH * 0.5f;
+                    // Arrow line
+                    dl->AddLine(ImVec2(cardMax.x + 4.0f, arrowCenterY),
+                                ImVec2(cardMax.x + arrowW - 6.0f, arrowCenterY),
+                                ImGui::ColorConvertFloat4ToU32(COL_MUTED), 2.0f);
+                    // Arrow head
+                    dl->AddTriangleFilled(
+                        ImVec2(cardMax.x + arrowW - 6.0f, arrowCenterY - 5.0f),
+                        ImVec2(cardMax.x + arrowW - 6.0f, arrowCenterY + 5.0f),
+                        ImVec2(cardMax.x + arrowW, arrowCenterY),
+                        ImGui::ColorConvertFloat4ToU32(COL_MUTED));
+                    ImGui::SetCursorScreenPos(ImVec2(cardMax.x + arrowW, startY));
+                }
+
+                // Auto-scroll to newest block
+                if (isNewest && scrollToEnd) {
+                    ImGui::SetScrollHereX(1.0f);
                 }
             }
-            ImGui::EndTable();
+
+            // Reserve total width so scrollbar covers the full chain
+            float totalW = g_tempChain.size() * cardW + (g_tempChain.size() - 1) * arrowW;
+            ImGui::SetCursorPos(ImVec2(totalW, 0));
+            ImGui::Dummy(ImVec2(1, 1));
         }
-        ImGui::PopStyleVar();
+
+        ImGui::EndChild();
     }
 
     // 9. Reset button
@@ -1625,6 +1748,8 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
             g_tempVerifyDone = false;
             g_tempAccumulator = 0.0f;
             g_tempRealCount = 0;
+            g_tempPrevCount = 0;
+            g_tempNewBlockAnim = 1.0f;
             g_tempTamperIndex = -1;
             g_tempDeleteIndex = -1;
             PushToast("Temp chain cleared.", COL_MUTED);
@@ -1955,7 +2080,7 @@ int main() {
 
         
         ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
-        ImGui::BeginChild("##sbwrap", ImVec2(280, -1), false);
+        ImGui::BeginChild("##sbwrap", ImVec2(320, -1), false);
         ImGui::PopStyleColor();
         RenderSidebar(chain);
         ImGui::EndChild();

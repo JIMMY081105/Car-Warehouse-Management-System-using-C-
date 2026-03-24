@@ -29,6 +29,17 @@ std::string actionToString(AuditAction action) {
     }
 }
 
+AuditAction stringToAction(const std::string& str) {
+    if (str == "BLOCK_ADDED")       return AuditAction::BLOCK_ADDED;
+    if (str == "INTEGRITY_CHECK")   return AuditAction::INTEGRITY_CHECK;
+    if (str == "SEARCH_PERFORMED")  return AuditAction::SEARCH_PERFORMED;
+    if (str == "CHAIN_VIEWED")      return AuditAction::CHAIN_VIEWED;
+    if (str == "TAMPER_SIMULATED")  return AuditAction::TAMPER_SIMULATED;
+    if (str == "PERSISTENCE_IO")    return AuditAction::PERSISTENCE_IO;
+    if (str == "BLOCK_DELETED")     return AuditAction::BLOCK_DELETED;
+    return AuditAction::PERSISTENCE_IO; // fallback for unknown strings
+}
+
 
 
 AuditLog::AuditLog()
@@ -56,6 +67,20 @@ void AuditLog::log(AuditAction action, const std::string& details) {
         
         tail_->next = node;  
         tail_ = node;        
+    }
+
+    ++count_;
+}
+
+void AuditLog::log(AuditAction action, const std::string& details, const std::string& timestamp) {
+    AuditEntry* node = new AuditEntry(action, details, timestamp);
+
+    if (tail_ == nullptr) {
+        head_ = node;
+        tail_ = node;
+    } else {
+        tail_->next = node;
+        tail_ = node;
     }
 
     ++count_;

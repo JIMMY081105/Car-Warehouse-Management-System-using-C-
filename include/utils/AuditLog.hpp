@@ -24,6 +24,7 @@ enum class AuditAction {
 
 
 std::string actionToString(AuditAction action);
+AuditAction stringToAction(const std::string& str);
 
 
 
@@ -63,6 +64,7 @@ public:
     
     
     void log(AuditAction action, const std::string& details);
+    void log(AuditAction action, const std::string& details, const std::string& timestamp);
 
     
     std::size_t size() const noexcept;
