@@ -1,5 +1,7 @@
 #include "blockchain/Block.hpp"
 
+#include <cstdlib>
+#include <ctime>
 #include <random>
 #include <sstream>
 #include <utility>
@@ -122,9 +124,19 @@ void Block::setRecord(CarRecord newRecord) {
 }
 
 std::uint64_t Block::generateNonce() {
-    static thread_local std::mt19937_64 engine{std::random_device{}()};
-    static thread_local std::uniform_int_distribution<std::uint64_t> dist;
-    return dist(engine);
+    // Seed std::rand once using current time (spec requirement: std::rand for hashes).
+    static bool seeded = false;
+    if (!seeded) {
+        std::srand(static_cast<unsigned int>(std::time(nullptr)));
+        seeded = true;
+    }
+
+    // Combine two std::rand() calls to build a 64-bit nonce.
+    // std::rand() returns at least 15 bits, so four calls cover 60+ bits.
+    auto r = []() -> std::uint64_t { return static_cast<std::uint64_t>(std::rand()); };
+    std::uint64_t nonce = (r() << 45) ^ (r() << 30) ^ (r() << 15) ^ r();
+
+    return nonce;
 }
 
 } 

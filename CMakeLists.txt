@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 
-option(BUILD_CLI "Build the terminal CLI version" ON)
 option(BUILD_GUI "Build the ImGui GUI version"   ON)
 
 
@@ -59,28 +58,6 @@ set(IMGUI_SOURCES
 )
 
 
-if(BUILD_CLI)
-    add_executable(car_warehouse_cli
-        src/main_cli.cpp
-        ${BACKEND_SOURCES}
-    )
-    target_include_directories(car_warehouse_cli
-        PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
-            third_party/sqlite
-    )
-    target_link_libraries(car_warehouse_cli
-        PRIVATE
-            OpenSSL::Crypto
-            sqlite3_lib
-    )
-    if(MSVC)
-        target_compile_options(car_warehouse_cli PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(car_warehouse_cli PRIVATE -Wall -Wextra -Wpedantic)
-    endif()
-endif()
-
 
 if(BUILD_GUI)
     add_executable(car_warehouse_gui
@@ -109,6 +86,8 @@ if(BUILD_GUI)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/JetBrainsMono-Regular.ttf
             $<TARGET_FILE_DIR:car_warehouse_gui>/fonts/JetBrainsMono-Regular.ttf
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            $<TARGET_FILE_DIR:car_warehouse_gui>/database
         COMMENT "Copying JetBrains Mono font next to executable"
     )
     if(MSVC)

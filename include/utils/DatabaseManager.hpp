@@ -51,7 +51,7 @@ public:
     bool upsertBlock(const Block& block);
 
     // Delete a block row by block_index, then renumber all rows whose
-    // block_index is greater than the deleted index (called after hardDeleteBlock).
+    // block_index is greater than the deleted index.
     bool deleteBlockRow(std::size_t index);
 
     // -- Audit log persistence --
@@ -79,7 +79,7 @@ public:
     // -- Sync --
 
     // Drop and recreate all tables, then repopulate from the given chain and
-    // audit log.  Used after hardDeleteBlock to keep DB consistent.
+    // audit log.
     bool fullResync(const std::vector<Block>& chain, const AuditLog& auditLog);
 
 private:

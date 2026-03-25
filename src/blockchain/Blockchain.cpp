@@ -290,63 +290,6 @@ bool Blockchain::softDeleteBlock(std::size_t index, std::string& outMessage) {
     return true;
 }
 
-bool Blockchain::hardDeleteBlock(std::size_t index, std::string& outMessage) {
-    if (index >= chain_.size()) {
-        std::ostringstream err;
-        err << "Hard delete failed: block index " << index
-            << " out of range (0.." << (chain_.empty() ? 0 : chain_.size() - 1) << ").";
-        outMessage = err.str();
-        return false;
-    }
-
-    if (chain_.size() == 1) {
-        outMessage = "Hard delete failed: cannot delete the only remaining block.";
-        return false;
-    }
-
-    const std::string deletedVin = chain_[index].getRecord().vin;
-    const std::size_t cascadeStart = index;
-
-    
-    chain_.erase(chain_.begin() + static_cast<std::ptrdiff_t>(index));
-
-    
-    for (std::size_t i = cascadeStart; i < chain_.size(); ++i) {
-        chain_[i].setIndex(i);
-
-        if (i == 0) {
-            
-            
-            chain_[i].setPreviousHash("0");
-            chain_[i].debugOverrideCurrentHash(chain_[i].computeHash());
-            chain_[i].setPreviousHash(chain_[i].getCurrentHash());
-        } else {
-            chain_[i].setPreviousHash(chain_[i - 1].getCurrentHash());
-            chain_[i].debugOverrideCurrentHash(chain_[i].computeHash());
-        }
-    }
-
-    
-    vinIndex_.clear();
-    for (std::size_t i = 0; i < chain_.size(); ++i) {
-        vinIndex_[chain_[i].getRecord().vin].push_back(i);
-    }
-
-    const std::size_t cascadeCount = chain_.size() - cascadeStart;
-    std::ostringstream detail;
-    detail << "Hard delete block #" << index
-           << " (VIN: " << deletedVin
-           << ") -- cascade re-hash applied to " << cascadeCount
-           << " subsequent blocks. Chain length now: " << chain_.size();
-    outMessage = detail.str();
-    auditLog_.log(AuditAction::BLOCK_DELETED, outMessage);
-
-    // Full resync to SQLite if a database is open.
-    if (db_ && db_->isOpen()) {
-        db_->fullResync(chain_, auditLog_);
-    }
-    return true;
-}
 
 bool Blockchain::saveBlockchain(const std::string& path) const {
     std::ofstream out(path);

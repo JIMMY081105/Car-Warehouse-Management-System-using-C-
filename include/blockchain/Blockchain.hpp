@@ -75,12 +75,6 @@ public:
     
     bool softDeleteBlock(std::size_t index, std::string& outMessage);
 
-    
-    
-    
-    bool hardDeleteBlock(std::size_t index, std::string& outMessage);
-
-    
     bool saveBlockchain(const std::string& path) const;
 
     
