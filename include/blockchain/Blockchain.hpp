@@ -84,9 +84,7 @@ public:
 
     
 
-    AuditLog& getAuditLog() const noexcept;
-
-
+    const AuditLog& getAuditLog() const noexcept;
     AuditLog& getAuditLog() noexcept;
 
     // -- SQLite database integration --
@@ -111,6 +109,9 @@ public:
 
     // Returns a const pointer to the DatabaseManager, or nullptr if not open.
     const DatabaseManager* getDatabase() const noexcept;
+
+    // Returns a mutable pointer to the DatabaseManager, or nullptr if not open.
+    DatabaseManager* getDatabase() noexcept;
 
 private:
     

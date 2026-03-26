@@ -24,8 +24,8 @@ std::string escapeField(const std::string& value) {
 std::string CarRecord::serialize() const {
     std::ostringstream out;
 
-    
-    out << "vin=" << escapeField(vin)
+    out << "v1"
+        << "|vin=" << escapeField(vin)
         << "|manufacturer=" << escapeField(manufacturer)
         << "|model=" << escapeField(model)
         << "|color=" << escapeField(color)
@@ -53,4 +53,12 @@ std::string CarRecord::serialize() const {
     return out.str();
 }
 
-} 
+CarRecord CarRecord::tombstone(const std::string& vin) {
+    CarRecord rec;
+    rec.vin          = vin;
+    rec.manufacturer = "[DELETED]";
+    rec.model        = "[DELETED]";
+    return rec;
+}
+
+}

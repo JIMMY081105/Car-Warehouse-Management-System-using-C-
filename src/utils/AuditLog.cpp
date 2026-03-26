@@ -110,92 +110,52 @@ void AuditLog::clear() {
 
 
 
-const AuditEntry** AuditLog::getRecentEntries(std::size_t maxCount,
-                                              std::size_t& outCount) const {
-    
-    
-    
-    
-
-    
-    std::size_t actualCount = (maxCount < count_) ? maxCount : count_;
-    outCount = actualCount;
-
+std::vector<const AuditEntry*> AuditLog::getRecentEntries(std::size_t maxCount) const {
+    std::size_t actualCount = std::min(maxCount, count_);
     if (actualCount == 0) {
-        return nullptr;
+        return {};
     }
 
-    
-    
-    const AuditEntry** arr = new const AuditEntry*[actualCount];
+    std::vector<const AuditEntry*> result(actualCount);
 
-    
-    
-    
     std::size_t skipCount = count_ - actualCount;
     const AuditEntry* node = head_;
     for (std::size_t i = 0; i < skipCount; ++i) {
-        node = node->next;  
+        node = node->next;
     }
 
-    
     for (std::size_t i = 0; i < actualCount; ++i) {
-        arr[i] = node;      
-        node = node->next;  
+        result[i] = node;
+        node = node->next;
     }
 
-    return arr;  
+    return result;
 }
 
 RecentEntryArray::RecentEntryArray(const AuditLog& log, std::size_t maxCount)
-    : data_(nullptr), count_(0) {
-    data_ = log.getRecentEntries(maxCount, count_);
-}
-
-RecentEntryArray::~RecentEntryArray() {
-    delete[] data_;
-}
-
-RecentEntryArray::RecentEntryArray(RecentEntryArray&& other) noexcept
-    : data_(other.data_), count_(other.count_) {
-    other.data_ = nullptr;
-    other.count_ = 0;
-}
-
-RecentEntryArray& RecentEntryArray::operator=(RecentEntryArray&& other) noexcept {
-    if (this == &other) {
-        return *this;
-    }
-
-    delete[] data_;
-    data_ = other.data_;
-    count_ = other.count_;
-    other.data_ = nullptr;
-    other.count_ = 0;
-    return *this;
-}
+    : data_(log.getRecentEntries(maxCount)) {}
 
 std::size_t RecentEntryArray::size() const noexcept {
-    return count_;
+    return data_.size();
 }
 
 bool RecentEntryArray::empty() const noexcept {
-    return count_ == 0;
+    return data_.empty();
 }
 
 const AuditEntry* RecentEntryArray::operator[](std::size_t index) const noexcept {
-    if (data_ == nullptr || index >= count_) {
+    if (index >= data_.size()) {
         return nullptr;
     }
     return data_[index];
 }
 
 const AuditEntry* const* RecentEntryArray::begin() const noexcept {
-    return data_;
+    return data_.empty() ? nullptr : data_.data();
 }
 
 const AuditEntry* const* RecentEntryArray::end() const noexcept {
-    return data_ == nullptr ? nullptr : (data_ + count_);
+    return data_.empty() ? nullptr : data_.data() + data_.size();
 }
 
 } 

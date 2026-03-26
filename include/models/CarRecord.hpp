@@ -44,9 +44,10 @@ struct CarRecord {
     double      salePrice = 0.0;   
     std::string warrantyExpiry;    
 
-    
-    
     std::string serialize() const;
+
+    // Create a tombstone record for soft-deletion, preserving only the VIN.
+    static CarRecord tombstone(const std::string& vin);
 };
 
 } 

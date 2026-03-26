@@ -62,6 +62,10 @@ std::string DatabaseManager::lastError() const {
     return lastError_;
 }
 
+sqlite3* DatabaseManager::rawHandle() noexcept {
+    return db_;
+}
+
 // ---------------------------------------------------------------------------
 // Table creation
 // ---------------------------------------------------------------------------
@@ -111,9 +115,13 @@ void DatabaseManager::createTables() {
     execSQL(auditSQL);
 
     // Migration: add sha3_hash column to existing databases that lack it.
-    execSQL("ALTER TABLE blocks ADD COLUMN sha3_hash TEXT");
-    // Ignore error if column already exists.
-    lastError_.clear();
+    if (!execSQL("ALTER TABLE blocks ADD COLUMN sha3_hash TEXT")) {
+        // Expected to fail with "duplicate column" if already present.
+        if (lastError_.find("duplicate") != std::string::npos) {
+            lastError_.clear();
+        }
+        // Otherwise keep lastError_ so callers can see an unexpected migration failure.
+    }
 }
 
 bool DatabaseManager::execSQL(const std::string& sql) {
@@ -139,36 +147,35 @@ bool DatabaseManager::execSQL(const std::string& sql) {
 static bool bindBlockToStmt(sqlite3_stmt* stmt, const Block& block) {
     const CarRecord& r = block.getRecord();
 
-    sqlite3_bind_int64(stmt,  1, static_cast<sqlite3_int64>(block.getIndex()));
-    sqlite3_bind_text(stmt,   2, block.getCurrentHash().c_str(),  -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,   3, block.getPreviousHash().c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,   4, block.getTimestamp().c_str(),    -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int64(stmt,  5, static_cast<sqlite3_int64>(block.getNonce()));
-    sqlite3_bind_text(stmt,   6, r.vin.c_str(),            -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,   7, r.manufacturer.c_str(),   -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,   8, r.model.c_str(),          -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,   9, r.color.c_str(),          -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt,   10, r.productionYear);
-    sqlite3_bind_int(stmt,   11, static_cast<int>(r.stage));
-    sqlite3_bind_text(stmt,  12, r.factoryLocation.c_str(),    -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  13, r.warehouseLocation.c_str(),  -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  14, r.receivedBy.c_str(),         -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  15, r.supplierId.c_str(),         -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  16, r.inspectorId.c_str(),        -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt,   17, r.passed ? 1 : 0);
-    sqlite3_bind_text(stmt,  18, r.qcNotes.c_str(),            -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  19, r.dealerId.c_str(),           -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  20, r.destination.c_str(),        -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  21, r.transportMode.c_str(),      -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  22, r.buyerId.c_str(),            -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  23, r.retailerId.c_str(),         -1, SQLITE_TRANSIENT);
-    sqlite3_bind_double(stmt,24, r.salePrice);
-    sqlite3_bind_text(stmt,  25, r.warrantyExpiry.c_str(),     -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt,  26, r.manufacturerId.c_str(),     -1, SQLITE_TRANSIENT);
-    // is_tombstone: true when manufacturer is "[DELETED]"
+    sqlite3_bind_int64(stmt, bind(BlockCol::Index),        static_cast<sqlite3_int64>(block.getIndex()));
+    sqlite3_bind_text(stmt,  bind(BlockCol::CurrentHash),  block.getCurrentHash().c_str(),  -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::PreviousHash), block.getPreviousHash().c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::Timestamp),    block.getTimestamp().c_str(),    -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(stmt, bind(BlockCol::Nonce),        static_cast<sqlite3_int64>(block.getNonce()));
+    sqlite3_bind_text(stmt,  bind(BlockCol::Vin),              r.vin.c_str(),            -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::Manufacturer),     r.manufacturer.c_str(),   -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::Model),            r.model.c_str(),          -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::Color),            r.color.c_str(),          -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt,   bind(BlockCol::ProductionYear),   r.productionYear);
+    sqlite3_bind_int(stmt,   bind(BlockCol::Stage),            static_cast<int>(r.stage));
+    sqlite3_bind_text(stmt,  bind(BlockCol::FactoryLocation),  r.factoryLocation.c_str(),    -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::WarehouseLocation),r.warehouseLocation.c_str(),  -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::ReceivedBy),       r.receivedBy.c_str(),         -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::SupplierId),       r.supplierId.c_str(),         -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::InspectorId),      r.inspectorId.c_str(),        -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt,   bind(BlockCol::Passed),           r.passed ? 1 : 0);
+    sqlite3_bind_text(stmt,  bind(BlockCol::QcNotes),          r.qcNotes.c_str(),            -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::DealerId),         r.dealerId.c_str(),           -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::Destination),      r.destination.c_str(),        -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::TransportMode),    r.transportMode.c_str(),      -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::BuyerId),          r.buyerId.c_str(),            -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::RetailerId),       r.retailerId.c_str(),         -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(stmt,bind(BlockCol::SalePrice),        r.salePrice);
+    sqlite3_bind_text(stmt,  bind(BlockCol::WarrantyExpiry),   r.warrantyExpiry.c_str(),     -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::ManufacturerId),   r.manufacturerId.c_str(),     -1, SQLITE_TRANSIENT);
     int isTombstone = (r.manufacturer == "[DELETED]") ? 1 : 0;
-    sqlite3_bind_int(stmt,   27, isTombstone);
-    sqlite3_bind_text(stmt,  28, block.getSha3Hash().c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt,   bind(BlockCol::IsTombstone),      isTombstone);
+    sqlite3_bind_text(stmt,  bind(BlockCol::Sha3Hash),         block.getSha3Hash().c_str(), -1, SQLITE_TRANSIENT);
 
     return true;
 }
@@ -235,43 +242,42 @@ std::vector<Block> DatabaseManager::loadAllBlocks() {
         };
         auto getDouble = [&](int col) { return sqlite3_column_double(stmt, col); };
 
-        std::size_t   index        = static_cast<std::size_t>(getInt64(0));
-        std::string   currentHash  = getText(1);
-        std::string   previousHash = getText(2);
-        std::string   timestamp    = getText(3);
-        std::uint64_t nonce        = static_cast<std::uint64_t>(getInt64(4));
+        std::size_t   index        = static_cast<std::size_t>(getInt64(col(BlockCol::Index)));
+        std::string   currentHash  = getText(col(BlockCol::CurrentHash));
+        std::string   previousHash = getText(col(BlockCol::PreviousHash));
+        std::string   timestamp    = getText(col(BlockCol::Timestamp));
+        std::uint64_t nonce        = static_cast<std::uint64_t>(getInt64(col(BlockCol::Nonce)));
 
         CarRecord rec;
-        rec.vin              = getText(5);
-        rec.manufacturer     = getText(6);
-        rec.model            = getText(7);
-        rec.color            = getText(8);
-        rec.productionYear   = getInt(9);
-        int stageInt         = getInt(10);
+        rec.vin              = getText(col(BlockCol::Vin));
+        rec.manufacturer     = getText(col(BlockCol::Manufacturer));
+        rec.model            = getText(col(BlockCol::Model));
+        rec.color            = getText(col(BlockCol::Color));
+        rec.productionYear   = getInt(col(BlockCol::ProductionYear));
+        int stageInt         = getInt(col(BlockCol::Stage));
         if (stageInt >= static_cast<int>(BlockStage::PRODUCTION) &&
             stageInt <= static_cast<int>(BlockStage::CUSTOMER_SALE)) {
             rec.stage = static_cast<BlockStage>(stageInt);
         }
-        rec.factoryLocation    = getText(11);
-        rec.warehouseLocation  = getText(12);
-        rec.receivedBy         = getText(13);
-        rec.supplierId         = getText(14);
-        rec.inspectorId        = getText(15);
-        rec.passed             = (getInt(16) != 0);
-        rec.qcNotes            = getText(17);
-        rec.dealerId           = getText(18);
-        rec.destination        = getText(19);
-        rec.transportMode      = getText(20);
-        rec.buyerId            = getText(21);
-        rec.retailerId         = getText(22);
-        rec.salePrice          = getDouble(23);
-        rec.warrantyExpiry     = getText(24);
-        rec.manufacturerId     = getText(25);
-        // column 26 = is_tombstone (informational only, already reflected in manufacturer)
-        // column 27 = sha3_hash
+        rec.factoryLocation    = getText(col(BlockCol::FactoryLocation));
+        rec.warehouseLocation  = getText(col(BlockCol::WarehouseLocation));
+        rec.receivedBy         = getText(col(BlockCol::ReceivedBy));
+        rec.supplierId         = getText(col(BlockCol::SupplierId));
+        rec.inspectorId        = getText(col(BlockCol::InspectorId));
+        rec.passed             = (getInt(col(BlockCol::Passed)) != 0);
+        rec.qcNotes            = getText(col(BlockCol::QcNotes));
+        rec.dealerId           = getText(col(BlockCol::DealerId));
+        rec.destination        = getText(col(BlockCol::Destination));
+        rec.transportMode      = getText(col(BlockCol::TransportMode));
+        rec.buyerId            = getText(col(BlockCol::BuyerId));
+        rec.retailerId         = getText(col(BlockCol::RetailerId));
+        rec.salePrice          = getDouble(col(BlockCol::SalePrice));
+        rec.warrantyExpiry     = getText(col(BlockCol::WarrantyExpiry));
+        rec.manufacturerId     = getText(col(BlockCol::ManufacturerId));
+        // IsTombstone (col 26) is informational only, already reflected in manufacturer.
         std::string sha3Hash;
-        if (sqlite3_column_count(stmt) > 27) {
-            sha3Hash = getText(27);
+        if (sqlite3_column_count(stmt) > col(BlockCol::Sha3Hash)) {
+            sha3Hash = getText(col(BlockCol::Sha3Hash));
         }
 
         result.emplace_back(index,
@@ -438,6 +444,7 @@ std::vector<std::size_t> DatabaseManager::searchBlocksSQL(const std::string& que
         "LOWER(vin) LIKE LOWER(?) OR "
         "LOWER(manufacturer) LIKE LOWER(?) OR "
         "LOWER(model) LIKE LOWER(?) OR "
+        "LOWER(color) LIKE LOWER(?) OR "
         "LOWER(destination) LIKE LOWER(?) OR "
         "LOWER(qc_notes) LIKE LOWER(?) "
         "ORDER BY block_index ASC";
@@ -450,7 +457,7 @@ std::vector<std::size_t> DatabaseManager::searchBlocksSQL(const std::string& que
     }
 
     std::string pattern = "%" + query + "%";
-    for (int i = 1; i <= 5; ++i) {
+    for (int i = 1; i <= 6; ++i) {
         sqlite3_bind_text(stmt, i, pattern.c_str(), -1, SQLITE_TRANSIENT);
     }
 

@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace cw1 {
 
@@ -82,8 +83,7 @@ public:
     
     
     
-    const AuditEntry** getRecentEntries(std::size_t maxCount,
-                                        std::size_t& outCount) const;
+    std::vector<const AuditEntry*> getRecentEntries(std::size_t maxCount) const;
 
     
     void clear();
@@ -102,13 +102,6 @@ private:
 class RecentEntryArray {
 public:
     RecentEntryArray(const AuditLog& log, std::size_t maxCount);
-    ~RecentEntryArray();
-
-    RecentEntryArray(const RecentEntryArray&) = delete;
-    RecentEntryArray& operator=(const RecentEntryArray&) = delete;
-
-    RecentEntryArray(RecentEntryArray&& other) noexcept;
-    RecentEntryArray& operator=(RecentEntryArray&& other) noexcept;
 
     std::size_t size() const noexcept;
     bool empty() const noexcept;
@@ -118,8 +111,7 @@ public:
     const AuditEntry* const* end() const noexcept;
 
 private:
-    const AuditEntry** data_;
-    std::size_t count_;
+    std::vector<const AuditEntry*> data_;
 };
 
 } 

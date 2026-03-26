@@ -76,7 +76,8 @@
       "Bash(openssl version:*)",
       "Bash(pkg-config --modversion openssl)",
       "Read(//mingw64/include/**)",
-      "Read(//mingw64/include/openssl/**)"
+      "Read(//mingw64/include/openssl/**)",
+      "Bash(xargs wc:*)"
     ]
   }
 }

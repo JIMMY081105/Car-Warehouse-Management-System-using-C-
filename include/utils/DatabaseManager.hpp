@@ -12,6 +12,43 @@ struct sqlite3;
 
 namespace cw1 {
 
+// Column indices for the blocks table (mirrors CREATE TABLE order).
+enum class BlockCol : int {
+    Index = 0,
+    CurrentHash,        // 1
+    PreviousHash,       // 2
+    Timestamp,          // 3
+    Nonce,              // 4
+    Vin,                // 5
+    Manufacturer,       // 6
+    Model,              // 7
+    Color,              // 8
+    ProductionYear,     // 9
+    Stage,              // 10
+    FactoryLocation,    // 11
+    WarehouseLocation,  // 12
+    ReceivedBy,         // 13
+    SupplierId,         // 14
+    InspectorId,        // 15
+    Passed,             // 16
+    QcNotes,            // 17
+    DealerId,           // 18
+    Destination,        // 19
+    TransportMode,      // 20
+    BuyerId,            // 21
+    RetailerId,         // 22
+    SalePrice,          // 23
+    WarrantyExpiry,     // 24
+    ManufacturerId,     // 25
+    IsTombstone,        // 26
+    Sha3Hash,           // 27
+    COUNT               // 28 — total number of columns
+};
+
+// Helper to convert BlockCol to int for SQLite binding (1-based) and reading (0-based).
+inline int col(BlockCol c) { return static_cast<int>(c); }
+inline int bind(BlockCol c) { return static_cast<int>(c) + 1; }
+
 // Manages SQLite persistence for the blockchain.
 // Uses RAII -- the constructor opens (or creates) the database and ensures
 // tables exist; the destructor closes the connection.  Non-copyable, movable.
@@ -75,6 +112,12 @@ public:
 
     // Get all distinct VINs stored in the database.
     std::vector<std::string> getAllVinsSQL();
+
+    // -- Raw handle (for sub-managers that share this connection) --
+
+    // Returns the underlying sqlite3 handle, or nullptr if not open.
+    // Ownership remains with DatabaseManager.
+    sqlite3* rawHandle() noexcept;
 
     // -- Sync --
 

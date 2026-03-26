@@ -5,14 +5,10 @@
 #include <string>
 
 #include "models/CarRecord.hpp"
-#include "blockchain/BlockBase.hpp"
 
 namespace cw1 {
 
-
-
-
-class Block : public BlockBase {
+class Block {
 public:
     Block(std::size_t index, std::string previousHash, CarRecord record);
     Block(std::size_t index,
@@ -23,21 +19,19 @@ public:
           CarRecord record,
           std::string sha3Hash = "");
 
-    std::size_t         getIndex()        const noexcept override;
-    const std::string&  getCurrentHash()  const noexcept override;
-    const std::string&  getPreviousHash() const noexcept override;
-    const std::string&  getTimestamp()    const noexcept override;
+    std::size_t         getIndex()        const noexcept;
+    const std::string&  getCurrentHash()  const noexcept;
+    const std::string&  getPreviousHash() const noexcept;
+    const std::string&  getTimestamp()     const noexcept;
     std::uint64_t       getNonce()        const noexcept;
     const CarRecord&    getRecord()       const noexcept;
     const std::string&  getSha3Hash()     const noexcept;
 
-
-    std::string computeHash() const override;
+    std::string computeHash() const;
 
     std::string computeSha3Hash() const;
 
-    
-    std::string toString() const override;
+    std::string toString() const;
 
     
     

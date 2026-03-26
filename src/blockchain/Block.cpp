@@ -1,7 +1,5 @@
 #include "blockchain/Block.hpp"
 
-#include <cstdlib>
-#include <ctime>
 #include <random>
 #include <sstream>
 #include <utility>
@@ -94,9 +92,13 @@ std::string Block::computeSha3Hash() const {
 
 std::string Block::toString() const {
     std::ostringstream out;
+    constexpr std::size_t kHashPreviewLen = 12;
+    auto truncHash = [&](const std::string& h) {
+        return h.size() > kHashPreviewLen ? h.substr(0, kHashPreviewLen) + "..." : h;
+    };
     out << "Block(index=" << index_
-        << ", hash=" << currentHash_.substr(0, 12) << "..."
-        << ", prev=" << (previousHash_.size() > 12 ? previousHash_.substr(0, 12) + "..." : previousHash_)
+        << ", hash=" << truncHash(currentHash_)
+        << ", prev=" << truncHash(previousHash_)
         << ", stage=" << stageToString(record_.stage)
         << ", vin=" << record_.vin << ")";
     return out.str();
@@ -124,19 +126,9 @@ void Block::setRecord(CarRecord newRecord) {
 }
 
 std::uint64_t Block::generateNonce() {
-    // Seed std::rand once using current time (spec requirement: std::rand for hashes).
-    static bool seeded = false;
-    if (!seeded) {
-        std::srand(static_cast<unsigned int>(std::time(nullptr)));
-        seeded = true;
-    }
-
-    // Combine two std::rand() calls to build a 64-bit nonce.
-    // std::rand() returns at least 15 bits, so four calls cover 60+ bits.
-    auto r = []() -> std::uint64_t { return static_cast<std::uint64_t>(std::rand()); };
-    std::uint64_t nonce = (r() << 45) ^ (r() << 30) ^ (r() << 15) ^ r();
-
-    return nonce;
+    static thread_local std::mt19937_64 engine{std::random_device{}()};
+    std::uniform_int_distribution<std::uint64_t> dist;
+    return dist(engine);
 }
 
 } 

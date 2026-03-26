@@ -43,6 +43,10 @@ set(BACKEND_SOURCES
     src/utils/HashUtil.cpp
     src/utils/TimeUtil.cpp
     src/utils/DatabaseManager.cpp
+    src/utils/FuelPriceManager.cpp
+    src/utils/StringUtil.cpp
+    src/utils/BranchMap.cpp
+    src/utils/VehicleData.cpp
 )
 
 

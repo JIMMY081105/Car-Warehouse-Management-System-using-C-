@@ -1,37 +1,15 @@
 #include "blockchain/Blockchain.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
 
+#include "utils/StringUtil.hpp"
 #include "utils/TimeUtil.hpp"
 
 namespace cw1 {
-
-namespace {
-
-
-bool containsIgnoreCase(const std::string& haystack, const std::string& needle) {
-    if (needle.empty()) return true;
-    if (needle.size() > haystack.size()) return false;
-
-    auto toLower = [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    };
-
-    std::string h, n;
-    h.resize(haystack.size());
-    n.resize(needle.size());
-    std::transform(haystack.begin(), haystack.end(), h.begin(), toLower);
-    std::transform(needle.begin(), needle.end(), n.begin(), toLower);
-
-    return h.find(n) != std::string::npos;
-}
-
-} 
 
 
 
@@ -144,7 +122,9 @@ std::vector<const Block*> Blockchain::searchGeneral(const std::string& query) co
             containsIgnoreCase(rec.manufacturer, query) ||
             containsIgnoreCase(rec.model, query) ||
             containsIgnoreCase(rec.color, query) ||
-            containsIgnoreCase(stageToString(rec.stage), query)) {
+            containsIgnoreCase(stageToString(rec.stage), query) ||
+            containsIgnoreCase(rec.destination, query) ||
+            containsIgnoreCase(rec.qcNotes, query)) {
             results.push_back(&block);
         }
     }
@@ -248,31 +228,7 @@ bool Blockchain::softDeleteBlock(std::size_t index, std::string& outMessage) {
 
     const std::string originalVin = chain_[index].getRecord().vin;
 
-    
-    CarRecord tombstone;
-    tombstone.vin            = originalVin;
-    tombstone.manufacturer   = "[DELETED]";
-    tombstone.model          = "[DELETED]";
-    tombstone.color          = "";
-    tombstone.productionYear = 0;
-    tombstone.stage          = BlockStage::PRODUCTION;
-    tombstone.passed         = false;
-    tombstone.salePrice      = 0.0;
-    tombstone.manufacturerId = "";
-    tombstone.factoryLocation   = "";
-    tombstone.warehouseLocation = "";
-    tombstone.receivedBy        = "";
-    tombstone.supplierId        = "";
-    tombstone.inspectorId       = "";
-    tombstone.qcNotes           = "";
-    tombstone.dealerId          = "";
-    tombstone.destination       = "";
-    tombstone.transportMode     = "";
-    tombstone.buyerId           = "";
-    tombstone.retailerId        = "";
-    tombstone.warrantyExpiry    = "";
-
-    chain_[index].setRecord(std::move(tombstone));
+    chain_[index].setRecord(CarRecord::tombstone(originalVin));
 
     std::ostringstream detail;
     detail << "Soft delete block #" << index
@@ -477,10 +433,7 @@ bool Blockchain::loadBlockchain(const std::string& path) {
 
 
 
-AuditLog& Blockchain::getAuditLog() const noexcept {
-    
-    
-    
+const AuditLog& Blockchain::getAuditLog() const noexcept {
     return auditLog_;
 }
 
@@ -584,6 +537,10 @@ std::vector<const Block*> Blockchain::searchBySQL(const std::string& query) cons
 }
 
 const DatabaseManager* Blockchain::getDatabase() const noexcept {
+    return db_.get();
+}
+
+DatabaseManager* Blockchain::getDatabase() noexcept {
     return db_.get();
 }
 
