@@ -75,6 +75,21 @@ public:
     
     bool softDeleteBlock(std::size_t index, std::string& outMessage);
 
+    // Restore a previously soft-deleted block to its original data.
+    bool restoreBlock(std::size_t index, std::string& outMessage);
+
+    // Check whether a block at the given index has been soft-deleted.
+    bool isDeleted(std::size_t index) const;
+
+    // Return the original record for a soft-deleted block, or nullptr.
+    const CarRecord* getDeletedOriginal(std::size_t index) const;
+
+    // Get all deleted block indices.
+    std::vector<std::size_t> getDeletedIndices() const;
+
+    // Recalculate hashes from a given block index to the end of the chain.
+    void rehashFrom(std::size_t index);
+
     bool saveBlockchain(const std::string& path) const;
 
     
@@ -124,6 +139,9 @@ private:
 
 
     mutable AuditLog auditLog_;
+
+    // Original records for soft-deleted blocks, keyed by block index.
+    std::map<std::size_t, CarRecord> deletedRecords_;
 
     // Optional SQLite database for persistence and SQL queries.
     std::unique_ptr<DatabaseManager> db_;

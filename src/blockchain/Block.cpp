@@ -125,6 +125,14 @@ void Block::setRecord(CarRecord newRecord) {
     record_ = std::move(newRecord);
 }
 
+void Block::rehash() {
+    currentHash_ = computeHash();
+    sha3Hash_    = computeSha3Hash();
+    if (index_ == 0) {
+        previousHash_ = currentHash_;
+    }
+}
+
 std::uint64_t Block::generateNonce() {
     static thread_local std::mt19937_64 engine{std::random_device{}()};
     std::uniform_int_distribution<std::uint64_t> dist;

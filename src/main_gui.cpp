@@ -1673,7 +1673,9 @@ static void RenderTempChainControls(cw1::Blockchain& chain) {
         ImGui::InputInt("Delete temp block index##tempdelidx", &g_tempDeleteIndex);
         ImGui::SameLine();
 
+        // Only allow deleting generated temp blocks, not original chain blocks.
         bool delValid = (g_tempDeleteIndex >= 0 &&
+                         static_cast<std::size_t>(g_tempDeleteIndex) >= g_tempRealCount &&
                          static_cast<std::size_t>(g_tempDeleteIndex) < g_tempChain.size() &&
                          g_tempChain.size() > 1);
 
@@ -1684,13 +1686,16 @@ static void RenderTempChainControls(cw1::Blockchain& chain) {
             for (std::size_t ri = di; ri < g_tempChain.size(); ++ri) {
                 g_tempChain[ri].setIndex(ri);
             }
-            if (g_tempRealCount > g_tempChain.size()) {
-                g_tempRealCount = g_tempChain.size();
-            }
             PushToast("Temp block #" + std::to_string(g_tempDeleteIndex) +
                       " deleted (chain links NOT repaired).", COL_RED);
         }
         ImGui::EndDisabled();
+        if (g_tempDeleteIndex >= 0 &&
+            static_cast<std::size_t>(g_tempDeleteIndex) < g_tempRealCount) {
+            ImGui::SameLine();
+            ImGui::TextColored(COL_YELLOW, "Cannot delete original chain blocks (0-%zu)",
+                               g_tempRealCount > 0 ? g_tempRealCount - 1 : 0u);
+        }
     }
 }
 
@@ -1954,6 +1959,7 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "Chain size: %zu block(s)", chain.totalBlocks());
     ImGui::Spacing();
 
+    // --- Soft Delete ---
     ImGui::TextColored(COL_MUTED, "Block index to delete:");
     ImGui::SetNextItemWidth(160.0f);
     ImGui::InputInt("##delete_block_index", &g_deleteBlockIndex);
@@ -1985,6 +1991,62 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
         ImGui::TextColored(COL_VERY_MUTED, "Last delete operation took: %s s",
                            cw1::formatSeconds(g_lastDeleteSeconds).c_str());
     }
+
+    // --- Deleted Blocks & Restore ---
+    auto deletedIndices = chain.getDeletedIndices();
+    if (!deletedIndices.empty()) {
+        ImGui::Spacing(); ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::TextColored(COL_YELLOW, "Soft-Deleted Blocks (original data preserved)");
+        ImGui::Spacing();
+
+        ImGuiTableFlags tflags = ImGuiTableFlags_BordersInnerV |
+                                 ImGuiTableFlags_BordersInnerH |
+                                 ImGuiTableFlags_RowBg |
+                                 ImGuiTableFlags_SizingStretchProp;
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8.0f, 6.0f));
+        if (ImGui::BeginTable("##deleted_blocks_table", 5, tflags, ImVec2(-1, 0))) {
+            ImGui::TableSetupColumn("Block #",      ImGuiTableColumnFlags_WidthFixed, 60);
+            ImGui::TableSetupColumn("VIN",           ImGuiTableColumnFlags_WidthStretch, 1.5f);
+            ImGui::TableSetupColumn("Manufacturer",  ImGuiTableColumnFlags_WidthStretch, 1.0f);
+            ImGui::TableSetupColumn("Model",         ImGuiTableColumnFlags_WidthStretch, 1.0f);
+            ImGui::TableSetupColumn("Action",        ImGuiTableColumnFlags_WidthFixed, 100);
+            ImGui::TableHeadersRow();
+
+            for (std::size_t idx : deletedIndices) {
+                const cw1::CarRecord* orig = chain.getDeletedOriginal(idx);
+                if (!orig) continue;
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextColored(COL_RED, "#%zu", idx);
+                ImGui::TableNextColumn();
+                ImGui::TextColored(COL_MUTED, "%s", orig->vin.c_str());
+                ImGui::TableNextColumn();
+                ImGui::TextColored(COL_MUTED, "%s", orig->manufacturer.c_str());
+                ImGui::TableNextColumn();
+                ImGui::TextColored(COL_MUTED, "%s", orig->model.c_str());
+                ImGui::TableNextColumn();
+
+                std::string btnLabel = "Restore##restore_" + std::to_string(idx);
+                if (DrawPrimaryButton(btnLabel.c_str(), ImVec2(90.0f, 28.0f))) {
+                    std::string msg;
+                    const bool ok = chain.restoreBlock(idx, msg);
+                    PushToast(ok ? msg : ("Restore failed: " + msg),
+                              ok ? COL_GREEN_BR : COL_RED);
+
+                    cw1::OperationTimer vt;
+                    g_lastVerify = chain.verifyIntegrity();
+                    g_lastVerifySeconds = vt.elapsedSeconds();
+                    g_verifyDone = true;
+                }
+            }
+            ImGui::EndTable();
+        }
+        ImGui::PopStyleVar();
+    }
+
 }
 
 

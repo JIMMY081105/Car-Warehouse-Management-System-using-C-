@@ -48,6 +48,9 @@ public:
     
     void setRecord(CarRecord newRecord);
 
+    // Recompute currentHash_ and sha3Hash_ from current block data.
+    void rehash();
+
 private:
     static std::uint64_t generateNonce();
 

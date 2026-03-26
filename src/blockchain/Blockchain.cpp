@@ -226,25 +226,96 @@ bool Blockchain::softDeleteBlock(std::size_t index, std::string& outMessage) {
         return false;
     }
 
-    const std::string originalVin = chain_[index].getRecord().vin;
+    if (isDeleted(index)) {
+        outMessage = "Block #" + std::to_string(index) + " is already deleted.";
+        return false;
+    }
 
+    // Store the original record so it can be restored later.
+    deletedRecords_[index] = chain_[index].getRecord();
+
+    const std::string originalVin = chain_[index].getRecord().vin;
     chain_[index].setRecord(CarRecord::tombstone(originalVin));
+
+    // Rehash this block and all subsequent blocks to keep chain valid.
+    rehashFrom(index);
 
     std::ostringstream detail;
     detail << "Soft delete block #" << index
            << " for VIN " << originalVin
-           << " (tombstone applied, hash now invalid)";
+           << " (tombstone applied, chain rehashed)";
     outMessage = detail.str();
     auditLog_.log(AuditAction::BLOCK_DELETED, outMessage);
 
     // Mirror to SQLite if a database is open.
     if (db_ && db_->isOpen()) {
-        db_->upsertBlock(chain_[index]);
+        // Save all blocks from the rehashed index onward.
+        for (std::size_t i = index; i < chain_.size(); ++i) {
+            db_->upsertBlock(chain_[i]);
+        }
         db_->insertAuditEntry(AuditAction::BLOCK_DELETED, outMessage,
                               TimeUtil::nowIso8601());
     }
     return true;
 }
+
+bool Blockchain::restoreBlock(std::size_t index, std::string& outMessage) {
+    auto it = deletedRecords_.find(index);
+    if (it == deletedRecords_.end()) {
+        outMessage = "Block #" + std::to_string(index) + " has no stored original data to restore.";
+        return false;
+    }
+
+    chain_[index].setRecord(it->second);
+
+    // Rehash this block and all subsequent blocks.
+    rehashFrom(index);
+
+    deletedRecords_.erase(it);
+
+    std::ostringstream detail;
+    detail << "Restored block #" << index
+           << " for VIN " << chain_[index].getRecord().vin
+           << " (original data recovered, chain rehashed)";
+    outMessage = detail.str();
+    auditLog_.log(AuditAction::BLOCK_DELETED, outMessage);
+
+    if (db_ && db_->isOpen()) {
+        for (std::size_t i = index; i < chain_.size(); ++i) {
+            db_->upsertBlock(chain_[i]);
+        }
+        db_->insertAuditEntry(AuditAction::BLOCK_DELETED, outMessage,
+                              TimeUtil::nowIso8601());
+    }
+    return true;
+}
+
+bool Blockchain::isDeleted(std::size_t index) const {
+    return deletedRecords_.find(index) != deletedRecords_.end();
+}
+
+const CarRecord* Blockchain::getDeletedOriginal(std::size_t index) const {
+    auto it = deletedRecords_.find(index);
+    return (it != deletedRecords_.end()) ? &it->second : nullptr;
+}
+
+std::vector<std::size_t> Blockchain::getDeletedIndices() const {
+    std::vector<std::size_t> indices;
+    for (const auto& pair : deletedRecords_) {
+        indices.push_back(pair.first);
+    }
+    return indices;
+}
+
+void Blockchain::rehashFrom(std::size_t index) {
+    for (std::size_t i = index; i < chain_.size(); ++i) {
+        if (i > 0) {
+            chain_[i].setPreviousHash(chain_[i - 1].getCurrentHash());
+        }
+        chain_[i].rehash();
+    }
+}
+
 
 
 bool Blockchain::saveBlockchain(const std::string& path) const {
