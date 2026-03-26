@@ -1,3 +1,5 @@
+// Builds the coursework GUI around the blockchain, audit log, persistence, and fuel-price modules. The interface now shows both indexed vector access and explicit linked-list traversal so lecture data-structure requirements are visible without weakening the existing architecture.
+
 #include <GLFW/glfw3.h>
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -9,6 +11,7 @@
 #include <cstdio>
 #include <ctime>
 #include <cstring>
+#include <exception>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -34,23 +37,23 @@ static ImVec4 HexColor(uint32_t hex, float a = 1.0f) {
         static_cast<float>( hex        & 0xFF) / 255.0f, a);
 }
 
-static const ImVec4 COL_BG_MAIN    = HexColor(0x0d1117);  
-static const ImVec4 COL_BG_PANEL   = HexColor(0x161b22);  
-static const ImVec4 COL_BG_CARD    = HexColor(0x21262d);  
-static const ImVec4 COL_BG_ELEV    = HexColor(0x1b222c);  
-static const ImVec4 COL_BG_HOVER   = HexColor(0x30363d);  
-static const ImVec4 COL_TEXT       = HexColor(0xe6edf3);  
-static const ImVec4 COL_MUTED      = HexColor(0x8b949e);  
-static const ImVec4 COL_VERY_MUTED = HexColor(0x484f58);  
-static const ImVec4 COL_ACCENT     = HexColor(0x1f6feb);  
-static const ImVec4 COL_ACCENT_HO  = HexColor(0x388bfd);  
+static const ImVec4 COL_BG_MAIN    = HexColor(0x0d1117);
+static const ImVec4 COL_BG_PANEL   = HexColor(0x161b22);
+static const ImVec4 COL_BG_CARD    = HexColor(0x21262d);
+static const ImVec4 COL_BG_ELEV    = HexColor(0x1b222c);
+static const ImVec4 COL_BG_HOVER   = HexColor(0x30363d);
+static const ImVec4 COL_TEXT       = HexColor(0xe6edf3);
+static const ImVec4 COL_MUTED      = HexColor(0x8b949e);
+static const ImVec4 COL_VERY_MUTED = HexColor(0x484f58);
+static const ImVec4 COL_ACCENT     = HexColor(0x1f6feb);
+static const ImVec4 COL_ACCENT_HO  = HexColor(0x388bfd);
 static const ImVec4 COL_ACCENT_SOFT = HexColor(0x1f6feb, 0.20f);
-static const ImVec4 COL_GREEN      = HexColor(0x238636);  
-static const ImVec4 COL_GREEN_BR   = HexColor(0x2ea043);  
-static const ImVec4 COL_RED        = HexColor(0xda3633);  
-static const ImVec4 COL_YELLOW     = HexColor(0xd29922);  
-static const ImVec4 COL_PURPLE     = HexColor(0x8957e5);  
-static const ImVec4 COL_ORANGE     = HexColor(0xdb6d28);  
+static const ImVec4 COL_GREEN      = HexColor(0x238636);
+static const ImVec4 COL_GREEN_BR   = HexColor(0x2ea043);
+static const ImVec4 COL_RED        = HexColor(0xda3633);
+static const ImVec4 COL_YELLOW     = HexColor(0xd29922);
+static const ImVec4 COL_PURPLE     = HexColor(0x8957e5);
+static const ImVec4 COL_ORANGE     = HexColor(0xdb6d28);
 static const ImVec4 COL_BORDER_SOFT = HexColor(0x30363d, 0.80f);
 
 
@@ -179,7 +182,22 @@ static void PushToast(const std::string& msg, ImVec4 color, float dur = 3.0f) {
     g_toasts.push_back({msg, dur, color});
 }
 
-// -- Fuel Intelligence state --
+// GUI actions are a useful exception boundary: backend failures are converted into an audit entry plus a toast instead of escaping into the render loop.
+static void ReportGuiFailure(cw1::Blockchain& chain,
+                             cw1::AuditAction action,
+                             const std::string& message) {
+    chain.getAuditLog().log(action, message);
+    PushToast(message, COL_RED, 4.0f);
+}
+
+static void ReportGuiException(cw1::Blockchain& chain,
+                               cw1::AuditAction action,
+                               const char* context,
+                               const std::exception& ex) {
+    ReportGuiFailure(chain, action, std::string(context) + ": " + ex.what());
+}
+
+
 static cw1::FuelPriceManager g_fuelMgr;
 static bool g_fuelInitialized = false;
 
@@ -208,7 +226,7 @@ static char   g_formSupplierId[64]  = {};
 static char   g_formRetailerId[64]  = {};
 static int    g_auditN              = 20;
 
-// -- Immutability demo state --
+
 static bool                    g_tempGenerating   = false;
 static float                   g_tempAccumulator  = 0.0f;
 static float                   g_tempInterval     = 5.0f;
@@ -219,8 +237,8 @@ static double                  g_tempVerifySeconds = 0.0;
 static int                     g_tempTamperIndex  = -1;
 static int                     g_tempDeleteIndex  = -1;
 static std::size_t             g_tempRealCount    = 0;
-static std::size_t             g_tempPrevCount    = 0;   // track for new-block animation
-static float                   g_tempNewBlockAnim = 1.0f; // 0..1 fade-in alpha
+static std::size_t             g_tempPrevCount    = 0;
+static float                   g_tempNewBlockAnim = 1.0f;
 
 
 
@@ -319,20 +337,10 @@ static std::string Truncate(const std::string& s, size_t maxLen) {
     return (s.size() <= maxLen) ? s : s.substr(0, maxLen) + "...";
 }
 
-static int ExtractFailedBlockIndex(const std::string& message) {
-    const std::string needle = "block index ";
-    const std::size_t pos = message.find(needle);
-    if (pos == std::string::npos) {
-        return -1;
-    }
-
-    const char* start = message.c_str() + pos + needle.size();
-    char* end = nullptr;
-    const long value = std::strtol(start, &end, 10);
-    if (end == start || value < 0) {
-        return -1;
-    }
-    return static_cast<int>(value);
+static std::string PointerToString(const void* ptr) {
+    std::ostringstream out;
+    out << ptr;
+    return out.str();
 }
 
 static void DrawSectionHeading(const char* text) {
@@ -425,11 +433,11 @@ static void RenderHeader(const cw1::Blockchain& chain) {
 
 
 
-static void RenderSidebar(const cw1::Blockchain& chain) {
+static void RenderSidebar(cw1::Blockchain& chain) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
     ImGui::BeginChild("##sidebar", ImVec2(-1.0f, -1.0f), true);
 
-    
+
     ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_ELEV);
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, COL_BG_HOVER);
     ImGui::PushStyleColor(ImGuiCol_FrameBgActive, COL_BG_HOVER);
@@ -442,7 +450,7 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    
+
     struct NavItem { const char* label; View view; };
     static const NavItem navItems[] = {
         { "  Dashboard",        View::DASHBOARD    },
@@ -474,7 +482,7 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
         ImGui::PopStyleColor(4);
     }
 
-    
+
     {
         bool active = (g_view == View::DELETE_BLOCK);
         if (active) {
@@ -501,14 +509,14 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    
+
     auto allVins = chain.getAllVins();
     ImGui::TextColored(COL_MUTED, "VEHICLES (%zu)", allVins.size());
     ImGui::Spacing();
 
-    
-    
-    
+
+
+
     std::vector<std::string> displayVins;
     const std::string query(g_searchBuf);
     if (!query.empty()) {
@@ -516,18 +524,25 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
             g_cachedSearchQuery = query;
             g_cachedSearchVins.clear();
 
-            const double seconds = cw1::measureSeconds([&]() {
-                const auto hits = chain.searchBySQL(query);
-                std::vector<std::string> seen;
-                for (const auto* blk : hits) {
-                    const std::string& vin = blk->getRecord().vin;
-                    if (std::find(seen.begin(), seen.end(), vin) == seen.end()) {
-                        seen.push_back(vin);
-                        g_cachedSearchVins.push_back(vin);
+            try {
+                const double seconds = cw1::measureSeconds([&]() {
+                    const auto hits = chain.searchBySQL(query);
+                    std::vector<std::string> seen;
+                    for (const auto* blk : hits) {
+                        const std::string& vin = blk->getRecord().vin;
+                        if (std::find(seen.begin(), seen.end(), vin) == seen.end()) {
+                            seen.push_back(vin);
+                            g_cachedSearchVins.push_back(vin);
+                        }
                     }
-                }
-            });
-            g_lastSearchSeconds = seconds;
+                });
+                g_lastSearchSeconds = seconds;
+            } catch (const std::exception& ex) {
+                g_lastSearchSeconds = 0.0;
+                g_cachedSearchVins.clear();
+                ReportGuiException(chain, cw1::AuditAction::SEARCH_PERFORMED,
+                                   "Search failed", ex);
+            }
         }
         displayVins = g_cachedSearchVins;
     } else {
@@ -549,7 +564,7 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
         bool        sel    = (vin == g_selectedVin);
         cw1::BlockStage st = chain.getLatestStage(vin);
 
-        
+
         if (sel) {
             ImVec2 p = ImGui::GetCursorScreenPos();
             ImGui::GetWindowDrawList()->AddRectFilled(
@@ -601,11 +616,11 @@ static void RenderSidebar(const cw1::Blockchain& chain) {
 
 
 
-// RenderBranchMap is now in utils/BranchMap.hpp
 
-// ---------------------------------------------------------------------------
-// Dashboard sub-components
-// ---------------------------------------------------------------------------
+
+
+
+
 
 static void DrawStatCard(const char* value, const char* label, ImVec4 col, ImVec2 sz) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_ELEV);
@@ -630,7 +645,7 @@ static void DrawHashWithTooltip(const cw1::Block& b, size_t maxLen = 12) {
     }
 }
 
-// Returns the left-group height so the map column can match it.
+
 static float RenderDashboardStats(cw1::Blockchain& chain,
                                   float statsW, float cardH) {
     char buf1[32], buf2[32], buf4[32];
@@ -739,7 +754,7 @@ static void RenderFuelChart(const std::vector<cw1::FuelWeeklyRecord>& hist,
         };
         dateLbl(0); if (n > 2) dateLbl(n/2); dateLbl(n-1);
 
-        // Hover tooltip
+
         ImVec2 mpos = ImGui::GetMousePos();
         if (mpos.x >= mX(0) && mpos.x <= mX(n-1) &&
             mpos.y >= org.y && mpos.y <= org.y + gh) {
@@ -769,7 +784,7 @@ static void RenderFuelChart(const std::vector<cw1::FuelWeeklyRecord>& hist,
         }
     }
 
-    // Legend (top-right corner)
+
     {
         float lx = org.x + gw - 120.0f, ly = org.y + 4.0f;
         const char* labels[] = {"RON95","RON97","Diesel(P)","Diesel(E)"};
@@ -929,9 +944,9 @@ static void RenderRecentBlocksTable(const std::vector<cw1::Block>& blocks) {
     ImGui::PopStyleVar();
 }
 
-// ---------------------------------------------------------------------------
-// Dashboard (coordinator)
-// ---------------------------------------------------------------------------
+
+
+
 
 static void RenderDashboard(cw1::Blockchain& chain) {
     const auto& blocks = chain.getChain();
@@ -940,7 +955,7 @@ static void RenderDashboard(cw1::Blockchain& chain) {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // Layout dimensions
+
     float totalW = ImGui::GetContentRegionAvail().x;
     float mapWidth = totalW * 0.42f;
     if (mapWidth < 280) mapWidth = 280;
@@ -948,14 +963,14 @@ static void RenderDashboard(cw1::Blockchain& chain) {
     float mapH = 260.0f;
     float cardH = (mapH - 8.0f) / 2.0f;
 
-    // Top row: stat cards (left) + map (right)
+
     float leftGroupH = RenderDashboardStats(chain, statsW, cardH);
     ImGui::SameLine(0, 12);
     ImGui::BeginGroup();
     RenderDashboardMap(mapWidth, leftGroupH);
     ImGui::EndGroup();
 
-    // Fuel Intelligence Panel
+
     ImGui::Spacing(); ImGui::Spacing();
     ImGui::TextColored(COL_MUTED, "FUEL PRICE INTELLIGENCE");
     ImGui::SameLine(totalW - mapWidth);
@@ -987,7 +1002,7 @@ static void RenderDashboard(cw1::Blockchain& chain) {
 
 
 
-// Helper: render a label-value row inside the detail card
+
 static void DetailRow(const char* label, const char* value,
                       ImVec4 valColor = COL_TEXT) {
     ImGui::TableNextRow();
@@ -1020,7 +1035,7 @@ static void RenderCarDetail(cw1::Blockchain& chain) {
         return;
     }
 
-    // Vehicle header card
+
     const cw1::CarRecord& first = history.front()->getRecord();
     cw1::BlockStage latestStage = chain.getLatestStage(g_selectedVin);
 
@@ -1057,7 +1072,7 @@ static void RenderCarDetail(cw1::Blockchain& chain) {
         snprintf(hdrLabel, sizeof(hdrLabel), "Block #%zu  |  %s##det%zu",
                  blk.getIndex(), cw1::stageToString(rec.stage).c_str(), idx);
 
-        // Stage color accent bar on the left of the header
+
         ImVec2 hdrPos = ImGui::GetCursorScreenPos();
         ImGui::GetWindowDrawList()->AddRectFilled(
             hdrPos, ImVec2(hdrPos.x + 4.0f, hdrPos.y + ImGui::GetFrameHeight()),
@@ -1074,8 +1089,8 @@ static void RenderCarDetail(cw1::Blockchain& chain) {
         ImGui::PopStyleColor(3);
         if (!open) continue;
 
-        // Count rows to compute a fixed height for the child
-        int rows = 7; // hash, sha3, prev, timestamp, nonce, vin, vehicle
+
+        int rows = 7;
         const bool isGenesis = (blk.getIndex() == 0);
         if (isGenesis) rows++;
         switch (rec.stage) {
@@ -1086,14 +1101,14 @@ static void RenderCarDetail(cw1::Blockchain& chain) {
             case cw1::BlockStage::CUSTOMER_SALE:    rows += 4; break;
         }
         float rowH = ImGui::GetTextLineHeightWithSpacing() + 4.0f;
-        float childH = rows * rowH + 72.0f; // extra for section headers and padding
+        float childH = rows * rowH + 72.0f;
 
         char childId[64];
         snprintf(childId, sizeof(childId), "##blkdet%zu", idx);
         ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_CARD);
         ImGui::BeginChild(childId, ImVec2(-1, childH), true);
 
-        // -- Block Info section --
+
         ImGui::TextColored(COL_ACCENT, "Block Information");
         ImGui::Spacing();
         if (ImGui::BeginTable("##binfo", 2, ImGuiTableFlags_SizingStretchProp)) {
@@ -1181,9 +1196,9 @@ static void RenderCarDetail(cw1::Blockchain& chain) {
 
 
 
-// Vehicle data (models, colors, transport modes, stage names) now in
-// utils/VehicleData.hpp / VehicleData.cpp.
-// Manufacturer & branch data in utils/BranchMap.hpp / BranchMap.cpp.
+
+
+
 
 static void RenderAddBlock(cw1::Blockchain& chain) {
     DrawSectionHeading("Add Block to Chain");
@@ -1202,7 +1217,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     ImGui::Combo("Stage##addstage", &g_formStage, k_stageNames, 5);
     ImGui::Spacing();
 
-    
+
     auto LabelText = [](const char* lbl, char* buf, size_t sz) {
         ImGui::TextColored(COL_MUTED, "%-18s", lbl);
         ImGui::SameLine();
@@ -1215,7 +1230,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
 
     ImGui::SameLine(0, 12);
     if (g_formVin[0] != '\0') {
-        // Build the full VIN with prefix for lookup
+
         std::string fullVin = g_formVin;
         if (fullVin.substr(0, 3) != "VIN") fullVin = "VIN" + fullVin;
         if (chain.hasVin(fullVin))
@@ -1269,12 +1284,12 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         ImGui::TextColored(COL_ACCENT, "%s", selBranch);
         break;
     }
-    case 1: 
+    case 1:
         LabelText("Warehouse",  g_formWarehouse,   sizeof(g_formWarehouse));
         LabelText("Received By",g_formReceivedBy,  sizeof(g_formReceivedBy));
         LabelText("Supplier ID", g_formSupplierId, sizeof(g_formSupplierId));
         break;
-    case 2: 
+    case 2:
         LabelText("Inspector ID", g_formInspector, sizeof(g_formInspector));
         ImGui::TextColored(COL_MUTED, "%-18s", "Passed");
         ImGui::SameLine();
@@ -1289,7 +1304,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         ImGui::SetNextItemWidth(300);
         ImGui::Combo("##add_Transport", &g_formTransportIndex, k_transportModes, k_transportModeCount);
         break;
-    case 4: 
+    case 4:
         LabelText("Buyer ID",     g_formBuyerId, sizeof(g_formBuyerId));
         LabelText("Retailer ID",  g_formRetailerId, sizeof(g_formRetailerId));
         ImGui::TextColored(COL_MUTED, "%-18s", "Sale Price (MYR)");
@@ -1313,7 +1328,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
 
     if (submit && canSubmit) {
         cw1::CarRecord r;
-        // Auto-prepend "VIN" if the user didn't type it
+
         {
             std::string raw = g_formVin;
             if (raw.substr(0, 3) != "VIN") raw = "VIN" + raw;
@@ -1353,26 +1368,31 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
             break;
         }
 
-        const double seconds = cw1::measureSeconds([&]() {
-            chain.addBlock(r);
-        });
-        g_lastAddBlockSeconds = seconds;
-        PushToast("Block #" + std::to_string(chain.totalBlocks() - 1) +
-                  " added for " + r.vin +
-                  " | Operation took: " + cw1::formatSeconds(seconds) + " s",
-                  COL_GREEN_BR);
+        try {
+            const double seconds = cw1::measureSeconds([&]() {
+                chain.addBlock(r);
+            });
+            g_lastAddBlockSeconds = seconds;
+            PushToast("Block #" + std::to_string(chain.totalBlocks() - 1) +
+                      " added for " + r.vin +
+                      " | Operation took: " + cw1::formatSeconds(seconds) + " s",
+                      COL_GREEN_BR);
 
 
-        g_formVin[0]    = '\0';
-        g_formMfrIndex  = 0;  g_formModelIndex = 0;  g_formBranchIndex = 0;  g_formColorIndex = 0;
-        g_formYear      = 2025;
-        g_formFactory[0]= '\0'; g_formWarehouse[0]    = '\0';
-        g_formReceivedBy[0]= '\0'; g_formInspector[0] = '\0';
-        g_formPassed    = true;  g_formQcNotes[0]     = '\0';
-        g_formDealerId[0]= '\0'; g_formDestination[0] = '\0';
-        g_formTransportIndex = 0; g_formBuyerId[0]    = '\0';
-        g_formSalePrice = 0.0;   g_formWarranty[0]    = '\0';
-        g_formMfrId[0] = '\0'; g_formSupplierId[0] = '\0'; g_formRetailerId[0] = '\0';
+            g_formVin[0]    = '\0';
+            g_formMfrIndex  = 0;  g_formModelIndex = 0;  g_formBranchIndex = 0;  g_formColorIndex = 0;
+            g_formYear      = 2025;
+            g_formFactory[0]= '\0'; g_formWarehouse[0]    = '\0';
+            g_formReceivedBy[0]= '\0'; g_formInspector[0] = '\0';
+            g_formPassed    = true;  g_formQcNotes[0]     = '\0';
+            g_formDealerId[0]= '\0'; g_formDestination[0] = '\0';
+            g_formTransportIndex = 0; g_formBuyerId[0]    = '\0';
+            g_formSalePrice = 0.0;   g_formWarranty[0]    = '\0';
+            g_formMfrId[0] = '\0'; g_formSupplierId[0] = '\0'; g_formRetailerId[0] = '\0';
+        } catch (const std::exception& ex) {
+            ReportGuiException(chain, cw1::AuditAction::BLOCK_ADDED,
+                               "Add block failed", ex);
+        }
     }
 
     if (g_lastAddBlockSeconds > 0.0) {
@@ -1391,27 +1411,31 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
 
 static void RenderGlobalChain(cw1::Blockchain& chain) {
     const auto& blocks = chain.getChain();
+    const cw1::LinkedBlockNode* head = chain.getLinkedHead();
 
     DrawSectionHeading("Global Chain");
     ImGui::SameLine();
     ImGui::TextColored(COL_MUTED, " (%zu block(s))", blocks.size());
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    ImGui::TextColored(COL_MUTED, "VISUAL LINKAGE");
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
     ImGui::BeginChild("##global_visual_link", ImVec2(-1.0f, 300.0f), true);
     ImGui::PopStyleColor();
 
-    if (blocks.empty()) {
+    if (head == nullptr) {
         ImGui::TextColored(COL_MUTED, "No blocks in the chain.");
     } else {
-        for (size_t i = 0; i < blocks.size(); ++i) {
-            const cw1::Block& b = blocks[i];
+        const cw1::LinkedBlockNode* node = head;
+        while (node != nullptr) {
+            const cw1::Block& b = *node->block;
             const cw1::CarRecord& rec = b.getRecord();
+            const std::string nodePtr = PointerToString(node);
+            const std::string nextPtr =
+                (node->next != nullptr) ? PointerToString(node->next) : "nullptr";
             const ImVec2 cardMin = ImGui::GetCursorScreenPos();
             const float cardWidth = ImGui::GetContentRegionAvail().x;
             const float lineH = ImGui::GetTextLineHeightWithSpacing();
-            const float cardHeight = (lineH * 5.0f) + 20.0f;
+            const float cardHeight = (lineH * 7.0f) + 20.0f;
             const ImVec2 cardMax(cardMin.x + cardWidth, cardMin.y + cardHeight);
             ImDrawList* dl = ImGui::GetWindowDrawList();
             dl->AddRectFilled(cardMin, cardMax,
@@ -1426,20 +1450,69 @@ static void RenderGlobalChain(cw1::Blockchain& chain) {
             ImGui::TextColored(COL_PURPLE, "Prev: %s", Truncate(b.getPreviousHash(), 8).c_str());
             ImGui::TextColored(StageColor(rec.stage), "Stage: %s", cw1::stageToString(rec.stage).c_str());
             ImGui::TextColored(COL_ACCENT, "VIN: %s", rec.vin.c_str());
+            ImGui::TextColored(COL_MUTED, "Node*: %s", nodePtr.c_str());
+            ImGui::TextColored(COL_MUTED, "next:  %s", nextPtr.c_str());
             ImGui::EndGroup();
 
             ImGui::SetCursorScreenPos(ImVec2(cardMin.x, cardMax.y + 8.0f));
 
-            if (i + 1 < blocks.size()) {
+            if (node->next != nullptr) {
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 14.0f);
                 ImGui::TextColored(COL_MUTED, "v");
             }
+
+            node = node->next;
         }
     }
 
     ImGui::EndChild();
     ImGui::Spacing();
-    ImGui::TextColored(COL_MUTED, "TABULAR CHAIN DATA");
+
+    ImGuiTableFlags linkedFlags = ImGuiTableFlags_BordersInnerV |
+                                  ImGuiTableFlags_BordersInnerH |
+                                  ImGuiTableFlags_RowBg |
+                                  ImGuiTableFlags_SizingStretchProp;
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(10.0f, 8.0f));
+    if (ImGui::BeginTable("##linked_nodes", 5, linkedFlags, ImVec2(-1, 170.0f))) {
+        ImGui::TableSetupColumn("Node*",      ImGuiTableColumnFlags_WidthStretch, 2.2f);
+        ImGui::TableSetupColumn("Block #",    ImGuiTableColumnFlags_WidthFixed,   70.0f);
+        ImGui::TableSetupColumn("VIN",        ImGuiTableColumnFlags_WidthStretch, 1.6f);
+        ImGui::TableSetupColumn("Prev Link",  ImGuiTableColumnFlags_WidthStretch, 1.8f);
+        ImGui::TableSetupColumn("Next*",      ImGuiTableColumnFlags_WidthStretch, 2.2f);
+        ImGui::TableHeadersRow();
+
+        const cw1::LinkedBlockNode* node = head;
+        while (node != nullptr) {
+            const cw1::Block& b = *node->block;
+            const std::string nodePtr = PointerToString(node);
+            const std::string nextPtr =
+                (node->next != nullptr) ? PointerToString(node->next) : "nullptr";
+
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            ImGui::TextColored(COL_MUTED, "%s", nodePtr.c_str());
+
+            ImGui::TableNextColumn();
+            ImGui::Text("%zu", b.getIndex());
+
+            ImGui::TableNextColumn();
+            ImGui::TextColored(COL_ACCENT, "%s", b.getRecord().vin.c_str());
+
+            ImGui::TableNextColumn();
+            ImGui::TextColored(COL_PURPLE, "%s", Truncate(b.getPreviousHash(), 12).c_str());
+
+            ImGui::TableNextColumn();
+            ImGui::TextColored(COL_MUTED, "%s", nextPtr.c_str());
+
+            node = node->next;
+        }
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar();
+
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "TABULAR CHAIN DATA (AUTHORITATIVE VECTOR)");
     ImGui::Spacing();
 
     ImGuiTableFlags tf = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH |
@@ -1529,7 +1602,7 @@ static void RenderAuditLog(cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "entries");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    
+
     cw1::RecentEntryArray entries(chain.getAuditLog(),
                                   static_cast<std::size_t>(g_auditN));
 
@@ -1594,12 +1667,12 @@ static void RenderAuditLog(cw1::Blockchain& chain) {
 
 
 
-// ---------------------------------------------------------------------------
-// Integrity sub-components
-// ---------------------------------------------------------------------------
+
+
+
 
 static void RenderTempChainControls(cw1::Blockchain& chain) {
-    // Start/Stop Toggle
+
     if (!g_tempGenerating) {
         ImGui::PushStyleColor(ImGuiCol_Button,        HexColor(0x1b4d30));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  HexColor(0x238636));
@@ -1623,7 +1696,7 @@ static void RenderTempChainControls(cw1::Blockchain& chain) {
         }
     }
 
-    // Status display
+
     if (!g_tempChain.empty()) {
         ImGui::Spacing();
         std::size_t genCount = g_tempChain.size() - g_tempRealCount;
@@ -1632,14 +1705,14 @@ static void RenderTempChainControls(cw1::Blockchain& chain) {
                            g_tempGenerating ? "ON" : "OFF");
     }
 
-    // Interval slider
+
     if (g_tempGenerating || !g_tempChain.empty()) {
         ImGui::Spacing();
         ImGui::SetNextItemWidth(240.0f);
         ImGui::SliderFloat("Generation interval (s)##tempinterval", &g_tempInterval, 1.0f, 10.0f, "%.1f s");
     }
 
-    // Tamper controls
+
     if (!g_tempChain.empty()) {
         ImGui::Spacing(); ImGui::Spacing();
         ImGui::TextColored(COL_MUTED, "TAMPER TEMP CHAIN");
@@ -1667,13 +1740,13 @@ static void RenderTempChainControls(cw1::Blockchain& chain) {
         }
         ImGui::EndDisabled();
 
-        // Delete temp block
+
         ImGui::Spacing();
         ImGui::SetNextItemWidth(140.0f);
         ImGui::InputInt("Delete temp block index##tempdelidx", &g_tempDeleteIndex);
         ImGui::SameLine();
 
-        // Only allow deleting generated temp blocks, not original chain blocks.
+
         bool delValid = (g_tempDeleteIndex >= 0 &&
                          static_cast<std::size_t>(g_tempDeleteIndex) >= g_tempRealCount &&
                          static_cast<std::size_t>(g_tempDeleteIndex) < g_tempChain.size() &&
@@ -1797,7 +1870,7 @@ static void RenderTempChainVisual() {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // Detect new blocks for fade-in animation
+
     bool scrollToEnd = false;
     if (g_tempChain.size() != g_tempPrevCount) {
         if (g_tempChain.size() > g_tempPrevCount) {
@@ -1911,15 +1984,15 @@ static void RenderTempChainVisual() {
     ImGui::EndChild();
 }
 
-// ---------------------------------------------------------------------------
-// Integrity (coordinator)
-// ---------------------------------------------------------------------------
+
+
+
 
 static void RenderIntegrity(cw1::Blockchain& chain) {
     DrawSectionHeading("Blockchain Characteristics: Immutability");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    // Initialize temp chain from real chain on first visit
+
     if (g_tempChain.empty() && !g_tempGenerating) {
         g_tempChain = chain.getChain();
         g_tempRealCount = g_tempChain.size();
@@ -1930,7 +2003,7 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
     RenderTempChainVerification();
     RenderTempChainVisual();
 
-    // Reset button
+
     if (!g_tempChain.empty()) {
         ImGui::Spacing();
         if (ImGui::Button("Clear Temp Chain##tempclear", ImVec2(180.0f, 34.0f))) {
@@ -1959,7 +2032,7 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "Chain size: %zu block(s)", chain.totalBlocks());
     ImGui::Spacing();
 
-    // --- Soft Delete ---
+
     ImGui::TextColored(COL_MUTED, "Block index to delete:");
     ImGui::SetNextItemWidth(160.0f);
     ImGui::InputInt("##delete_block_index", &g_deleteBlockIndex);
@@ -1970,19 +2043,24 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
             static_cast<std::size_t>(g_deleteBlockIndex) >= chain.totalBlocks()) {
             PushToast("Invalid block index.", COL_RED);
         } else {
-            std::string msg;
-            cw1::OperationTimer timer;
-            const bool ok = chain.softDeleteBlock(
-                static_cast<std::size_t>(g_deleteBlockIndex), msg);
-            g_lastDeleteSeconds = timer.elapsedSeconds();
+            try {
+                std::string msg;
+                cw1::OperationTimer timer;
+                const bool ok = chain.softDeleteBlock(
+                    static_cast<std::size_t>(g_deleteBlockIndex), msg);
+                g_lastDeleteSeconds = timer.elapsedSeconds();
 
-            PushToast(ok ? msg : ("Soft delete failed: " + msg),
-                      ok ? COL_GREEN_BR : COL_RED);
+                PushToast(ok ? msg : ("Soft delete failed: " + msg),
+                          ok ? COL_GREEN_BR : COL_RED);
 
-            cw1::OperationTimer vt;
-            g_lastVerify = chain.verifyIntegrity();
-            g_lastVerifySeconds = vt.elapsedSeconds();
-            g_verifyDone = true;
+                cw1::OperationTimer vt;
+                g_lastVerify = chain.verifyIntegrity();
+                g_lastVerifySeconds = vt.elapsedSeconds();
+                g_verifyDone = true;
+            } catch (const std::exception& ex) {
+                ReportGuiException(chain, cw1::AuditAction::BLOCK_DELETED,
+                                   "Soft delete failed", ex);
+            }
         }
     }
 
@@ -1992,7 +2070,7 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
                            cw1::formatSeconds(g_lastDeleteSeconds).c_str());
     }
 
-    // --- Deleted Blocks & Restore ---
+
     auto deletedIndices = chain.getDeletedIndices();
     if (!deletedIndices.empty()) {
         ImGui::Spacing(); ImGui::Spacing();
@@ -2031,15 +2109,20 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
 
                 std::string btnLabel = "Restore##restore_" + std::to_string(idx);
                 if (DrawPrimaryButton(btnLabel.c_str(), ImVec2(90.0f, 28.0f))) {
-                    std::string msg;
-                    const bool ok = chain.restoreBlock(idx, msg);
-                    PushToast(ok ? msg : ("Restore failed: " + msg),
-                              ok ? COL_GREEN_BR : COL_RED);
+                    try {
+                        std::string msg;
+                        const bool ok = chain.restoreBlock(idx, msg);
+                        PushToast(ok ? msg : ("Restore failed: " + msg),
+                                  ok ? COL_GREEN_BR : COL_RED);
 
-                    cw1::OperationTimer vt;
-                    g_lastVerify = chain.verifyIntegrity();
-                    g_lastVerifySeconds = vt.elapsedSeconds();
-                    g_verifyDone = true;
+                        cw1::OperationTimer vt;
+                        g_lastVerify = chain.verifyIntegrity();
+                        g_lastVerifySeconds = vt.elapsedSeconds();
+                        g_verifyDone = true;
+                    } catch (const std::exception& ex) {
+                        ReportGuiException(chain, cw1::AuditAction::BLOCK_DELETED,
+                                           "Restore failed", ex);
+                    }
                 }
             }
             ImGui::EndTable();
@@ -2054,7 +2137,7 @@ static void RenderDeleteBlock(cw1::Blockchain& chain) {
 
 
 static void RenderToasts(float deltaTime) {
-    
+
     g_toasts.erase(
         std::remove_if(g_toasts.begin(), g_toasts.end(),
                        [](const Toast& t) { return t.remainingSecs <= 0.0f; }),
@@ -2070,7 +2153,7 @@ static void RenderToasts(float deltaTime) {
     for (size_t i = 0; i < g_toasts.size(); ++i) {
         Toast& t = g_toasts[i];
 
-        
+
         float alpha = (t.remainingSecs < 0.5f) ? (t.remainingSecs / 0.5f) : 1.0f;
         if (alpha < 0.0f) alpha = 0.0f;
 
@@ -2111,7 +2194,7 @@ static void RenderToasts(float deltaTime) {
 
 
 int main() {
-    
+
     if (!glfwInit()) return 1;
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -2127,7 +2210,16 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    
+
+    float dpiScale = 1.0f;
+    {
+        float xscale = 1.0f, yscale = 1.0f;
+        glfwGetWindowContentScale(window, &xscale, &yscale);
+        dpiScale = xscale;
+        if (dpiScale < 1.0f) dpiScale = 1.0f;
+    }
+
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -2139,7 +2231,7 @@ int main() {
 
     ApplyGitHubDarkTheme();
 
-    
+
     {
         auto TryLoadFont = [&](const char* path, float sizePx) -> ImFont* {
             FILE* fp = fopen(path, "rb");
@@ -2151,29 +2243,29 @@ int main() {
         };
 
 #ifdef _WIN32
-        g_fontBody = TryLoadFont("C:/Windows/Fonts/segoeui.ttf", 16.0f);
-        g_fontSection = TryLoadFont("C:/Windows/Fonts/segoeuib.ttf", 22.0f);
-        g_fontTitle = TryLoadFont("C:/Windows/Fonts/segoeuib.ttf", 26.0f);
+        g_fontBody = TryLoadFont("C:/Windows/Fonts/segoeui.ttf", 16.0f * dpiScale);
+        g_fontSection = TryLoadFont("C:/Windows/Fonts/segoeuib.ttf", 22.0f * dpiScale);
+        g_fontTitle = TryLoadFont("C:/Windows/Fonts/segoeuib.ttf", 26.0f * dpiScale);
 #endif
 
         if (g_fontBody == nullptr) {
-            g_fontBody = TryLoadFont("fonts/SegoeUI.ttf", 16.0f);
+            g_fontBody = TryLoadFont("fonts/SegoeUI.ttf", 16.0f * dpiScale);
         }
         if (g_fontSection == nullptr) {
-            g_fontSection = TryLoadFont("fonts/SegoeUI-Bold.ttf", 22.0f);
+            g_fontSection = TryLoadFont("fonts/SegoeUI-Bold.ttf", 22.0f * dpiScale);
         }
         if (g_fontTitle == nullptr) {
-            g_fontTitle = TryLoadFont("fonts/SegoeUI-Bold.ttf", 26.0f);
+            g_fontTitle = TryLoadFont("fonts/SegoeUI-Bold.ttf", 26.0f * dpiScale);
         }
 
         if (g_fontBody == nullptr) {
-            g_fontBody = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 16.0f);
+            g_fontBody = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 16.0f * dpiScale);
         }
         if (g_fontSection == nullptr) {
-            g_fontSection = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 22.0f);
+            g_fontSection = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 22.0f * dpiScale);
         }
         if (g_fontTitle == nullptr) {
-            g_fontTitle = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 26.0f);
+            g_fontTitle = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 26.0f * dpiScale);
         }
 
         if (g_fontBody == nullptr) {
@@ -2186,38 +2278,65 @@ int main() {
             g_fontTitle = g_fontSection;
         }
         io.FontDefault = g_fontBody;
+
+
+        io.FontGlobalScale = 1.0f / dpiScale;
     }
 
 
     cw1::Blockchain chain;
-    chain.openDatabase("database/cw1_blockchain.db");
     bool loadedFromDB = false;
-    if (chain.isDatabaseOpen()) {
-        loadedFromDB = chain.loadFromDB() && chain.totalBlocks() > 0;
-    }
-    if (!loadedFromDB) {
-        loadDemoData(chain);
+    try {
+        if (!chain.openDatabase("database/cw1_blockchain.db")) {
+            PushToast("SQLite database unavailable. Continuing with in-memory data.",
+                      COL_YELLOW, 4.0f);
+        }
+
         if (chain.isDatabaseOpen()) {
-            chain.saveToDB();
+            const bool dbLoadOk = chain.loadFromDB();
+            loadedFromDB = dbLoadOk && chain.totalBlocks() > 0;
+            if (!loadedFromDB) {
+                PushToast(dbLoadOk
+                              ? "No persisted chain found. Seeding demo blockchain data instead."
+                              : "Database load failed. Seeding demo blockchain data instead.",
+                          COL_YELLOW, 4.0f);
+            }
         }
-    }
-    g_lastVerifySeconds = cw1::measureSeconds([&]() {
-        g_lastVerify = chain.verifyIntegrity();
-    });
-    g_verifyDone = true;
 
-    // -- Initialize Fuel Intelligence --
-    if (chain.isDatabaseOpen()) {
-        cw1::DatabaseManager* dbm = chain.getDatabase();
-        if (dbm != nullptr) {
-            g_fuelMgr.attach(dbm->rawHandle());
-            g_fuelMgr.seedFallbackDataIfEmpty();
-            g_fuelMgr.loadRecentHistory(16);
-            g_fuelInitialized = true;
+        if (!loadedFromDB) {
+            loadDemoData(chain);
+            if (chain.isDatabaseOpen() && !chain.saveToDB()) {
+                PushToast("Database sync failed. Continuing with in-memory chain.",
+                          COL_YELLOW, 4.0f);
+            }
         }
+        g_lastVerifySeconds = cw1::measureSeconds([&]() {
+            g_lastVerify = chain.verifyIntegrity();
+        });
+        g_verifyDone = true;
+
+        if (chain.isDatabaseOpen()) {
+            cw1::DatabaseManager* dbm = chain.getDatabase();
+            if (dbm != nullptr) {
+                g_fuelMgr.attach(dbm->rawHandle());
+                g_fuelMgr.seedFallbackDataIfEmpty();
+                g_fuelMgr.loadRecentHistory(16);
+                g_fuelInitialized = true;
+            }
+        }
+    } catch (const std::exception& ex) {
+        ReportGuiException(chain, cw1::AuditAction::PERSISTENCE_IO,
+                           "Startup initialisation failed", ex);
+        if (chain.totalBlocks() == 0) {
+            loadDemoData(chain);
+        }
+        g_lastVerifySeconds = cw1::measureSeconds([&]() {
+            g_lastVerify = chain.verifyIntegrity();
+        });
+        g_verifyDone = true;
     }
 
-    
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -2225,13 +2344,13 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // -- Temp block auto-generation --
+
         if (g_tempGenerating && !g_tempChain.empty()) {
             g_tempAccumulator += io.DeltaTime;
             if (g_tempAccumulator >= g_tempInterval) {
                 g_tempAccumulator -= g_tempInterval;
 
-                // Use std::rand for random car generation (spec requirement).
+
                 static bool seededGui = false;
                 if (!seededGui) {
                     std::srand(static_cast<unsigned int>(std::time(nullptr)));
@@ -2303,7 +2422,7 @@ int main() {
         RenderHeader(chain);
         ImGui::Spacing();
 
-        
+
         ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
         ImGui::BeginChild("##sbwrap", ImVec2(320, -1), false);
         ImGui::PopStyleColor();
@@ -2312,11 +2431,11 @@ int main() {
 
         ImGui::SameLine();
 
-        
+
         ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_MAIN);
         ImGui::BeginChild("##content", ImVec2(-1, -1), false,
                           ImGuiWindowFlags_NoScrollbar);
-        // Inner scrollable region — avoids scrollbar flicker from size oscillation
+
         ImGui::BeginChild("##contentInner", ImVec2(-1, -1), false);
         ImGui::PopStyleColor();
         ImGui::Spacing(); ImGui::Spacing();
@@ -2331,25 +2450,25 @@ int main() {
         case View::DELETE_BLOCK: RenderDeleteBlock(chain);  break;
         }
 
-        ImGui::EndChild(); // ##contentInner
-        ImGui::EndChild(); // ##content
+        ImGui::EndChild();
+        ImGui::EndChild();
         ImGui::End();
 
 
         RenderToasts(io.DeltaTime);
 
-        
+
         ImGui::Render();
         int dispW, dispH;
         glfwGetFramebufferSize(window, &dispW, &dispH);
         glViewport(0, 0, dispW, dispH);
-        glClearColor(0.051f, 0.067f, 0.090f, 1.0f);  
+        glClearColor(0.051f, 0.067f, 0.090f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
     }
 
-    
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

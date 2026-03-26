@@ -36,6 +36,7 @@ endif()
 set(BACKEND_SOURCES
     src/models/CarRecord.cpp
     src/blockchain/Block.cpp
+    src/blockchain/LinkedBlockchainView.cpp
     src/blockchain/BlockStage.cpp
     src/blockchain/Blockchain.cpp
     src/blockchain/Validation.cpp

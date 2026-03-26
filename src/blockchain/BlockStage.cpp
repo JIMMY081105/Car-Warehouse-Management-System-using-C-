@@ -1,3 +1,5 @@
+// Provides string conversions for lifecycle stages used by the blockchain, persistence layer, and GUI.
+
 #include "blockchain/BlockStage.hpp"
 
 #include <algorithm>
@@ -18,7 +20,7 @@ std::string stageToString(BlockStage stage) {
 }
 
 BlockStage stringToStage(const std::string& text) {
-    
+    // Case-insensitive parsing keeps saved data and UI text handling tolerant.
     std::string lower = text;
     std::transform(lower.begin(), lower.end(), lower.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -30,6 +32,6 @@ BlockStage stringToStage(const std::string& text) {
     if (lower == "customer sale")    return BlockStage::CUSTOMER_SALE;
 
     throw std::invalid_argument("Unknown stage: " + text);
-}
+}  // namespace cw1
 
-} 
+}

@@ -1,3 +1,5 @@
+// Supplies the manufacturer/branch dataset and renders the interactive branch globe shown on the dashboard. This supports the coursework's richer GUI and helps visualise the warehouse network geographically.
+
 #include "utils/BranchMap.hpp"
 #include "imgui.h"
 #include <cmath>
@@ -5,7 +7,6 @@
 #include <cstring>
 #include <vector>
 
-// ── Manufacturer & branch data (shared with main_gui.cpp via extern) ────
 
 const char* k_manufacturers[] = {
     "Perodua", "Proton", "Toyota", "Honda", "Nissan", "Mazda",
@@ -168,12 +169,12 @@ const BranchList k_branchesByMfr[] = {
     {k_branches_ford,       6}, {k_branches_lexus,      6}, {k_branches_volvo,     6},
 };
 
-// ── Interactive world map with branch pins ──────────────────────────────
+
 
 struct GeoPin { float lat; float lng; const char* label; const char* country; };
 
 static const GeoPin k_allPins[] = {
-    // Malaysia — scattered across all states
+
     { 3.3215f, 101.5770f, "Rawang",           "Malaysia"},
     { 6.1200f, 100.3700f, "Alor Setar",       "Malaysia"},
     { 5.3117f, 103.1324f, "K. Terengganu",    "Malaysia"},
@@ -206,7 +207,7 @@ static const GeoPin k_allPins[] = {
     { 3.4500f, 102.4200f, "Temerloh",         "Malaysia"},
     { 5.4000f, 100.3700f, "Butterworth",      "Malaysia"},
     { 4.2200f, 100.7000f, "Sitiawan",         "Malaysia"},
-    // Japan
+
     {35.0853f, 137.1577f, "Toyota City",      "Japan"},
     {35.6581f, 139.7514f, "Minato, Tokyo",    "Japan"},
     {35.4437f, 139.6380f, "Yokohama",         "Japan"},
@@ -216,25 +217,25 @@ static const GeoPin k_allPins[] = {
     {36.2959f, 139.3784f, "Ota, Gunma",       "Japan"},
     {35.3390f, 139.4870f, "Fujisawa",         "Japan"},
     {34.6693f, 137.0334f, "Tahara",           "Japan"},
-    // South Korea
+
     {35.5384f, 129.3114f, "Ulsan",            "South Korea"},
     {37.1997f, 126.8313f, "Hwaseong",         "South Korea"},
-    // Germany
+
     {48.1351f,  11.5820f, "Munich",           "Germany"},
     {48.7758f,   9.1829f, "Stuttgart",        "Germany"},
     {52.4227f,  10.7865f, "Wolfsburg",        "Germany"},
-    // USA
+
     {42.3223f, -83.1763f, "Dearborn",         "United States"},
-    // Sweden
+
     {57.7089f,  11.9746f, "Gothenburg",       "Sweden"},
 };
 static const int k_allPinsCount = sizeof(k_allPins) / sizeof(k_allPins[0]);
 
-static float g_globeRotLon  = 110.0f;   // center longitude (starts at Malaysia)
-static float g_globeRotLat  = 5.0f;     // center latitude
-static float g_globeRadius  = 0.30f;    // radius fraction of min(w,h)/2
+static float g_globeRotLon  = 110.0f;
+static float g_globeRotLat  = 5.0f;
+static float g_globeRadius  = 0.30f;
 
-// Simplified coastline outlines
+
 static const float k_peninsular[][2] = {
     {6.5f,100.0f},{6.2f,100.2f},{5.8f,100.3f},{5.5f,100.2f},{5.3f,100.3f},
     {4.9f,100.4f},{4.2f,100.6f},{3.7f,101.0f},{3.1f,101.3f},{2.5f,101.7f},
@@ -287,7 +288,7 @@ static const float k_usa[][2] = {
     {33.0f,-79.0f},{30.0f,-81.0f},{25.0f,-80.0f},
 };
 
-// Africa
+
 static const float k_africa[][2] = {
     {37.0f,-1.0f},{36.5f,3.0f},{37.0f,10.0f},{33.0f,12.0f},{32.0f,15.0f},
     {31.0f,25.0f},{31.5f,32.0f},{29.0f,33.0f},{22.0f,36.5f},{15.0f,40.0f},
@@ -298,7 +299,7 @@ static const float k_africa[][2] = {
     {4.5f,-7.5f},{7.5f,-13.0f},{10.0f,-15.0f},{15.0f,-17.0f},{20.0f,-17.0f},
     {25.0f,-15.0f},{28.0f,-13.0f},{33.0f,-8.0f},{35.5f,-5.5f},{37.0f,-1.0f},
 };
-// South America
+
 static const float k_south_america[][2] = {
     {12.0f,-72.0f},{10.5f,-75.0f},{8.0f,-77.0f},{4.0f,-77.5f},{1.0f,-80.0f},
     {-4.0f,-81.0f},{-6.0f,-81.0f},{-14.0f,-76.0f},{-18.0f,-70.0f},{-24.0f,-70.5f},
@@ -307,7 +308,7 @@ static const float k_south_america[][2] = {
     {-23.0f,-43.0f},{-13.0f,-38.5f},{-5.0f,-35.0f},{-2.0f,-44.0f},{0.5f,-50.0f},
     {6.0f,-57.0f},{8.5f,-60.0f},{10.5f,-67.0f},{12.0f,-72.0f},
 };
-// Australia
+
 static const float k_australia[][2] = {
     {-12.0f,136.0f},{-12.5f,130.5f},{-14.5f,129.0f},{-18.0f,122.0f},
     {-22.0f,114.0f},{-26.0f,113.0f},{-30.0f,115.0f},{-35.0f,117.5f},
@@ -315,86 +316,86 @@ static const float k_australia[][2] = {
     {-33.5f,152.0f},{-28.0f,153.5f},{-24.0f,152.0f},{-19.0f,147.0f},
     {-14.5f,143.5f},{-11.0f,136.5f},{-12.0f,136.0f},
 };
-// India
+
 static const float k_india[][2] = {
     {35.0f,74.0f},{30.0f,78.0f},{27.0f,88.0f},{22.0f,89.0f},{21.0f,87.0f},
     {15.0f,80.0f},{8.0f,77.5f},{8.5f,76.0f},{13.0f,74.5f},{20.0f,73.0f},
     {24.0f,68.5f},{25.5f,62.0f},{29.0f,65.0f},{33.0f,72.0f},{35.0f,74.0f},
 };
-// China / mainland East Asia
+
 static const float k_china[][2] = {
     {40.0f,73.5f},{45.0f,82.0f},{50.0f,87.5f},{53.5f,109.0f},{50.0f,117.0f},
     {48.0f,120.0f},{48.0f,135.0f},{43.0f,130.0f},{39.0f,122.0f},{35.0f,119.5f},
     {31.0f,122.0f},{25.0f,120.0f},{22.0f,114.0f},{21.5f,110.0f},{22.0f,106.0f},
     {21.5f,99.0f},{27.0f,97.0f},{35.0f,79.0f},{40.0f,73.5f},
 };
-// SE Asia mainland (Thailand, Vietnam, Myanmar, Cambodia, Laos)
+
 static const float k_se_asia[][2] = {
     {22.0f,101.0f},{20.0f,100.0f},{17.0f,97.5f},{10.0f,98.5f},{7.0f,99.5f},
     {1.3f,103.8f},{1.4f,104.0f},{8.0f,105.0f},{10.5f,107.0f},{12.0f,109.0f},
     {16.5f,108.0f},{21.0f,106.0f},{23.5f,104.0f},{22.0f,101.0f},
 };
-// Arabian Peninsula / Middle East
+
 static const float k_arabia[][2] = {
     {30.0f,35.0f},{25.0f,37.0f},{16.0f,43.0f},{13.0f,48.0f},{22.0f,59.5f},
     {26.0f,56.0f},{26.5f,50.0f},{29.0f,48.0f},{33.5f,36.0f},{30.0f,35.0f},
 };
-// Greenland
+
 static const float k_greenland[][2] = {
     {60.0f,-45.0f},{65.0f,-54.0f},{72.0f,-56.0f},{78.0f,-68.0f},{82.0f,-55.0f},
     {83.0f,-40.0f},{78.0f,-18.0f},{70.0f,-22.0f},{62.0f,-42.0f},{60.0f,-45.0f},
 };
-// UK
+
 static const float k_uk[][2] = {
     {50.0f,-5.5f},{51.5f,1.0f},{53.0f,0.0f},{55.5f,-2.0f},{58.5f,-3.0f},
     {58.5f,-5.0f},{56.0f,-5.5f},{54.0f,-4.5f},{51.5f,-5.0f},{50.0f,-5.5f},
 };
-// Central America / Mexico
+
 static const float k_mexico[][2] = {
     {32.5f,-117.0f},{24.0f,-110.0f},{19.0f,-105.0f},{15.5f,-92.0f},{18.0f,-88.0f},
     {21.5f,-87.0f},{26.0f,-97.0f},{29.0f,-95.0f},{30.0f,-90.0f},{32.5f,-117.0f},
 };
-// Sumatra
+
 static const float k_sumatra[][2] = {
     {5.5f,95.0f},{3.5f,98.5f},{0.0f,100.5f},{-3.0f,103.5f},{-5.8f,105.5f},
     {-3.5f,105.5f},{1.0f,102.0f},{5.0f,97.5f},{5.5f,95.0f},
 };
-// Java
+
 static const float k_java[][2] = {
     {-6.0f,105.5f},{-7.0f,109.0f},{-8.0f,114.0f},{-8.5f,114.5f},
     {-7.5f,111.0f},{-6.5f,107.0f},{-6.0f,105.5f},
 };
-// Philippines
+
 static const float k_philippines[][2] = {
     {18.5f,120.5f},{14.5f,120.0f},{13.0f,121.5f},{9.0f,126.0f},{6.5f,125.0f},
     {9.5f,124.0f},{12.5f,124.0f},{14.5f,121.0f},{18.5f,120.5f},
 };
-// New Zealand North Island
+
 static const float k_nz_n[][2] = {
     {-34.5f,173.0f},{-37.5f,176.0f},{-41.5f,175.0f},{-38.5f,174.0f},{-34.5f,173.0f},
 };
-// New Zealand South Island
+
 static const float k_nz_s[][2] = {
     {-41.0f,173.5f},{-44.0f,170.0f},{-46.5f,168.5f},{-44.0f,172.5f},{-41.0f,174.5f},{-41.0f,173.5f},
 };
-// Iceland
+
 static const float k_iceland[][2] = {
     {63.5f,-20.0f},{64.0f,-14.0f},{66.0f,-14.0f},{66.5f,-18.0f},{65.5f,-24.0f},{63.5f,-20.0f},
 };
-// Madagascar
+
 static const float k_madagascar[][2] = {
     {-12.0f,49.0f},{-15.5f,50.5f},{-22.0f,48.0f},{-25.5f,45.0f},{-23.0f,44.0f},
     {-16.0f,46.0f},{-12.0f,49.0f},
 };
-// Sri Lanka
+
 static const float k_sri_lanka[][2] = {
     {9.5f,80.0f},{7.5f,81.5f},{6.0f,80.5f},{7.0f,79.5f},{9.5f,80.0f},
 };
-// Taiwan
+
 static const float k_taiwan[][2] = {
     {25.0f,121.0f},{23.5f,121.5f},{22.0f,120.5f},{23.0f,120.0f},{25.0f,121.0f},
 };
-// Papua New Guinea
+
 static const float k_png[][2] = {
     {-2.5f,141.0f},{-5.0f,141.5f},{-8.0f,143.0f},{-10.0f,147.0f},{-8.0f,148.5f},
     {-6.0f,147.5f},{-5.5f,150.0f},{-4.0f,152.5f},{-2.5f,150.0f},{-1.0f,141.0f},{-2.5f,141.0f},
@@ -419,10 +420,10 @@ static const Outline k_outlines[] = {
 };
 static const int k_outlineCount = sizeof(k_outlines)/sizeof(k_outlines[0]);
 
-// Country center labels for hover
+
 struct CountryCenter { float lat; float lon; const char* name; };
 static const CountryCenter k_countries[] = {
-    // Asia
+
     { 4.5f,  101.5f, "Malaysia"},       { 2.5f,  111.0f, "Malaysia"},
     {35.5f, 138.0f, "Japan"},
     {36.0f,  128.0f, "South Korea"},    {35.0f,  105.0f, "China"},
@@ -435,7 +436,7 @@ static const CountryCenter k_countries[] = {
     { 7.0f,   80.0f, "Sri Lanka"},      {23.5f,  121.0f, "Taiwan"},
     {47.0f,  105.0f, "Mongolia"},       {37.0f,  127.5f, "North Korea"},
     {20.0f,  105.0f, "Laos"},
-    // Middle East
+
     {24.0f,   45.0f, "Saudi Arabia"},   {32.0f,   54.0f, "Iran"},
     {33.0f,   44.0f, "Iraq"},           {26.0f,   50.5f, "Bahrain"},
     {25.3f,   51.2f, "Qatar"},          {24.0f,   54.0f, "UAE"},
@@ -443,7 +444,7 @@ static const CountryCenter k_countries[] = {
     {35.0f,   38.0f, "Syria"},          {34.0f,   36.0f, "Lebanon"},
     {31.5f,   35.0f, "Israel"},         {31.0f,   36.0f, "Jordan"},
     {39.0f,   35.0f, "Turkey"},         {41.0f,   45.0f, "Georgia"},
-    // Europe
+
     {48.8f,    2.3f, "France"},         {51.0f,   10.0f, "Germany"},
     {42.5f,   12.5f, "Italy"},          {40.0f,   -4.0f, "Spain"},
     {39.5f,   -8.0f, "Portugal"},       {54.0f,   -2.0f, "United Kingdom"},
@@ -459,7 +460,7 @@ static const CountryCenter k_countries[] = {
     {48.7f,   19.7f, "Slovakia"},       {42.0f,   20.0f, "Kosovo"},
     {56.8f,   24.0f, "Latvia"},         {55.0f,   24.0f, "Lithuania"},
     {59.0f,   25.0f, "Estonia"},        {50.0f,   32.0f, "Ukraine"},
-    // Africa
+
     { 0.0f,   38.0f, "Kenya"},          {-6.3f,   35.0f, "Tanzania"},
     {-1.3f,   36.8f, "Uganda"},         { 9.0f,    8.0f, "Nigeria"},
     {30.0f,    3.0f, "Algeria"},         {32.0f,   -5.0f, "Morocco"},
@@ -470,7 +471,7 @@ static const CountryCenter k_countries[] = {
     {14.5f,  -14.5f, "Senegal"},        {-19.0f,  46.0f, "Madagascar"},
     {34.0f,    9.0f, "Tunisia"},        {-4.0f,   22.0f, "DR Congo"},
     { 7.5f,    1.5f, "Togo"},           {12.0f,  -15.0f, "Guinea"},
-    // Americas
+
     {56.0f, -106.0f, "Canada"},         {39.0f,  -98.0f, "United States"},
     {23.0f, -102.0f, "Mexico"},         {-10.0f, -55.0f, "Brazil"},
     {-35.0f, -65.0f, "Argentina"},      {-33.5f, -71.0f, "Chile"},
@@ -481,10 +482,10 @@ static const CountryCenter k_countries[] = {
     {19.0f,  -70.7f, "Dominican Republic"},
     {23.0f,  -82.0f, "Cuba"},           { 9.7f,  -84.0f, "Costa Rica"},
     {14.0f,  -87.0f, "Honduras"},       {13.2f,  -59.5f, "Barbados"},
-    // Oceania
+
     {-25.0f, 134.0f, "Australia"},      {-42.0f, 172.0f, "New Zealand"},
     {-6.0f,  147.0f, "Papua New Guinea"},
-    // Russia & Central Asia
+
     {60.0f,   100.0f, "Russia"},
     {41.0f,    65.0f, "Uzbekistan"},    {48.0f,    67.0f, "Kazakhstan"},
 };
@@ -504,25 +505,25 @@ void RenderBranchMap(float mapW, float mapH)
     float cy = origin.y + mapH * 0.5f;
     float radius = std::min(mapW, mapH) * g_globeRadius;
 
-    // Dark space background
+
     dl->AddRectFilled(mapMin, mapMax, IM_COL32(2, 5, 15, 255));
     dl->PushClipRect(mapMin, mapMax, true);
 
-    // Globe ocean sphere
+
     dl->AddCircleFilled(ImVec2(cx, cy), radius, IM_COL32(12, 25, 55, 255), 64);
-    // Subtle highlight for 3D look
+
     dl->AddCircleFilled(ImVec2(cx - radius*0.18f, cy - radius*0.18f),
                         radius*0.55f, IM_COL32(20, 45, 90, 60), 48);
 
-    // Atmosphere glow
+
     dl->AddCircle(ImVec2(cx, cy), radius + 2, IM_COL32(60, 130, 220, 35), 64, 3.0f);
     dl->AddCircle(ImVec2(cx, cy), radius + 6, IM_COL32(40, 90, 180, 15), 64, 2.0f);
 
-    // Rotation parameters
+
     float cLatR = g_globeRotLat * DEG2RAD;
     float cosClat = std::cos(cLatR), sinClat = std::sin(cLatR);
 
-    // Orthographic projection: geo (lat,lon) -> screen (x,y) + depth z
+
     auto GeoToGlobe = [&](float lat, float lon, float& outZ) -> ImVec2 {
         float latR = lat * DEG2RAD;
         float dLon = (lon - g_globeRotLon) * DEG2RAD;
@@ -535,7 +536,7 @@ void RenderBranchMap(float mapW, float mapH)
         return ImVec2(cx + x0 * radius, cy - y0 * radius);
     };
 
-    // Grid lines (latitude circles)
+
     for (int lat = -60; lat <= 80; lat += 30) {
         ImVec2 prev; float prevZ = -1;
         for (int lon = -180; lon <= 180; lon += 3) {
@@ -546,7 +547,7 @@ void RenderBranchMap(float mapW, float mapH)
             prev = p; prevZ = z;
         }
     }
-    // Grid lines (longitude meridians)
+
     for (int lon = -180; lon < 180; lon += 30) {
         ImVec2 prev; float prevZ = -1;
         for (int lat = -90; lat <= 90; lat += 3) {
@@ -558,10 +559,10 @@ void RenderBranchMap(float mapW, float mapH)
         }
     }
 
-    // Land masses — filled polygons + outlines
+
     for (int oi = 0; oi < k_outlineCount; ++oi) {
         const Outline& ol = k_outlines[oi];
-        // Collect visible projected points for fill
+
         std::vector<ImVec2> visPts;
         for (int j = 0; j < ol.count; ++j) {
             float z;
@@ -571,7 +572,7 @@ void RenderBranchMap(float mapW, float mapH)
         if (visPts.size() >= 3)
             dl->AddConvexPolyFilled(visPts.data(), (int)visPts.size(),
                                     IM_COL32(25, 60, 35, 200));
-        // Outline edges (only when both endpoints visible)
+
         for (int j = 0; j < ol.count - 1; ++j) {
             float z1, z2;
             ImVec2 p1 = GeoToGlobe(ol.pts[j][0], ol.pts[j][1], z1);
@@ -581,7 +582,7 @@ void RenderBranchMap(float mapW, float mapH)
         }
     }
 
-    // Pins
+
     const char* hoveredLabel = nullptr;
     const char* hoveredCountry = nullptr;
     float hoveredLat = 0, hoveredLng = 0;
@@ -592,17 +593,17 @@ void RenderBranchMap(float mapW, float mapH)
         const GeoPin& pin = k_allPins[i];
         float z;
         ImVec2 sp = GeoToGlobe(pin.lat, pin.lng, z);
-        if (z <= 0.05f) continue;  // behind the globe
+        if (z <= 0.05f) continue;
 
         bool isMY = (strcmp(pin.country, "Malaysia") == 0);
         ImU32 pinCol  = isMY ? IM_COL32(0,200,120,255) : IM_COL32(255,100,60,255);
         ImU32 glowCol = isMY ? IM_COL32(0,200,120,50)  : IM_COL32(255,100,60,50);
-        float pinR = 4.0f * (0.5f + 0.5f * z);  // perspective size
+        float pinR = 4.0f * (0.5f + 0.5f * z);
         dl->AddCircleFilled(sp, pinR + 3.0f, glowCol);
         dl->AddCircleFilled(sp, pinR, pinCol);
         dl->AddCircleFilled(sp, 1.5f, IM_COL32(255,255,255,220));
 
-        // Label text (only when facing forward and globe is large enough)
+
         if (z > 0.3f && radius > 80)
             dl->AddText(ImVec2(sp.x + 7, sp.y - 6),
                         IM_COL32(200,210,220,(int)(180*z)), pin.label);
@@ -626,7 +627,7 @@ void RenderBranchMap(float mapW, float mapH)
         }
     }
 
-    // Country name hover — unproject mouse to lat/lon on sphere
+
     const char* hoveredCountryName = nullptr;
     {
         float mx = (mousePos.x - cx) / radius;
@@ -634,14 +635,14 @@ void RenderBranchMap(float mapW, float mapH)
         float r2 = mx * mx + my * my;
         if (r2 < 1.0f) {
             float mz = std::sqrt(1.0f - r2);
-            // Inverse rotation to get lat/lon
+
             float sinLat = sinClat * mz + cosClat * my;
             if (sinLat > 1.0f) sinLat = 1.0f;
             if (sinLat < -1.0f) sinLat = -1.0f;
             float lat = std::asin(sinLat) / DEG2RAD;
             float cosLatM = cosClat * mz - sinClat * my;
             float lon = g_globeRotLon + std::atan2(mx, cosLatM) / DEG2RAD;
-            // Find nearest country center
+
             float bestDist = 1e9f;
             for (int ci = 0; ci < k_countryCount; ++ci) {
                 float dlat = k_countries[ci].lat - lat;
@@ -651,7 +652,7 @@ void RenderBranchMap(float mapW, float mapH)
                 float d = dlat*dlat + dlon*dlon;
                 if (d < bestDist) { bestDist = d; hoveredCountryName = k_countries[ci].name; }
             }
-            // Only show if reasonably close (threshold depends on zoom)
+
             float thresh = 400.0f / (g_globeRadius * g_globeRadius + 1.0f);
             if (thresh < 20.0f) thresh = 20.0f;
             if (bestDist > thresh) hoveredCountryName = nullptr;
@@ -660,7 +661,7 @@ void RenderBranchMap(float mapW, float mapH)
 
     dl->PopClipRect();
 
-    // Mouse interaction
+
     ImGui::SetCursorScreenPos(mapMin);
     ImGui::InvisibleButton("##globe", ImVec2(mapW, mapH));
     bool hov = ImGui::IsItemHovered();
@@ -683,7 +684,7 @@ void RenderBranchMap(float mapW, float mapH)
         }
     }
 
-    // Tooltip for pins
+
     if (hoveredLabel && hov) {
         ImGui::BeginTooltip();
         ImGui::TextColored(ImVec4(1,1,1,1), "%s", hoveredLabel);
@@ -695,22 +696,22 @@ void RenderBranchMap(float mapW, float mapH)
         }
         ImGui::EndTooltip();
     }
-    // Tooltip for country name (only when not hovering a pin)
+
     else if (hoveredCountryName && hov && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
         ImGui::BeginTooltip();
         ImGui::TextColored(ImVec4(1,1,1,1), "%s", hoveredCountryName);
         ImGui::EndTooltip();
     }
 
-    // --- Scale bar ---
+
     {
-        // Earth radius ~ 3959 miles. 1 radian on sphere = 3959 miles.
-        // On screen: 1 radian = radius pixels.
-        // So miles_per_pixel = 3959 / radius.
+
+
+
         float milesPerPx = 3959.0f / radius;
         float targetBarPx = 80.0f;
         float rawMiles = targetBarPx * milesPerPx;
-        // Pick nearest nice round number
+
         static const float nice[] = {1,2,5,10,20,50,100,200,500,1000,2000,5000,10000};
         float bestVal = nice[0];
         float bestDiff = 1e9f;
@@ -730,20 +731,20 @@ void RenderBranchMap(float mapW, float mapH)
 
         float sx = mapMax.x - barPx - 16.0f;
         float sy = mapMax.y - 18.0f;
-        // Bar background
+
         dl->AddRectFilled(ImVec2(sx - 4, sy - 14), ImVec2(sx + barPx + 8, sy + 8),
                           IM_COL32(10, 20, 35, 200), 3.0f);
-        // Bar line
+
         dl->AddLine(ImVec2(sx, sy), ImVec2(sx + barPx, sy), IM_COL32(200,210,220,200), 2.0f);
-        // End caps
+
         dl->AddLine(ImVec2(sx, sy - 4), ImVec2(sx, sy + 4), IM_COL32(200,210,220,200), 1.5f);
         dl->AddLine(ImVec2(sx + barPx, sy - 4), ImVec2(sx + barPx, sy + 4),
                     IM_COL32(200,210,220,200), 1.5f);
-        // Label
+
         dl->AddText(ImVec2(sx + 2, sy - 14), IM_COL32(200,210,220,220), scaleBuf);
     }
 
-    // Legend (top-left)
+
     ImVec2 lp = ImVec2(mapMin.x + 6, mapMin.y + 6);
     dl->AddRectFilled(lp, ImVec2(lp.x + 195, lp.y + 28), IM_COL32(10,20,35,200), 4.0f);
     dl->AddCircleFilled(ImVec2(lp.x+12, lp.y+9), 4, IM_COL32(0,200,120,255));

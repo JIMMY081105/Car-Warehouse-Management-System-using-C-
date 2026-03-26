@@ -1,3 +1,5 @@
+// Implements SQLite persistence for blocks and audit entries. The database is optional at runtime, but when enabled it preserves the richer coursework workflow across sessions and supports SQL-backed search.
+
 #include "utils/DatabaseManager.hpp"
 
 #include <sqlite3.h>
@@ -6,10 +8,6 @@
 #include <utility>
 
 namespace cw1 {
-
-// ---------------------------------------------------------------------------
-// Construction / destruction
-// ---------------------------------------------------------------------------
 
 DatabaseManager::DatabaseManager(const std::string& dbPath)
     : db_(nullptr), dbPath_(dbPath) {
@@ -50,9 +48,7 @@ DatabaseManager& DatabaseManager::operator=(DatabaseManager&& other) noexcept {
     return *this;
 }
 
-// ---------------------------------------------------------------------------
-// Status helpers
-// ---------------------------------------------------------------------------
+
 
 bool DatabaseManager::isOpen() const noexcept {
     return db_ != nullptr;
@@ -66,11 +62,12 @@ sqlite3* DatabaseManager::rawHandle() noexcept {
     return db_;
 }
 
-// ---------------------------------------------------------------------------
-// Table creation
-// ---------------------------------------------------------------------------
+
 
 void DatabaseManager::createTables() {
+    lastError_.clear();
+
+    // Separate tables keep block history and audit history queryable.
     const char* blocksSQL =
         "CREATE TABLE IF NOT EXISTS blocks ("
         "    block_index     INTEGER PRIMARY KEY,"
@@ -114,13 +111,10 @@ void DatabaseManager::createTables() {
     execSQL(blocksSQL);
     execSQL(auditSQL);
 
-    // Migration: add sha3_hash column to existing databases that lack it.
     if (!execSQL("ALTER TABLE blocks ADD COLUMN sha3_hash TEXT")) {
-        // Expected to fail with "duplicate column" if already present.
         if (lastError_.find("duplicate") != std::string::npos) {
             lastError_.clear();
         }
-        // Otherwise keep lastError_ so callers can see an unexpected migration failure.
     }
 }
 
@@ -136,15 +130,14 @@ bool DatabaseManager::execSQL(const std::string& sql) {
         sqlite3_free(errMsg);
         return false;
     }
+    lastError_.clear();
     return true;
 }
 
-// ---------------------------------------------------------------------------
-// Block persistence
-// ---------------------------------------------------------------------------
 
-// Helper: bind all block columns to a prepared INSERT OR REPLACE statement.
+
 static bool bindBlockToStmt(sqlite3_stmt* stmt, const Block& block) {
+    // Binding every payload field keeps the persisted row faithful to the block that was hashed and shown in the GUI.
     const CarRecord& r = block.getRecord();
 
     sqlite3_bind_int64(stmt, bind(BlockCol::Index),        static_cast<sqlite3_int64>(block.getIndex()));
@@ -191,6 +184,7 @@ static const char* k_upsertSQL =
     ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
 bool DatabaseManager::saveAllBlocks(const std::vector<Block>& chain) {
+    lastError_.clear();
     if (db_ == nullptr) { lastError_ = "Database not open"; return false; }
 
     if (!execSQL("BEGIN TRANSACTION")) return false;
@@ -222,6 +216,7 @@ bool DatabaseManager::saveAllBlocks(const std::vector<Block>& chain) {
 }
 
 std::vector<Block> DatabaseManager::loadAllBlocks() {
+    lastError_.clear();
     std::vector<Block> result;
     if (db_ == nullptr) { lastError_ = "Database not open"; return result; }
 
@@ -274,7 +269,6 @@ std::vector<Block> DatabaseManager::loadAllBlocks() {
         rec.salePrice          = getDouble(col(BlockCol::SalePrice));
         rec.warrantyExpiry     = getText(col(BlockCol::WarrantyExpiry));
         rec.manufacturerId     = getText(col(BlockCol::ManufacturerId));
-        // IsTombstone (col 26) is informational only, already reflected in manufacturer.
         std::string sha3Hash;
         if (sqlite3_column_count(stmt) > col(BlockCol::Sha3Hash)) {
             sha3Hash = getText(col(BlockCol::Sha3Hash));
@@ -299,6 +293,7 @@ std::vector<Block> DatabaseManager::loadAllBlocks() {
 }
 
 bool DatabaseManager::upsertBlock(const Block& block) {
+    lastError_.clear();
     if (db_ == nullptr) { lastError_ = "Database not open"; return false; }
 
     sqlite3_stmt* stmt = nullptr;
@@ -322,11 +317,11 @@ bool DatabaseManager::upsertBlock(const Block& block) {
 }
 
 bool DatabaseManager::deleteBlockRow(std::size_t index) {
+    lastError_.clear();
     if (db_ == nullptr) { lastError_ = "Database not open"; return false; }
 
     if (!execSQL("BEGIN TRANSACTION")) return false;
 
-    // Delete the target row.
     {
         const char* sql = "DELETE FROM blocks WHERE block_index = ?";
         sqlite3_stmt* stmt = nullptr;
@@ -346,7 +341,6 @@ bool DatabaseManager::deleteBlockRow(std::size_t index) {
         }
     }
 
-    // Renumber all subsequent rows.
     {
         const char* sql = "UPDATE blocks SET block_index = block_index - 1 "
                           "WHERE block_index > ?";
@@ -370,13 +364,12 @@ bool DatabaseManager::deleteBlockRow(std::size_t index) {
     return execSQL("COMMIT");
 }
 
-// ---------------------------------------------------------------------------
-// Audit log persistence
-// ---------------------------------------------------------------------------
+
 
 bool DatabaseManager::insertAuditEntry(AuditAction action,
                                        const std::string& details,
                                        const std::string& timestamp) {
+    lastError_.clear();
     if (db_ == nullptr) { lastError_ = "Database not open"; return false; }
 
     const char* sql =
@@ -406,6 +399,7 @@ bool DatabaseManager::insertAuditEntry(AuditAction action,
 
 std::vector<std::tuple<std::string, std::string, std::string>>
 DatabaseManager::loadAuditLog() {
+    lastError_.clear();
     std::vector<std::tuple<std::string, std::string, std::string>> result;
     if (db_ == nullptr) { lastError_ = "Database not open"; return result; }
 
@@ -431,11 +425,10 @@ DatabaseManager::loadAuditLog() {
     return result;
 }
 
-// ---------------------------------------------------------------------------
-// SQL search
-// ---------------------------------------------------------------------------
+
 
 std::vector<std::size_t> DatabaseManager::searchBlocksSQL(const std::string& query) {
+    lastError_.clear();
     std::vector<std::size_t> result;
     if (db_ == nullptr) { lastError_ = "Database not open"; return result; }
 
@@ -471,6 +464,7 @@ std::vector<std::size_t> DatabaseManager::searchBlocksSQL(const std::string& que
 }
 
 std::vector<std::size_t> DatabaseManager::getBlockIndicesByVin(const std::string& vin) {
+    lastError_.clear();
     std::vector<std::size_t> result;
     if (db_ == nullptr) { lastError_ = "Database not open"; return result; }
 
@@ -495,6 +489,7 @@ std::vector<std::size_t> DatabaseManager::getBlockIndicesByVin(const std::string
 }
 
 std::vector<std::string> DatabaseManager::getAllVinsSQL() {
+    lastError_.clear();
     std::vector<std::string> result;
     if (db_ == nullptr) { lastError_ = "Database not open"; return result; }
 
@@ -517,19 +512,17 @@ std::vector<std::string> DatabaseManager::getAllVinsSQL() {
     return result;
 }
 
-// ---------------------------------------------------------------------------
-// Full resync
-// ---------------------------------------------------------------------------
+
 
 bool DatabaseManager::fullResync(const std::vector<Block>& chain,
                                  const AuditLog& auditLog) {
+    lastError_.clear();
     if (db_ == nullptr) { lastError_ = "Database not open"; return false; }
 
     if (!execSQL("BEGIN TRANSACTION")) return false;
     if (!execSQL("DELETE FROM blocks"))    { execSQL("ROLLBACK"); return false; }
     if (!execSQL("DELETE FROM audit_log")) { execSQL("ROLLBACK"); return false; }
 
-    // Re-insert all blocks.
     {
         sqlite3_stmt* stmt = nullptr;
         int rc = sqlite3_prepare_v2(db_, k_upsertSQL, -1, &stmt, nullptr);
@@ -554,7 +547,6 @@ bool DatabaseManager::fullResync(const std::vector<Block>& chain,
         sqlite3_finalize(stmt);
     }
 
-    // Re-insert all audit entries by traversing the linked list.
     {
         const char* auditInsert =
             "INSERT INTO audit_log (action, details, timestamp) VALUES (?, ?, ?)";
@@ -592,4 +584,4 @@ bool DatabaseManager::fullResync(const std::vector<Block>& chain,
     return execSQL("COMMIT");
 }
 
-} // namespace cw1
+}

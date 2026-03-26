@@ -1,3 +1,5 @@
+// Implements the fuel-price intelligence feature. It persists weekly fuel prices, loads chart history for the dashboard, and provides a simple forecast to strengthen the coursework's extra functionality.
+
 #include "utils/FuelPriceManager.hpp"
 
 #include <sqlite3.h>
@@ -9,10 +11,6 @@
 #include <sstream>
 
 namespace cw1 {
-
-// ============================================================================
-// Construction
-// ============================================================================
 
 FuelPriceManager::FuelPriceManager() = default;
 
@@ -27,16 +25,13 @@ bool FuelPriceManager::isAttached() const noexcept {
     return db_ != nullptr;
 }
 
-// ============================================================================
-// Table creation
-// ============================================================================
+
+
 
 void FuelPriceManager::createFuelTables() {
     if (db_ == nullptr) return;
 
-    // Schema for Malaysia weekly retail fuel prices.
-    // Only real Malaysian fuel types: RON95, RON97, Diesel (Peninsular),
-    // Diesel (East Malaysia).
+    // A dedicated table keeps the logistics intelligence feature separate from the blockchain tables while still sharing the same SQLite database.
     const char* sql =
         "CREATE TABLE IF NOT EXISTS fuel_prices ("
         "  id                INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -58,9 +53,8 @@ void FuelPriceManager::createFuelTables() {
     }
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
+
+
 
 static std::string nowISO() {
     std::time_t t = std::time(nullptr);
@@ -75,14 +69,13 @@ static std::string nowISO() {
     return std::string(buf);
 }
 
-// ============================================================================
-// Insert / load
-// ============================================================================
+
+
 
 bool FuelPriceManager::insertRecord(const FuelWeeklyRecord& rec) {
     if (db_ == nullptr) { lastError_ = "Not attached"; return false; }
 
-    // Reject records with zero/invalid prices.
+    // Basic validation prevents obviously invalid records from distorting the dashboard chart or forecast.
     if (rec.ron95 <= 0 || rec.ron97 <= 0 ||
         rec.dieselPeninsular <= 0 || rec.dieselEast <= 0) {
         lastError_ = "Rejected: one or more fuel prices are zero or negative";
@@ -125,7 +118,7 @@ int FuelPriceManager::loadRecentHistory(int maxWeeks) {
     history_.clear();
     if (db_ == nullptr) { lastError_ = "Not attached"; return 0; }
 
-    // Load ordered oldest-first so the vector is chronological.
+    // The query loads newest rows first for efficiency, then reverses them so the chart renders from oldest to newest on screen.
     const char* sql =
         "SELECT effective_date, ron95, ron97, diesel_peninsular, diesel_east, "
         "       source, fetched_at "
@@ -159,7 +152,7 @@ int FuelPriceManager::loadRecentHistory(int maxWeeks) {
     }
     sqlite3_finalize(stmt);
 
-    // Reverse so oldest is first (chronological order for plotting).
+
     std::reverse(history_.begin(), history_.end());
 
     if (!history_.empty()) {
@@ -195,11 +188,10 @@ std::string FuelPriceManager::latestEffectiveDate() const {
     return result;
 }
 
-// ============================================================================
-// Forecasting
-// ============================================================================
 
-// Extract a single price series from the cached history.
+
+
+
 std::vector<double> FuelPriceManager::extractSeries(FuelSeries series) const {
     std::vector<double> prices;
     prices.reserve(history_.size());
@@ -214,22 +206,22 @@ std::vector<double> FuelPriceManager::extractSeries(FuelSeries series) const {
     return prices;
 }
 
-// ---------------------------------------------------------------------------
-// ForecastNextWeekPrice  --  lightweight trend extrapolation
-// ---------------------------------------------------------------------------
-// Given a chronological vector of weekly prices, predict the next value:
-//
-//   n == 0  ->  return 0  (no data)
-//   n == 1  ->  return P[last]  (flat, single point)
-//   n == 2  ->  prediction = P[last] + (P[last] - P[last-1])
-//   n >= 3  ->  trend1 = P[t]   - P[t-1]
-//               trend2 = P[t-1] - P[t-2]
-//               avgTrend = (trend1 + trend2) / 2.0
-//               prediction = P[t] + avgTrend
-//
-// The result is clamped to >= 0 (fuel price cannot be negative).
-// Rounding is for display only -- this returns full precision.
-// ---------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 double FuelPriceManager::ForecastNextWeekPrice(const std::vector<double>& prices) {
     const size_t n = prices.size();
     if (n == 0) return 0.0;
@@ -240,7 +232,7 @@ double FuelPriceManager::ForecastNextWeekPrice(const std::vector<double>& prices
         return std::max(0.0, prediction);
     }
 
-    // n >= 3: average the two most recent weekly deltas.
+
     double trend1 = prices[n - 1] - prices[n - 2];
     double trend2 = prices[n - 2] - prices[n - 3];
     double avgTrend = (trend1 + trend2) / 2.0;
@@ -248,10 +240,10 @@ double FuelPriceManager::ForecastNextWeekPrice(const std::vector<double>& prices
     return std::max(0.0, prediction);
 }
 
-// Classify the trend direction.
-//   |delta| < 0.01 RM  ->  stable
-//   delta > 0           ->  increasing
-//   delta < 0           ->  decreasing
+
+
+
+
 void FuelPriceManager::ClassifyTrend(double delta, bool& increasing, bool& stable) {
     constexpr double kStableThreshold = 0.01;
     stable = (std::fabs(delta) < kStableThreshold);
@@ -270,17 +262,16 @@ FuelForecast FuelPriceManager::forecast(FuelSeries series) const {
     return f;
 }
 
-// ============================================================================
-// Delivery cost estimation
-// ============================================================================
-// Simple logistics formula:
-//   litres_used = distanceMiles / milesPerLitre
-//   cost = litres_used * fuelPricePerLitre
-//
-// Default assumptions:
-//   averageDistanceMiles  = 10.0  (configurable)
-//   truckEfficiency       =  8.0 miles per litre (configurable)
-// ============================================================================
+
+
+
+
+
+
+
+
+
+
 
 double FuelPriceManager::EstimateDeliveryCost(double fuelPricePerLitre,
                                                double distanceMiles,
@@ -290,19 +281,19 @@ double FuelPriceManager::EstimateDeliveryCost(double fuelPricePerLitre,
     return litresUsed * fuelPricePerLitre;
 }
 
-// ============================================================================
-// Fallback / demo data
-// ============================================================================
-// These are representative Malaysia retail fuel prices for recent weeks.
-// They are clearly marked as "fallback" data and are only inserted when the
-// fuel_prices table is completely empty.  In production, a live HTTP provider
-// (e.g. data.gov.my) would supply real data via the provider abstraction.
-// ============================================================================
+
+
+
+
+
+
+
+
 
 void FuelPriceManager::seedFallbackDataIfEmpty() {
     if (db_ == nullptr) return;
 
-    // Check if table already has rows.
+
     {
         const char* sql = "SELECT COUNT(*) FROM fuel_prices";
         sqlite3_stmt* stmt = nullptr;
@@ -311,17 +302,18 @@ void FuelPriceManager::seedFallbackDataIfEmpty() {
         if (sqlite3_step(stmt) == SQLITE_ROW) {
             int count = sqlite3_column_int(stmt, 0);
             sqlite3_finalize(stmt);
-            if (count > 0) return;  // Already has data -- skip.
+            if (count > 0) return;
         } else {
             sqlite3_finalize(stmt);
             return;
         }
     }
 
-    // Representative Malaysia weekly fuel prices (RM/litre).
-    // Source reference: data.gov.my / Malaysian Ministry of Finance weekly announcements.
-    // RON95 is subsidised and typically stable at RM 2.05.
-    // RON97, Diesel (Peninsular), Diesel (East Malaysia) are market-driven.
+
+
+
+
+
     struct FallbackEntry {
         const char* date;
         double ron95, ron97, dieselPen, dieselEast;
@@ -359,9 +351,8 @@ void FuelPriceManager::seedFallbackDataIfEmpty() {
     statusText_ = "Seeded with fallback Malaysia fuel price data";
 }
 
-// ============================================================================
-// Status
-// ============================================================================
+
+
 
 std::string FuelPriceManager::lastError() const {
     return lastError_;
@@ -371,4 +362,4 @@ std::string FuelPriceManager::statusText() const {
     return statusText_;
 }
 
-} // namespace cw1
+}

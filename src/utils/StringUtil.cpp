@@ -1,3 +1,5 @@
+// Implements small search helpers shared by blockchain queries and the GUI.
+
 #include "utils/StringUtil.hpp"
 
 #include <algorithm>
@@ -20,6 +22,6 @@ bool containsIgnoreCase(const std::string& haystack, const std::string& needle) 
     std::transform(needle.begin(), needle.end(), n.begin(), toLower);
 
     return h.find(n) != std::string::npos;
-}
+}  // namespace cw1
 
-} // namespace cw1
+}

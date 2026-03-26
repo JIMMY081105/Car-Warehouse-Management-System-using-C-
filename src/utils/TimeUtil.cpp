@@ -1,3 +1,5 @@
+// Centralises timestamp formatting so blocks and audit entries use the same ISO-8601 representation.
+
 #include "utils/TimeUtil.hpp"
 
 #include <chrono>
@@ -21,6 +23,6 @@ std::string nowIso8601() {
     std::ostringstream output;
     output << std::put_time(&utcTime, "%Y-%m-%dT%H:%M:%SZ");
     return output.str();
-}
+}  // namespace cw1::TimeUtil
 
-} 
+}

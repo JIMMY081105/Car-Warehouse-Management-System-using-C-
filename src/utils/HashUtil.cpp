@@ -1,3 +1,4 @@
+// This file turns raw strings into the hashes used by the blockchain and the extra digest view.
 #include "utils/HashUtil.hpp"
 
 #include <iomanip>
@@ -8,6 +9,7 @@
 namespace cw1::HashUtil {
 
 std::string sha256(const std::string& input) {
+    // SHA-256 stays as the full chain hash because it is the main integrity link between blocks.
     unsigned char digest[SHA256_DIGEST_LENGTH] = {0};
 
     SHA256(
@@ -27,11 +29,11 @@ std::string sha256(const std::string& input) {
 }
 
 std::string sha3_128(const std::string& input) {
-    // Use SHAKE128 (SHA-3 family XOF) with 128-bit / 16-byte output.
+    // SHAKE128 gives a shorter digest that is still useful for a visible secondary check in the project.
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(ctx, EVP_shake128(), nullptr);
     EVP_DigestUpdate(ctx, input.data(), input.size());
-    unsigned char digest[16]; // 128-bit output
+    unsigned char digest[16];
     EVP_DigestFinalXOF(ctx, digest, sizeof(digest));
     EVP_MD_CTX_free(ctx);
 

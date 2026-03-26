@@ -1,3 +1,5 @@
+// Lightweight timing helpers used to show search, verification, and add-block durations in the GUI.
+
 #pragma once
 
 #include <chrono>
@@ -8,7 +10,7 @@
 
 namespace cw1 {
 
-
+// Measures elapsed time for one operation using a steady clock.
 class OperationTimer {
 public:
     using Clock = std::chrono::steady_clock;
@@ -37,4 +39,4 @@ inline std::string formatSeconds(double seconds) {
     return out.str();
 }
 
-} 
+}

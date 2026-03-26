@@ -1,20 +1,13 @@
 
 
-
-
-
-
-
-
+// Implements the linked-list audit trail. This module is a direct example of manual dynamic memory management with safe append and cleanup behaviour.
 
 #include "utils/AuditLog.hpp"
 #include "utils/TimeUtil.hpp"
 
-#include <algorithm>  
+#include <algorithm>
 
 namespace cw1 {
-
-
 
 std::string actionToString(AuditAction action) {
     switch (action) {
@@ -37,36 +30,27 @@ AuditAction stringToAction(const std::string& str) {
     if (str == "TAMPER_SIMULATED")  return AuditAction::TAMPER_SIMULATED;
     if (str == "PERSISTENCE_IO")    return AuditAction::PERSISTENCE_IO;
     if (str == "BLOCK_DELETED")     return AuditAction::BLOCK_DELETED;
-    return AuditAction::PERSISTENCE_IO; // fallback for unknown strings
+    return AuditAction::PERSISTENCE_IO;
 }
-
-
 
 AuditLog::AuditLog()
-    : head_(nullptr), tail_(nullptr), count_(0) {
-    
-}
+    : head_(nullptr), tail_(nullptr), count_(0) {}
 
 AuditLog::~AuditLog() {
-    
     clear();
 }
 
-
-
 void AuditLog::log(AuditAction action, const std::string& details) {
-    
+    // Every appended node is allocated once and becomes owned by the log.
     AuditEntry* node = new AuditEntry(action, details, TimeUtil::nowIso8601());
 
     if (tail_ == nullptr) {
-        
         head_ = node;
         tail_ = node;
     } else {
-        
-        
-        tail_->next = node;  
-        tail_ = node;        
+        // Pointer chaining is explicit here: the current tail points at the new node, then the tail pointer advances.
+        tail_->next = node;
+        tail_ = node;
     }
 
     ++count_;
@@ -95,20 +79,17 @@ const AuditEntry* AuditLog::head() const noexcept {
 }
 
 void AuditLog::clear() {
-    
-    
+    // Walk node-by-node so every dynamic allocation is released exactly once.
     AuditEntry* current = head_;
     while (current != nullptr) {
-        AuditEntry* next = current->next;  
-        delete current;                    
-        current = next;                    
+        AuditEntry* next = current->next;
+        delete current;
+        current = next;
     }
     head_  = nullptr;
     tail_  = nullptr;
     count_ = 0;
 }
-
-
 
 std::vector<const AuditEntry*> AuditLog::getRecentEntries(std::size_t maxCount) const {
     std::size_t actualCount = std::min(maxCount, count_);
@@ -130,7 +111,7 @@ std::vector<const AuditEntry*> AuditLog::getRecentEntries(std::size_t maxCount) 
     }
 
     return result;
-}
+}  // namespace cw1
 
 RecentEntryArray::RecentEntryArray(const AuditLog& log, std::size_t maxCount)
     : data_(log.getRecentEntries(maxCount)) {}
@@ -158,4 +139,4 @@ const AuditEntry* const* RecentEntryArray::end() const noexcept {
     return data_.empty() ? nullptr : data_.data() + data_.size();
 }
 
-} 
+}

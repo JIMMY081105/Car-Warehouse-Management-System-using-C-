@@ -1,3 +1,5 @@
+// Helper for producing lecturer-friendly block summaries in text form. The formatter makes the hash links, genesis rule, and stage-specific payload fields easy to inspect quickly.
+
 #pragma once
 
 #include <iomanip>
@@ -9,8 +11,7 @@
 
 namespace cw1 {
 
-
-
+// Produces a rich multi-line description of one block for display or debugging.
 inline std::string formatBlockForDisplay(const Block& block) {
     const CarRecord& record = block.getRecord();
     const bool isGenesis = (block.getIndex() == 0);
@@ -69,4 +70,4 @@ inline std::string formatBlockForDisplay(const Block& block) {
     return out.str();
 }
 
-} 
+}

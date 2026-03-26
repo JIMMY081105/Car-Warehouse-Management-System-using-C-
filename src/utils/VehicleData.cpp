@@ -1,8 +1,8 @@
+// Stores static manufacturer, model, colour, and transport lists used by the add-block form and demo data generation.
+
 #include "utils/VehicleData.hpp"
 
-// ============================================================================
-// Stage names
-// ============================================================================
+
 
 const char* k_stageNames[] = {
     "PRODUCTION", "WAREHOUSE_INTAKE", "QUALITY_CHECK",
@@ -10,9 +10,7 @@ const char* k_stageNames[] = {
 };
 const int k_stageNameCount = 5;
 
-// ============================================================================
-// Per-manufacturer model lists
-// ============================================================================
+
 
 static const char* k_models_perodua[]    = {"Myvi","Axia","Bezza","Aruz","Ativa","Alza"};
 static const char* k_models_proton[]     = {"Saga","Persona","X50","X70","X90","Iriz","Exora","S70"};
@@ -42,9 +40,7 @@ const ModelList k_modelsByMfr[] = {
     {k_models_ford,       3}, {k_models_lexus,      6}, {k_models_volvo,     7},
 };
 
-// ============================================================================
-// Colors & transport modes
-// ============================================================================
+
 
 const char* k_colors[] = {
     "White","Black","Silver","Grey","Red","Blue",

@@ -1,3 +1,5 @@
+// Serialises vehicle payloads into a stable string so each block hash reflects the full business record stored at that lifecycle stage.
+
 #include "models/CarRecord.hpp"
 
 #include <sstream>
@@ -6,7 +8,7 @@ namespace cw1 {
 
 namespace {
 
-
+// Escapes field separators so hashing remains deterministic even if user data contains reserved characters.
 std::string escapeField(const std::string& value) {
     std::string escaped;
     escaped.reserve(value.size());
@@ -19,11 +21,12 @@ std::string escapeField(const std::string& value) {
     return escaped;
 }
 
-} 
+}
 
 std::string CarRecord::serialize() const {
     std::ostringstream out;
 
+    // The serialised field order is fixed so the same payload always produces the same digest unless one of the stored values changes.
     out << "v1"
         << "|vin=" << escapeField(vin)
         << "|manufacturer=" << escapeField(manufacturer)
@@ -33,8 +36,6 @@ std::string CarRecord::serialize() const {
         << "|stage=" << escapeField(stageToString(stage))
         << "|manufacturerId=" << escapeField(manufacturerId);
 
-    
-    
     out << "|factoryLocation=" << escapeField(factoryLocation)
         << "|warehouseLocation=" << escapeField(warehouseLocation)
         << "|receivedBy=" << escapeField(receivedBy)
@@ -54,11 +55,12 @@ std::string CarRecord::serialize() const {
 }
 
 CarRecord CarRecord::tombstone(const std::string& vin) {
+    // Tombstones keep the blockchain position visible after a delete without pretending the original business data is still present.
     CarRecord rec;
     rec.vin          = vin;
     rec.manufacturer = "[DELETED]";
     rec.model        = "[DELETED]";
     return rec;
-}
+}  // namespace cw1
 
 }

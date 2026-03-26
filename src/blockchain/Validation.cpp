@@ -1,3 +1,5 @@
+// Implements the explicit blockchain checks used by both the real chain and the temporary integrity demo shown in the GUI.
+
 #include "blockchain/Validation.hpp"
 
 #include <sstream>
@@ -14,27 +16,27 @@ ValidationResult verifyChain(const std::vector<Block>& blocks) {
     for (std::size_t i = 0; i < blocks.size(); ++i) {
         const Block& current = blocks[i];
 
-        // SHA-256 hash recompute check
+        // Recompute the payload hash to detect direct edits to stored data.
         if (current.getCurrentHash() != current.computeHash()) {
             failedIndices.push_back(i);
             continue;
         }
 
-        // SHA3-128 hash recompute check
+        // The coursework stores a second digest so the marker can see another integrity signal besides the main SHA-256 chain hash.
         if (current.getSha3Hash() != current.computeSha3Hash()) {
             failedIndices.push_back(i);
             continue;
         }
 
         if (i == 0) {
-            // Genesis rule: previousHash must equal currentHash
+            // Custom genesis rule: the first block keeps its own hash in the previousHash field after construction/rehash.
             if (current.getPreviousHash() != current.getCurrentHash()) {
                 failedIndices.push_back(i);
             }
             continue;
         }
 
-        // Chain link check
+        // Every later block must point at the exact hash stored by the block immediately before it, otherwise the chain has been broken.
         const Block& previous = blocks[i - 1];
         if (current.getPreviousHash() != previous.getCurrentHash()) {
             failedIndices.push_back(i);
@@ -54,6 +56,6 @@ ValidationResult verifyChain(const std::vector<Block>& blocks) {
         msg << "#" << failedIndices[j];
     }
     return {false, msg.str(), failedIndices};
-}
+}  // namespace cw1::Validation
 
 }
