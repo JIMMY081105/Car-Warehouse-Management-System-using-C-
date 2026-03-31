@@ -48,6 +48,10 @@ set(BACKEND_SOURCES
     src/utils/StringUtil.cpp
     src/utils/BranchMap.cpp
     src/utils/VehicleData.cpp
+    src/security/Auth.cpp
+    src/security/AccessControl.cpp
+    src/security/PendingApprovalManager.cpp
+    src/security/SecurityUtil.cpp
 )
 
 

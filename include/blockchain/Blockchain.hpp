@@ -23,6 +23,16 @@ public:
     // Appends a new block to the end of the chain. The new block records the previous block's hash so tampering can be detected during verification.
     void addBlock(const CarRecord& record);
 
+    // Appends a new block with security metadata from the pending approval
+    // workflow. The metadata (creator, approver, request ID, signature) is
+    // set after the block is hashed so existing chain integrity is preserved.
+    void addBlockWithMetadata(const CarRecord& record,
+                              const std::string& createdBy,
+                              const std::string& approvedBy,
+                              int originRequestId,
+                              const std::string& creatorSignature,
+                              bool signatureVerified);
+
     // Returns the authoritative vector-backed blockchain storage. This remains the primary representation because indexed access is needed for the GUI, VIN lookup, validation, and database synchronisation.
     const std::vector<Block>& getChain() const noexcept;
 

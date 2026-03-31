@@ -55,6 +55,21 @@ public:
     // Recomputes stored hashes after payload or previous-hash changes.
     void rehash();
 
+    // Security metadata accessors. These fields are not included in the hash
+    // computation because they represent workflow context rather than payload
+    // data. This keeps the existing chain integrity logic unchanged.
+    const std::string& getCreatedBy() const noexcept;
+    const std::string& getApprovedBy() const noexcept;
+    int getOriginRequestId() const noexcept;
+    const std::string& getCreatorSignature() const noexcept;
+    bool isSignatureVerified() const noexcept;
+
+    void setCreatedBy(std::string value);
+    void setApprovedBy(std::string value);
+    void setOriginRequestId(int id);
+    void setCreatorSignature(std::string sig);
+    void setSignatureVerified(bool verified);
+
 private:
     static std::uint64_t generateNonce();
 
@@ -65,6 +80,15 @@ private:
     std::string timestamp_;
     std::uint64_t nonce_;
     CarRecord record_;
+
+    // Security metadata fields added for the multi-level security upgrade.
+    // These are persisted alongside the block but excluded from hash
+    // computation so existing blockchain integrity checks are preserved.
+    std::string createdBy_;
+    std::string approvedBy_;
+    int originRequestId_ = -1;
+    std::string creatorSignature_;
+    bool signatureVerified_ = false;
 };
 
 }  // namespace cw1

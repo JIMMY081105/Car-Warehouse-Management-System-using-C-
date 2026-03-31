@@ -20,9 +20,14 @@
 #include "blockchain/BlockFormatter.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/BlockStage.hpp"
+#include "security/Auth.hpp"
+#include "security/AccessControl.hpp"
+#include "security/PendingApprovalManager.hpp"
+#include "security/SecurityUtil.hpp"
 #include "utils/BranchMap.hpp"
 #include "utils/FuelPriceManager.hpp"
 #include "utils/OperationTimer.hpp"
+#include "utils/TimeUtil.hpp"
 #include "utils/VehicleData.hpp"
 
 
@@ -141,7 +146,7 @@ static void ApplyGitHubDarkTheme() {
 
 
 
-enum class View { DASHBOARD, CAR_DETAIL, ADD_BLOCK, GLOBAL_CHAIN, AUDIT_LOG, INTEGRITY, DELETE_BLOCK };
+enum class View { DASHBOARD, CAR_DETAIL, ADD_BLOCK, GLOBAL_CHAIN, AUDIT_LOG, INTEGRITY, DELETE_BLOCK, PENDING_APPROVALS };
 
 static View        g_view        = View::DASHBOARD;
 static std::string g_selectedVin;
@@ -200,6 +205,17 @@ static void ReportGuiException(cw1::Blockchain& chain,
 
 static cw1::FuelPriceManager g_fuelMgr;
 static bool g_fuelInitialized = false;
+
+// ---------------------------------------------------------------------------
+// Security / authentication state
+// ---------------------------------------------------------------------------
+static cw1::AuthManager g_authMgr;
+static cw1::PendingApprovalManager g_pendingMgr;
+static bool g_showLoginScreen = true;      // true until first successful login
+static char g_loginUser[64]   = {};
+static char g_loginPass[64]   = {};
+static std::string g_loginError;
+static char g_rejectReasonBuf[256] = {};   // used by pending approvals page
 
 
 static int    g_formStage           = 0;
@@ -403,9 +419,19 @@ static void RenderHeader(const cw1::Blockchain& chain) {
         ImGui::PopFont();
     }
 
-    float statsWidth = 430.0f;
+    float statsWidth = 620.0f;
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - statsWidth
                     + ImGui::GetCursorPosX() - 16.0f);
+
+    // Show current user identity and role in the header bar.
+    if (g_authMgr.isLoggedIn()) {
+        const cw1::User& user = g_authMgr.currentUser();
+        char userBadge[128];
+        snprintf(userBadge, sizeof(userBadge), "%s [%s]",
+                 user.displayName.c_str(), cw1::roleToString(user.role).c_str());
+        DrawMetricBadge(userBadge, COL_TEXT, HexColor(0x30363d, 0.60f));
+        ImGui::SameLine();
+    }
 
     char badge[64];
     snprintf(badge, sizeof(badge), "%zu blocks", chain.totalBlocks());
@@ -451,16 +477,27 @@ static void RenderSidebar(cw1::Blockchain& chain) {
     ImGui::Spacing();
 
 
+    // Show pending approvals count badge in the sidebar when requests exist.
+    int pendCount = g_pendingMgr.pendingCount();
+    const cw1::Role currentRole = g_authMgr.isLoggedIn()
+        ? g_authMgr.currentUser().role : cw1::Role::AUDITOR;
+
     struct NavItem { const char* label; View view; };
     static const NavItem navItems[] = {
-        { "  Dashboard",        View::DASHBOARD    },
-        { "  + Add New Block",  View::ADD_BLOCK     },
-        { "  Global Chain",     View::GLOBAL_CHAIN  },
-        { "  Audit Log",        View::AUDIT_LOG     },
-        { "  Verify Integrity", View::INTEGRITY     },
+        { "  Dashboard",          View::DASHBOARD          },
+        { "  + Add New Block",    View::ADD_BLOCK           },
+        { "  Pending Approvals",  View::PENDING_APPROVALS   },
+        { "  Global Chain",       View::GLOBAL_CHAIN        },
+        { "  Audit Log",          View::AUDIT_LOG           },
+        { "  Verify Integrity",   View::INTEGRITY           },
     };
 
     for (const auto& item : navItems) {
+        // Auditors cannot add blocks; skip the Add Block nav item for them.
+        if (item.view == View::ADD_BLOCK && cw1::AccessControl::isReadOnly(currentRole)) {
+            continue;
+        }
+
         bool active = (g_view == item.view);
         if (active) {
             ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT_SOFT);
@@ -474,16 +511,27 @@ static void RenderSidebar(cw1::Blockchain& chain) {
             ImGui::PushStyleColor(ImGuiCol_Text,          COL_TEXT);
         }
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
-        if (ImGui::Button(item.label, ImVec2(-1.0f, 34.0f))) {
-            g_view = item.view;
-            g_selectedVin.clear();
+
+        // Show pending count badge on the Pending Approvals button.
+        if (item.view == View::PENDING_APPROVALS && pendCount > 0) {
+            char pendLabel[64];
+            snprintf(pendLabel, sizeof(pendLabel), "  Pending Approvals (%d)", pendCount);
+            if (ImGui::Button(pendLabel, ImVec2(-1.0f, 34.0f))) {
+                g_view = item.view;
+                g_selectedVin.clear();
+            }
+        } else {
+            if (ImGui::Button(item.label, ImVec2(-1.0f, 34.0f))) {
+                g_view = item.view;
+                g_selectedVin.clear();
+            }
         }
         ImGui::PopStyleVar();
         ImGui::PopStyleColor(4);
     }
 
-
-    {
+    // Delete Block button - only visible to Admin.
+    if (cw1::AccessControl::canDelete(currentRole)) {
         bool active = (g_view == View::DELETE_BLOCK);
         if (active) {
             ImGui::PushStyleColor(ImGuiCol_Button,        HexColor(0x5d2227));
@@ -503,6 +551,31 @@ static void RenderSidebar(cw1::Blockchain& chain) {
         }
         ImGui::PopStyleVar();
         ImGui::PopStyleColor(4);
+    }
+
+    // Logout button at the bottom of the sidebar navigation.
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    if (g_authMgr.isLoggedIn()) {
+        ImGui::TextColored(COL_MUTED, "Logged in as:");
+        ImGui::TextColored(COL_ACCENT, "%s", g_authMgr.currentUser().displayName.c_str());
+        ImGui::TextColored(COL_VERY_MUTED, "(%s)", cw1::roleToString(g_authMgr.currentUser().role).c_str());
+        ImGui::Spacing();
+        if (DrawDangerButton("  Logout", ImVec2(-1.0f, 30.0f))) {
+            std::string logoutMsg = "User " + g_authMgr.currentUser().username + " logged out";
+            chain.getAuditLog().log(cw1::AuditAction::USER_LOGOUT, logoutMsg);
+            if (chain.isDatabaseOpen()) {
+                chain.getDatabase()->insertAuditEntry(cw1::AuditAction::USER_LOGOUT,
+                    logoutMsg, cw1::TimeUtil::nowIso8601());
+            }
+            g_authMgr.logout();
+            g_showLoginScreen = true;
+            g_view = View::DASHBOARD;
+            g_loginUser[0] = '\0';
+            g_loginPass[0] = '\0';
+            g_loginError.clear();
+        }
     }
 
     ImGui::Spacing();
@@ -887,7 +960,7 @@ static void RenderFuelPriceTable(float rightW, float chartH) {
     ImGui::PopStyleColor(2);
 }
 
-static void RenderRecentBlocksTable(const std::vector<cw1::Block>& blocks) {
+static void RenderRecentBlocksTable(const std::vector<cw1::Block>& blocks, const cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "RECENT BLOCKS");
     ImGui::Separator();
     ImGui::Spacing();
@@ -910,6 +983,8 @@ static void RenderRecentBlocksTable(const std::vector<cw1::Block>& blocks) {
             size_t i = count - 1 - ri;
             const cw1::Block& b = blocks[i];
             const cw1::CarRecord& rec = b.getRecord();
+
+            if (chain.isDeleted(b.getIndex())) continue;
 
             ImGui::TableNextRow();
 
@@ -995,7 +1070,7 @@ static void RenderDashboard(cw1::Blockchain& chain) {
     }
 
     ImGui::Spacing(); ImGui::Spacing();
-    RenderRecentBlocksTable(blocks);
+    RenderRecentBlocksTable(blocks, chain);
 }
 
 
@@ -1150,6 +1225,12 @@ static void RenderCarDetail(cw1::Blockchain& chain) {
             ImGui::TableSetupColumn("PLabel", ImGuiTableColumnFlags_WidthFixed, 160.0f);
             ImGui::TableSetupColumn("PValue", ImGuiTableColumnFlags_WidthStretch);
 
+            // Sensitive fields are masked based on the current user's role
+            // using the SecurityUtil helper. Admin sees full values, others
+            // see masked identifiers.
+            const cw1::Role detailRole = g_authMgr.isLoggedIn()
+                ? g_authMgr.currentUser().role : cw1::Role::AUDITOR;
+
             switch (rec.stage) {
                 case cw1::BlockStage::PRODUCTION:
                     DetailRow("Factory Location", rec.factoryLocation.c_str());
@@ -1157,22 +1238,27 @@ static void RenderCarDetail(cw1::Blockchain& chain) {
                 case cw1::BlockStage::WAREHOUSE_INTAKE:
                     DetailRow("Warehouse Location", rec.warehouseLocation.c_str());
                     DetailRow("Received By", rec.receivedBy.c_str());
-                    DetailRow("Supplier ID", rec.supplierId.c_str());
+                    DetailRow("Supplier ID",
+                        cw1::SecurityUtil::visibleValueForRole(detailRole, "supplierId", rec.supplierId).c_str());
                     break;
                 case cw1::BlockStage::QUALITY_CHECK:
-                    DetailRow("Inspector ID", rec.inspectorId.c_str());
+                    DetailRow("Inspector ID",
+                        cw1::SecurityUtil::visibleValueForRole(detailRole, "inspectorId", rec.inspectorId).c_str());
                     DetailRow("QC Result", rec.passed ? "PASSED" : "FAILED",
                               rec.passed ? COL_GREEN_BR : COL_RED);
                     DetailRow("QC Notes", rec.qcNotes.c_str());
                     break;
                 case cw1::BlockStage::DEALER_DISPATCH:
-                    DetailRow("Dealer ID", rec.dealerId.c_str());
+                    DetailRow("Dealer ID",
+                        cw1::SecurityUtil::visibleValueForRole(detailRole, "dealerId", rec.dealerId).c_str());
                     DetailRow("Destination", rec.destination.c_str());
                     DetailRow("Transport Mode", rec.transportMode.c_str());
                     break;
                 case cw1::BlockStage::CUSTOMER_SALE: {
-                    DetailRow("Buyer ID", rec.buyerId.c_str());
-                    DetailRow("Retailer ID", rec.retailerId.c_str());
+                    DetailRow("Buyer ID",
+                        cw1::SecurityUtil::visibleValueForRole(detailRole, "buyerId", rec.buyerId).c_str());
+                    DetailRow("Retailer ID",
+                        cw1::SecurityUtil::visibleValueForRole(detailRole, "retailerId", rec.retailerId).c_str());
                     char priceBuf[64];
                     snprintf(priceBuf, sizeof(priceBuf), "MYR %.2f", rec.salePrice);
                     DetailRow("Sale Price", priceBuf, COL_GREEN_BR);
@@ -1213,8 +1299,38 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     ImGui::TextColored(COL_MUTED, "COMMON FIELDS");
     ImGui::Separator(); ImGui::Spacing();
 
+    // RBAC: Filter stage options based on the current user's role permissions.
+    // The stage combo only shows stages the user is allowed to create.
     ImGui::SetNextItemWidth(240);
-    ImGui::Combo("Stage##addstage", &g_formStage, k_stageNames, 5);
+    {
+        const cw1::Role userRole = g_authMgr.isLoggedIn()
+            ? g_authMgr.currentUser().role : cw1::Role::AUDITOR;
+
+        // Build a filtered list of allowed stages for this role.
+        static int allowedStageIndices[5];
+        static const char* allowedStageNames[5];
+        int allowedCount = 0;
+        for (int si = 0; si < 5; ++si) {
+            if (cw1::AccessControl::canCreateStage(userRole, static_cast<cw1::BlockStage>(si))) {
+                allowedStageIndices[allowedCount] = si;
+                allowedStageNames[allowedCount] = k_stageNames[si];
+                ++allowedCount;
+            }
+        }
+
+        if (allowedCount == 0) {
+            ImGui::TextColored(COL_RED, "Your role does not permit creating blocks.");
+            ImGui::PopStyleColor(4);
+            ImGui::PopStyleVar();
+            return;
+        }
+
+        // Map the combo selection to the actual stage index.
+        static int filteredIndex = 0;
+        if (filteredIndex >= allowedCount) filteredIndex = 0;
+        ImGui::Combo("Stage##addstage", &filteredIndex, allowedStageNames, allowedCount);
+        g_formStage = allowedStageIndices[filteredIndex];
+    }
     ImGui::Spacing();
 
 
@@ -1232,7 +1348,6 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
     if (g_formVin[0] != '\0') {
 
         std::string fullVin = g_formVin;
-        if (fullVin.substr(0, 3) != "VIN") fullVin = "VIN" + fullVin;
         if (chain.hasVin(fullVin))
             ImGui::TextColored(COL_GREEN_BR, "[+ Existing: %s]", fullVin.c_str());
         else
@@ -1317,7 +1432,14 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
 
     ImGui::Spacing(); ImGui::Spacing();
 
-    bool submit = DrawPrimaryButton("  Add Block  ", ImVec2(150, 36));
+    // The button label changes based on role: Admin adds directly, others submit
+    // a pending request that must be approved before it joins the chain.
+    const cw1::Role addRole = g_authMgr.isLoggedIn()
+        ? g_authMgr.currentUser().role : cw1::Role::AUDITOR;
+    const bool isAdmin = (addRole == cw1::Role::ADMIN);
+    const char* submitLabel = isAdmin ? "  Add Block (Direct)  " : "  Submit Pending Request  ";
+
+    bool submit = DrawPrimaryButton(submitLabel, ImVec2(220, 36));
 
     bool canSubmit = (g_formVin[0] != '\0');
 
@@ -1330,9 +1452,7 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         cw1::CarRecord r;
 
         {
-            std::string raw = g_formVin;
-            if (raw.substr(0, 3) != "VIN") raw = "VIN" + raw;
-            r.vin = raw;
+            r.vin = g_formVin;
         }
         r.manufacturer   = k_manufacturers[g_formMfrIndex];
         r.model          = k_modelsByMfr[g_formMfrIndex].models[g_formModelIndex];
@@ -1369,16 +1489,58 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
         }
 
         try {
-            const double seconds = cw1::measureSeconds([&]() {
-                chain.addBlock(r);
-            });
-            g_lastAddBlockSeconds = seconds;
-            PushToast("Block #" + std::to_string(chain.totalBlocks() - 1) +
-                      " added for " + r.vin +
-                      " | Operation took: " + cw1::formatSeconds(seconds) + " s",
-                      COL_GREEN_BR);
+            if (isAdmin) {
+                // Admin bypasses the pending workflow and adds blocks directly.
+                const double seconds = cw1::measureSeconds([&]() {
+                    chain.addBlock(r);
+                    // Set metadata on the newly added block.
+                    cw1::Block& added = const_cast<cw1::Block&>(chain.getChain().back());
+                    added.setCreatedBy(g_authMgr.currentUser().username);
+                    added.setApprovedBy(g_authMgr.currentUser().username);
+                    added.setSignatureVerified(true);
+                    if (chain.isDatabaseOpen()) {
+                        chain.getDatabase()->upsertBlock(added);
+                    }
+                });
+                g_lastAddBlockSeconds = seconds;
+                PushToast("Block #" + std::to_string(chain.totalBlocks() - 1) +
+                          " added for " + r.vin +
+                          " | Operation took: " + cw1::formatSeconds(seconds) + " s",
+                          COL_GREEN_BR);
+            } else {
+                // Non-admin users create a pending request with a signature.
+                const cw1::User& user = g_authMgr.currentUser();
+                cw1::PendingBlockRequest req;
+                req.requestedBy = user.username;
+                req.requestedByDisplay = user.displayName;
+                req.requestTimestamp = cw1::TimeUtil::nowIso8601();
+                req.requestedStage = r.stage;
+                req.payload = r;
 
+                // Generate a lightweight SHA-256 signature from the request data.
+                req.creatorSignature = cw1::SecurityUtil::signRequest(
+                    user.username, req.requestTimestamp,
+                    cw1::stageToString(r.stage), r.serialize(), user.secretKey);
 
+                int reqId = g_pendingMgr.submitRequest(req);
+                if (reqId >= 0) {
+                    std::string auditMsg = "User " + user.username +
+                        " submitted pending request #" + std::to_string(reqId) +
+                        " for VIN " + r.vin + " (" + cw1::stageToString(r.stage) + ")";
+                    chain.getAuditLog().log(cw1::AuditAction::APPROVAL_ACTION, auditMsg);
+                    if (chain.isDatabaseOpen()) {
+                        chain.getDatabase()->insertAuditEntry(
+                            cw1::AuditAction::APPROVAL_ACTION, auditMsg,
+                            cw1::TimeUtil::nowIso8601());
+                    }
+                    PushToast("Pending request #" + std::to_string(reqId) +
+                              " submitted for " + r.vin, COL_ACCENT);
+                } else {
+                    PushToast("Failed to submit request: " + g_pendingMgr.lastError(), COL_RED);
+                }
+            }
+
+            // Reset form fields after successful submission.
             g_formVin[0]    = '\0';
             g_formMfrIndex  = 0;  g_formModelIndex = 0;  g_formBranchIndex = 0;  g_formColorIndex = 0;
             g_formYear      = 2025;
@@ -1393,6 +1555,12 @@ static void RenderAddBlock(cw1::Blockchain& chain) {
             ReportGuiException(chain, cw1::AuditAction::BLOCK_ADDED,
                                "Add block failed", ex);
         }
+    }
+
+    if (!isAdmin) {
+        ImGui::Spacing();
+        ImGui::TextColored(COL_YELLOW,
+            "Note: Your role requires Admin approval before blocks are committed to the chain.");
     }
 
     if (g_lastAddBlockSeconds > 0.0) {
@@ -1428,6 +1596,7 @@ static void RenderGlobalChain(cw1::Blockchain& chain) {
         const cw1::LinkedBlockNode* node = head;
         while (node != nullptr) {
             const cw1::Block& b = *node->block;
+            if (chain.isDeleted(b.getIndex())) { node = node->next; continue; }
             const cw1::CarRecord& rec = b.getRecord();
             const std::string nodePtr = PointerToString(node);
             const std::string nextPtr =
@@ -1484,6 +1653,7 @@ static void RenderGlobalChain(cw1::Blockchain& chain) {
         const cw1::LinkedBlockNode* node = head;
         while (node != nullptr) {
             const cw1::Block& b = *node->block;
+            if (chain.isDeleted(b.getIndex())) { node = node->next; continue; }
             const std::string nodePtr = PointerToString(node);
             const std::string nextPtr =
                 (node->next != nullptr) ? PointerToString(node->next) : "nullptr";
@@ -1534,6 +1704,8 @@ static void RenderGlobalChain(cw1::Blockchain& chain) {
         for (size_t i = 0; i < blocks.size(); ++i) {
             const cw1::Block& b   = blocks[i];
             const cw1::CarRecord& rec = b.getRecord();
+
+            if (chain.isDeleted(b.getIndex())) continue;
 
             ImGui::TableNextRow();
 
@@ -1615,6 +1787,10 @@ static void RenderAuditLog(cw1::Blockchain& chain) {
         case cw1::AuditAction::TAMPER_SIMULATED: return COL_RED;
         case cw1::AuditAction::PERSISTENCE_IO:   return COL_ORANGE;
         case cw1::AuditAction::BLOCK_DELETED:    return COL_RED;
+        case cw1::AuditAction::USER_LOGIN:       return COL_ACCENT;
+        case cw1::AuditAction::USER_LOGOUT:      return COL_MUTED;
+        case cw1::AuditAction::APPROVAL_ACTION:  return COL_YELLOW;
+        case cw1::AuditAction::ACCESS_DENIED:    return COL_RED;
         default:                                  return COL_TEXT;
         }
     };
@@ -1627,6 +1803,10 @@ static void RenderAuditLog(cw1::Blockchain& chain) {
         case cw1::AuditAction::TAMPER_SIMULATED: return "TAMPER_SIMULATED";
         case cw1::AuditAction::PERSISTENCE_IO:   return "PERSISTENCE_IO";
         case cw1::AuditAction::BLOCK_DELETED:    return "BLOCK_DELETED";
+        case cw1::AuditAction::USER_LOGIN:       return "USER_LOGIN";
+        case cw1::AuditAction::USER_LOGOUT:      return "USER_LOGOUT";
+        case cw1::AuditAction::APPROVAL_ACTION:  return "APPROVAL_ACTION";
+        case cw1::AuditAction::ACCESS_DENIED:    return "ACCESS_DENIED";
         default:                                  return "UNKNOWN";
         }
     };
@@ -1988,10 +2168,17 @@ static void RenderTempChainVisual() {
 
 
 
+// Forward declaration so RenderIntegrity can call RenderSecurityPanel.
+static void RenderSecurityPanel(cw1::Blockchain& chain);
+
 static void RenderIntegrity(cw1::Blockchain& chain) {
     DrawSectionHeading("Blockchain Characteristics: Immutability");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
+    // RBAC: Only Admin can use the tamper simulation controls.
+    const cw1::Role intRole = g_authMgr.isLoggedIn()
+        ? g_authMgr.currentUser().role : cw1::Role::AUDITOR;
+    const bool canTamperHere = cw1::AccessControl::canTamper(intRole);
 
     if (g_tempChain.empty() && !g_tempGenerating) {
         g_tempChain = chain.getChain();
@@ -1999,12 +2186,17 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
         g_tempPrevCount = g_tempChain.size();
     }
 
-    RenderTempChainControls(chain);
+    if (canTamperHere) {
+        RenderTempChainControls(chain);
+    } else {
+        ImGui::TextColored(COL_YELLOW, "Tamper simulation controls are restricted to Admin users.");
+        ImGui::Spacing();
+    }
+
     RenderTempChainVerification();
     RenderTempChainVisual();
 
-
-    if (!g_tempChain.empty()) {
+    if (!g_tempChain.empty() && canTamperHere) {
         ImGui::Spacing();
         if (ImGui::Button("Clear Temp Chain##tempclear", ImVec2(180.0f, 34.0f))) {
             g_tempChain.clear();
@@ -2019,6 +2211,9 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
             PushToast("Temp chain cleared.", COL_MUTED);
         }
     }
+
+    // Security validation panel shows signature and approval statistics.
+    RenderSecurityPanel(chain);
 }
 
 
@@ -2028,6 +2223,18 @@ static void RenderIntegrity(cw1::Blockchain& chain) {
 static void RenderDeleteBlock(cw1::Blockchain& chain) {
     DrawSectionHeading("Delete Block");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+    // Backend permission check - even if the button was somehow reached by a
+    // non-admin user, the actual delete operation is blocked here.
+    const cw1::Role delRole = g_authMgr.isLoggedIn()
+        ? g_authMgr.currentUser().role : cw1::Role::AUDITOR;
+    if (!cw1::AccessControl::canDelete(delRole)) {
+        ImGui::TextColored(COL_RED, "Access Denied: Your role does not permit block deletion.");
+        std::string denyMsg = "Unauthorized delete page access by " +
+            (g_authMgr.isLoggedIn() ? g_authMgr.currentUser().username : std::string("unknown"));
+        chain.getAuditLog().log(cw1::AuditAction::ACCESS_DENIED, denyMsg);
+        return;
+    }
 
     ImGui::TextColored(COL_MUTED, "Chain size: %zu block(s)", chain.totalBlocks());
     ImGui::Spacing();
@@ -2193,6 +2400,344 @@ static void RenderToasts(float deltaTime) {
 
 
 
+// ---------------------------------------------------------------------------
+// Login screen - shown before any system page is accessible
+// ---------------------------------------------------------------------------
+static void RenderLoginScreen(cw1::Blockchain& chain) {
+    ImGuiIO& io = ImGui::GetIO();
+
+    // Centre the login card on screen.
+    const float cardW = 400.0f;
+    const float cardH = 340.0f;
+    const float cardX = (io.DisplaySize.x - cardW) * 0.5f;
+    const float cardY = (io.DisplaySize.y - cardH) * 0.5f;
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(io.DisplaySize);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, COL_BG_MAIN);
+    ImGui::Begin("##loginbg", nullptr,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
+    ImGui::PopStyleColor();
+
+    ImGui::SetCursorPos(ImVec2(cardX, cardY));
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
+    ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
+    ImGui::BeginChild("##logincard", ImVec2(cardW, cardH), true);
+
+    ImGui::Spacing(); ImGui::Spacing();
+    if (g_fontTitle) ImGui::PushFont(g_fontTitle);
+    ImGui::TextColored(COL_ACCENT, "  Car Warehouse Blockchain");
+    if (g_fontTitle) ImGui::PopFont();
+
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "  Please log in to continue.");
+    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+    ImGui::TextColored(COL_MUTED, "  Username");
+    ImGui::SetNextItemWidth(cardW - 40.0f);
+    ImGui::SetCursorPosX(20.0f);
+    ImGui::InputText("##login_user", g_loginUser, sizeof(g_loginUser));
+
+    ImGui::Spacing();
+    ImGui::TextColored(COL_MUTED, "  Password");
+    ImGui::SetNextItemWidth(cardW - 40.0f);
+    ImGui::SetCursorPosX(20.0f);
+    ImGui::InputText("##login_pass", g_loginPass, sizeof(g_loginPass),
+                     ImGuiInputTextFlags_Password);
+
+    ImGui::Spacing(); ImGui::Spacing();
+    ImGui::SetCursorPosX(20.0f);
+    if (DrawPrimaryButton("  Login  ", ImVec2(cardW - 40.0f, 36.0f))) {
+        if (g_authMgr.login(g_loginUser, g_loginPass)) {
+            g_showLoginScreen = false;
+            g_loginError.clear();
+            g_loginPass[0] = '\0';
+
+            std::string loginMsg = "User " + std::string(g_loginUser) +
+                " (" + cw1::roleToString(g_authMgr.currentUser().role) +
+                ") logged in successfully";
+            chain.getAuditLog().log(cw1::AuditAction::USER_LOGIN, loginMsg);
+            if (chain.isDatabaseOpen()) {
+                chain.getDatabase()->insertAuditEntry(cw1::AuditAction::USER_LOGIN,
+                    loginMsg, cw1::TimeUtil::nowIso8601());
+            }
+            PushToast("Welcome, " + g_authMgr.currentUser().displayName + "!",
+                      COL_GREEN_BR);
+        } else {
+            g_loginError = "Invalid username or password.";
+
+            std::string failMsg = "Login failed for username: " + std::string(g_loginUser);
+            chain.getAuditLog().log(cw1::AuditAction::USER_LOGIN, failMsg);
+            if (chain.isDatabaseOpen()) {
+                chain.getDatabase()->insertAuditEntry(cw1::AuditAction::USER_LOGIN,
+                    failMsg, cw1::TimeUtil::nowIso8601());
+            }
+        }
+    }
+
+    if (!g_loginError.empty()) {
+        ImGui::Spacing();
+        ImGui::TextColored(COL_RED, "  %s", g_loginError.c_str());
+    }
+
+    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+    ImGui::TextColored(COL_VERY_MUTED, "  Demo accounts:");
+    ImGui::TextColored(COL_VERY_MUTED, "  admin01/admin123  staff01/staff123  qc01/qc123");
+    ImGui::TextColored(COL_VERY_MUTED, "  dealer01/dealer123  auditor01/audit123");
+
+    ImGui::EndChild();
+    ImGui::PopStyleColor(2);
+    ImGui::End();
+}
+
+
+// ---------------------------------------------------------------------------
+// Pending Approvals page - shows request queue with approve/reject controls
+// ---------------------------------------------------------------------------
+static void RenderPendingApprovals(cw1::Blockchain& chain) {
+    DrawSectionHeading("Pending Block Approvals");
+    ImGui::SameLine();
+    ImGui::TextColored(COL_MUTED, " (%d pending)", g_pendingMgr.pendingCount());
+    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+    const cw1::Role viewerRole = g_authMgr.isLoggedIn()
+        ? g_authMgr.currentUser().role : cw1::Role::AUDITOR;
+    const bool canApprove = cw1::AccessControl::canApprove(viewerRole);
+
+    const auto& allRequests = g_pendingMgr.getAllRequests();
+    if (allRequests.empty()) {
+        ImGui::TextColored(COL_MUTED, "No pending requests.");
+        return;
+    }
+
+    ImGuiTableFlags tf = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH |
+                         ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
+                         ImGuiTableFlags_SizingStretchProp;
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8.0f, 6.0f));
+
+    int colCount = canApprove ? 8 : 7;
+    if (ImGui::BeginTable("##pending_requests", colCount, tf, ImVec2(-1, -1))) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn("ID",        ImGuiTableColumnFlags_WidthFixed, 45);
+        ImGui::TableSetupColumn("Requester",  ImGuiTableColumnFlags_WidthStretch, 1.5f);
+        ImGui::TableSetupColumn("VIN",        ImGuiTableColumnFlags_WidthStretch, 1.5f);
+        ImGui::TableSetupColumn("Stage",      ImGuiTableColumnFlags_WidthStretch, 1.2f);
+        ImGui::TableSetupColumn("Status",     ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("Signature",  ImGuiTableColumnFlags_WidthStretch, 1.0f);
+        ImGui::TableSetupColumn("Timestamp",  ImGuiTableColumnFlags_WidthStretch, 2.0f);
+        if (canApprove) {
+            ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 200);
+        }
+        ImGui::TableHeadersRow();
+
+        // Display requests in reverse order so the newest appear first.
+        for (int ri = static_cast<int>(allRequests.size()) - 1; ri >= 0; --ri) {
+            const cw1::PendingBlockRequest& req = allRequests[static_cast<size_t>(ri)];
+
+            ImGui::TableNextRow();
+
+            // Request ID
+            ImGui::TableNextColumn();
+            ImGui::Text("#%d", req.requestId);
+
+            // Requester
+            ImGui::TableNextColumn();
+            ImGui::TextColored(COL_TEXT, "%s", req.requestedByDisplay.c_str());
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::Text("Username: %s", req.requestedBy.c_str());
+                ImGui::EndTooltip();
+            }
+
+            // VIN
+            ImGui::TableNextColumn();
+            ImGui::TextColored(COL_ACCENT, "%s", req.payload.vin.c_str());
+
+            // Stage
+            ImGui::TableNextColumn();
+            ImGui::TextColored(StageColor(req.requestedStage), "%s",
+                               cw1::stageToString(req.requestedStage).c_str());
+
+            // Status badge
+            ImGui::TableNextColumn();
+            switch (req.status) {
+                case cw1::RequestStatus::PENDING:
+                    ImGui::TextColored(COL_YELLOW, "PENDING");
+                    break;
+                case cw1::RequestStatus::APPROVED:
+                    ImGui::TextColored(COL_GREEN_BR, "APPROVED");
+                    if (ImGui::IsItemHovered() && !req.approvedBy.empty()) {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Approved by: %s", req.approvedBy.c_str());
+                        ImGui::Text("At: %s", req.approvedTimestamp.c_str());
+                        ImGui::EndTooltip();
+                    }
+                    break;
+                case cw1::RequestStatus::REJECTED:
+                    ImGui::TextColored(COL_RED, "REJECTED");
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Rejected by: %s", req.approvedBy.c_str());
+                        if (!req.rejectReason.empty())
+                            ImGui::Text("Reason: %s", req.rejectReason.c_str());
+                        ImGui::EndTooltip();
+                    }
+                    break;
+            }
+
+            // Signature status
+            ImGui::TableNextColumn();
+            if (!req.creatorSignature.empty()) {
+                // Verify signature if we can find the creator's secret key.
+                const cw1::User* creator = g_authMgr.findUser(req.requestedBy);
+                if (creator != nullptr) {
+                    bool sigValid = cw1::SecurityUtil::verifySignature(
+                        req.creatorSignature, req.requestedBy,
+                        req.requestTimestamp,
+                        cw1::stageToString(req.requestedStage),
+                        req.payload.serialize(), creator->secretKey);
+                    ImGui::TextColored(sigValid ? COL_GREEN_BR : COL_RED,
+                                       sigValid ? "Valid" : "INVALID");
+                } else {
+                    ImGui::TextColored(COL_MUTED, "N/A");
+                }
+            } else {
+                ImGui::TextColored(COL_MUTED, "None");
+            }
+
+            // Timestamp
+            ImGui::TableNextColumn();
+            ImGui::TextColored(COL_MUTED, "%s", req.requestTimestamp.c_str());
+
+            // Approve / Reject buttons (Admin only, pending requests only)
+            if (canApprove) {
+                ImGui::TableNextColumn();
+                if (req.status == cw1::RequestStatus::PENDING) {
+                    // Verify signature before allowing approval.
+                    const cw1::User* creator = g_authMgr.findUser(req.requestedBy);
+                    bool sigValid = false;
+                    if (creator != nullptr && !req.creatorSignature.empty()) {
+                        sigValid = cw1::SecurityUtil::verifySignature(
+                            req.creatorSignature, req.requestedBy,
+                            req.requestTimestamp,
+                            cw1::stageToString(req.requestedStage),
+                            req.payload.serialize(), creator->secretKey);
+                    }
+
+                    std::string appBtnId = "Approve##ap" + std::to_string(req.requestId);
+                    if (DrawPrimaryButton(appBtnId.c_str(), ImVec2(80, 26))) {
+                        const std::string approver = g_authMgr.currentUser().username;
+                        if (g_pendingMgr.approveRequest(req.requestId, approver)) {
+                            // Commit the approved block to the chain with full metadata.
+                            chain.addBlockWithMetadata(
+                                req.payload, req.requestedBy, approver,
+                                req.requestId, req.creatorSignature, sigValid);
+
+                            std::string auditMsg = "User " + approver +
+                                " approved request #" + std::to_string(req.requestId) +
+                                " and committed block #" +
+                                std::to_string(chain.totalBlocks() - 1) +
+                                " for VIN " + req.payload.vin;
+                            chain.getAuditLog().log(cw1::AuditAction::APPROVAL_ACTION, auditMsg);
+                            if (chain.isDatabaseOpen()) {
+                                chain.getDatabase()->insertAuditEntry(
+                                    cw1::AuditAction::APPROVAL_ACTION, auditMsg,
+                                    cw1::TimeUtil::nowIso8601());
+                            }
+                            PushToast("Request #" + std::to_string(req.requestId) +
+                                      " approved -> Block #" +
+                                      std::to_string(chain.totalBlocks() - 1), COL_GREEN_BR);
+                        }
+                    }
+                    ImGui::SameLine();
+                    std::string rejBtnId = "Reject##rj" + std::to_string(req.requestId);
+                    if (DrawDangerButton(rejBtnId.c_str(), ImVec2(80, 26))) {
+                        ImGui::OpenPopup(("RejectPopup##" + std::to_string(req.requestId)).c_str());
+                    }
+
+                    // Rejection reason popup.
+                    if (ImGui::BeginPopup(("RejectPopup##" + std::to_string(req.requestId)).c_str())) {
+                        ImGui::Text("Reason for rejection:");
+                        ImGui::SetNextItemWidth(200);
+                        ImGui::InputText("##rejreason", g_rejectReasonBuf, sizeof(g_rejectReasonBuf));
+                        if (DrawDangerButton("Confirm Reject", ImVec2(140, 26))) {
+                            const std::string approver = g_authMgr.currentUser().username;
+                            if (g_pendingMgr.rejectRequest(req.requestId, approver,
+                                                           g_rejectReasonBuf)) {
+                                std::string auditMsg = "User " + approver +
+                                    " rejected request #" + std::to_string(req.requestId) +
+                                    " for VIN " + req.payload.vin +
+                                    " (reason: " + g_rejectReasonBuf + ")";
+                                chain.getAuditLog().log(cw1::AuditAction::APPROVAL_ACTION, auditMsg);
+                                if (chain.isDatabaseOpen()) {
+                                    chain.getDatabase()->insertAuditEntry(
+                                        cw1::AuditAction::APPROVAL_ACTION, auditMsg,
+                                        cw1::TimeUtil::nowIso8601());
+                                }
+                                PushToast("Request #" + std::to_string(req.requestId) +
+                                          " rejected.", COL_RED);
+                                g_rejectReasonBuf[0] = '\0';
+                            }
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::EndPopup();
+                    }
+                } else {
+                    ImGui::TextColored(COL_VERY_MUTED, "--");
+                }
+            }
+        }
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar();
+}
+
+
+// ---------------------------------------------------------------------------
+// Security validation panel - added to the integrity page
+// ---------------------------------------------------------------------------
+static void RenderSecurityPanel(cw1::Blockchain& chain) {
+    ImGui::Spacing(); ImGui::Spacing();
+    DrawSectionHeading("Security Validation");
+    ImGui::Separator(); ImGui::Spacing();
+
+    // Count blocks with valid/invalid/missing signatures.
+    const auto& blocks = chain.getChain();
+    int withSig = 0, verified = 0, unverified = 0, noSig = 0;
+    for (const auto& b : blocks) {
+        if (chain.isDeleted(b.getIndex())) continue;
+        if (b.getCreatorSignature().empty()) {
+            ++noSig;
+        } else {
+            ++withSig;
+            if (b.isSignatureVerified()) ++verified;
+            else ++unverified;
+        }
+    }
+
+    ImGui::TextColored(COL_MUTED, "Block Signature Summary:");
+    ImGui::Spacing();
+
+    char buf[64];
+    float halfW = (ImGui::GetContentRegionAvail().x - 8.0f) / 3.0f;
+    snprintf(buf, sizeof(buf), "%d", verified);
+    DrawStatCard(buf, "Signatures Verified", COL_GREEN_BR, ImVec2(halfW, 60));
+    ImGui::SameLine(0, 4);
+    snprintf(buf, sizeof(buf), "%d", unverified);
+    DrawStatCard(buf, "Unverified", COL_YELLOW, ImVec2(halfW, 60));
+    ImGui::SameLine(0, 4);
+    snprintf(buf, sizeof(buf), "%d", noSig);
+    DrawStatCard(buf, "No Signature", COL_MUTED, ImVec2(halfW, 60));
+
+    ImGui::Spacing();
+    snprintf(buf, sizeof(buf), "%d", g_pendingMgr.pendingCount());
+    ImGui::TextColored(COL_MUTED, "Pending Approval Requests:");
+    ImGui::SameLine();
+    ImGui::TextColored(COL_YELLOW, "%s", buf);
+}
+
+
 int main() {
 
     if (!glfwInit()) return 1;
@@ -2322,6 +2867,10 @@ int main() {
                 g_fuelMgr.seedFallbackDataIfEmpty();
                 g_fuelMgr.loadRecentHistory(16);
                 g_fuelInitialized = true;
+
+                // Attach the pending approval manager to the same database so
+                // pending requests persist across GUI restarts.
+                g_pendingMgr.attach(dbm->rawHandle());
             }
         }
     } catch (const std::exception& ex) {
@@ -2344,6 +2893,22 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+
+        // Show login screen if no user is authenticated yet.
+        if (g_showLoginScreen || !g_authMgr.isLoggedIn()) {
+            RenderLoginScreen(chain);
+            RenderToasts(io.DeltaTime);
+
+            ImGui::Render();
+            int dispW, dispH;
+            glfwGetFramebufferSize(window, &dispW, &dispH);
+            glViewport(0, 0, dispW, dispH);
+            glClearColor(0.051f, 0.067f, 0.090f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            glfwSwapBuffers(window);
+            continue;
+        }
 
         if (g_tempGenerating && !g_tempChain.empty()) {
             g_tempAccumulator += io.DeltaTime;
@@ -2441,13 +3006,14 @@ int main() {
         ImGui::Spacing(); ImGui::Spacing();
 
         switch (g_view) {
-        case View::DASHBOARD:    RenderDashboard(chain);    break;
-        case View::CAR_DETAIL:   RenderCarDetail(chain);    break;
-        case View::ADD_BLOCK:    RenderAddBlock(chain);     break;
-        case View::GLOBAL_CHAIN: RenderGlobalChain(chain);  break;
-        case View::AUDIT_LOG:    RenderAuditLog(chain);     break;
-        case View::INTEGRITY:    RenderIntegrity(chain);    break;
-        case View::DELETE_BLOCK: RenderDeleteBlock(chain);  break;
+        case View::DASHBOARD:          RenderDashboard(chain);          break;
+        case View::CAR_DETAIL:         RenderCarDetail(chain);          break;
+        case View::ADD_BLOCK:          RenderAddBlock(chain);           break;
+        case View::PENDING_APPROVALS:  RenderPendingApprovals(chain);   break;
+        case View::GLOBAL_CHAIN:       RenderGlobalChain(chain);        break;
+        case View::AUDIT_LOG:          RenderAuditLog(chain);           break;
+        case View::INTEGRITY:          RenderIntegrity(chain);          break;
+        case View::DELETE_BLOCK:       RenderDeleteBlock(chain);        break;
         }
 
         ImGui::EndChild();

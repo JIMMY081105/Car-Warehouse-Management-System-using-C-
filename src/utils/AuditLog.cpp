@@ -18,6 +18,10 @@ std::string actionToString(AuditAction action) {
         case AuditAction::TAMPER_SIMULATED:  return "TAMPER_SIMULATED";
         case AuditAction::PERSISTENCE_IO:    return "PERSISTENCE_IO";
         case AuditAction::BLOCK_DELETED:     return "BLOCK_DELETED";
+        case AuditAction::USER_LOGIN:        return "USER_LOGIN";
+        case AuditAction::USER_LOGOUT:       return "USER_LOGOUT";
+        case AuditAction::APPROVAL_ACTION:   return "APPROVAL_ACTION";
+        case AuditAction::ACCESS_DENIED:     return "ACCESS_DENIED";
         default:                             return "UNKNOWN";
     }
 }
@@ -30,6 +34,10 @@ AuditAction stringToAction(const std::string& str) {
     if (str == "TAMPER_SIMULATED")  return AuditAction::TAMPER_SIMULATED;
     if (str == "PERSISTENCE_IO")    return AuditAction::PERSISTENCE_IO;
     if (str == "BLOCK_DELETED")     return AuditAction::BLOCK_DELETED;
+    if (str == "USER_LOGIN")        return AuditAction::USER_LOGIN;
+    if (str == "USER_LOGOUT")       return AuditAction::USER_LOGOUT;
+    if (str == "APPROVAL_ACTION")   return AuditAction::APPROVAL_ACTION;
+    if (str == "ACCESS_DENIED")     return AuditAction::ACCESS_DENIED;
     return AuditAction::PERSISTENCE_IO;
 }
 

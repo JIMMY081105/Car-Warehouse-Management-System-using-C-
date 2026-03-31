@@ -55,6 +55,31 @@ void Blockchain::addBlock(const CarRecord& record) {
     }
 }
 
+void Blockchain::addBlockWithMetadata(const CarRecord& record,
+                                      const std::string& createdBy,
+                                      const std::string& approvedBy,
+                                      int originRequestId,
+                                      const std::string& creatorSignature,
+                                      bool signatureVerified) {
+    // Use the existing addBlock logic to maintain chain linkage, VIN indexing,
+    // linked-list mirroring, and audit logging.
+    addBlock(record);
+
+    // Set security metadata on the newly appended block. These fields are
+    // excluded from hash computation so the chain integrity remains intact.
+    Block& added = chain_.back();
+    added.setCreatedBy(createdBy);
+    added.setApprovedBy(approvedBy);
+    added.setOriginRequestId(originRequestId);
+    added.setCreatorSignature(creatorSignature);
+    added.setSignatureVerified(signatureVerified);
+
+    // Re-persist the block with its metadata so SQLite stores the full record.
+    if (db_ && db_->isOpen()) {
+        db_->upsertBlock(added);
+    }
+}
+
 const std::vector<Block>& Blockchain::getChain() const noexcept {
     return chain_;
 }
@@ -71,6 +96,8 @@ std::vector<const Block*> Blockchain::getCarHistory(const std::string& vin) cons
     if (it != vinIndex_.end()) {
         history.reserve(it->second.size());
         for (std::size_t idx : it->second) {
+            // Skip tombstoned blocks so they don't appear in vehicle history views.
+            if (deletedRecords_.find(idx) != deletedRecords_.end()) continue;
             history.push_back(&chain_[idx]);
         }
     }
@@ -85,7 +112,17 @@ std::vector<std::string> Blockchain::getAllVins() const {
     std::vector<std::string> vins;
     vins.reserve(vinIndex_.size());
     for (const auto& [vin, indices] : vinIndex_) {
-        vins.push_back(vin);
+        // Skip VINs where every block is a tombstone so they don't appear in the sidebar or dashboard.
+        bool allDeleted = true;
+        for (std::size_t idx : indices) {
+            if (deletedRecords_.find(idx) == deletedRecords_.end()) {
+                allDeleted = false;
+                break;
+            }
+        }
+        if (!allDeleted) {
+            vins.push_back(vin);
+        }
     }
     return vins;
 }
@@ -96,7 +133,15 @@ BlockStage Blockchain::getLatestStage(const std::string& vin) const {
         throw std::out_of_range("VIN not found: " + vin);
     }
 
-    return chain_[it->second.back()].getRecord().stage;
+    // Walk backwards to find the latest non-tombstoned block for this VIN.
+    const auto& indices = it->second;
+    for (auto rit = indices.rbegin(); rit != indices.rend(); ++rit) {
+        if (deletedRecords_.find(*rit) == deletedRecords_.end()) {
+            return chain_[*rit].getRecord().stage;
+        }
+    }
+    // All blocks deleted - return stage from the last block anyway to avoid throwing.
+    return chain_[indices.back()].getRecord().stage;
 }
 
 
@@ -104,6 +149,7 @@ BlockStage Blockchain::getLatestStage(const std::string& vin) const {
 std::vector<const Block*> Blockchain::searchByBrand(const std::string& brand) const {
     std::vector<const Block*> results;
     for (const auto& block : chain_) {
+        if (deletedRecords_.find(block.getIndex()) != deletedRecords_.end()) continue;
         if (containsIgnoreCase(block.getRecord().manufacturer, brand)) {
             results.push_back(&block);
         }
@@ -118,6 +164,7 @@ std::vector<const Block*> Blockchain::searchByBrand(const std::string& brand) co
 std::vector<const Block*> Blockchain::searchByStage(BlockStage stage) const {
     std::vector<const Block*> results;
     for (const auto& block : chain_) {
+        if (deletedRecords_.find(block.getIndex()) != deletedRecords_.end()) continue;
         if (block.getRecord().stage == stage) {
             results.push_back(&block);
         }
@@ -132,6 +179,7 @@ std::vector<const Block*> Blockchain::searchByStage(BlockStage stage) const {
 std::vector<const Block*> Blockchain::searchGeneral(const std::string& query) const {
     std::vector<const Block*> results;
     for (const auto& block : chain_) {
+        if (deletedRecords_.find(block.getIndex()) != deletedRecords_.end()) continue;
         const CarRecord& rec = block.getRecord();
         if (containsIgnoreCase(rec.vin, query) ||
             containsIgnoreCase(rec.manufacturer, query) ||
@@ -263,6 +311,8 @@ bool Blockchain::softDeleteBlock(std::size_t index, std::string& outMessage) {
     auditLog_.log(AuditAction::BLOCK_DELETED, outMessage);
 
     if (db_ && db_->isOpen()) {
+        // Persist the original record so restore survives GUI restarts.
+        db_->saveDeletedOriginal(index, deletedRecords_[index]);
         // Every later block was rehashed, so the persisted rows must also be updated from the edit point onward.
         for (std::size_t i = index; i < chain_.size(); ++i) {
             db_->upsertBlock(chain_[i]);
@@ -294,6 +344,8 @@ bool Blockchain::restoreBlock(std::size_t index, std::string& outMessage) {
     auditLog_.log(AuditAction::BLOCK_DELETED, outMessage);
 
     if (db_ && db_->isOpen()) {
+        // Remove the persisted original since the block is no longer deleted.
+        db_->removeDeletedOriginal(index);
         for (std::size_t i = index; i < chain_.size(); ++i) {
             db_->upsertBlock(chain_[i]);
         }
@@ -574,6 +626,11 @@ bool Blockchain::saveToDB() {
                                          : db_->lastError());
         }
 
+        // Re-persist deleted originals since fullResync wipes and rebuilds all tables.
+        for (const auto& [idx, rec] : deletedRecords_) {
+            db_->saveDeletedOriginal(idx, rec);
+        }
+
         const std::string msg = "saveToDB succeeded";
         auditLog_.log(AuditAction::PERSISTENCE_IO, msg);
         db_->insertAuditEntry(AuditAction::PERSISTENCE_IO, msg,
@@ -619,6 +676,9 @@ bool Blockchain::loadFromDB() {
         vinIndex_ = std::move(loadedIndex);
         rebuildLinkedView();
 
+        // Restore the deleted-originals map so soft-deleted blocks can still be restored after a GUI restart.
+        deletedRecords_ = db_->loadDeletedOriginals();
+
         // Audit entries are stored separately in SQLite, so they are replayed into the in-memory linked audit log after the chain itself is restored.
         auto dbAudit = db_->loadAuditLog();
         if (dbAudit.empty() && !db_->lastError().empty()) {
@@ -658,7 +718,7 @@ std::vector<const Block*> Blockchain::searchBySQL(const std::string& query) cons
     std::vector<const Block*> results;
     results.reserve(indices.size());
     for (std::size_t idx : indices) {
-        if (idx < chain_.size()) {
+        if (idx < chain_.size() && deletedRecords_.find(idx) == deletedRecords_.end()) {
             results.push_back(&chain_[idx]);
         }
     }

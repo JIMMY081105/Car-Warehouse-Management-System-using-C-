@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstddef>
+#include <map>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -44,6 +45,11 @@ enum class BlockCol : int {
     ManufacturerId,
     IsTombstone,
     Sha3Hash,
+    CreatedBy,
+    ApprovedBy,
+    OriginRequestId,
+    CreatorSignature,
+    SignatureVerified,
     COUNT
 };
 
@@ -93,6 +99,15 @@ public:
 
     // Resynchronises both blocks and audit log after a substantial reload.
     bool fullResync(const std::vector<Block>& chain, const AuditLog& auditLog);
+
+    // Persists the original CarRecord for a soft-deleted block so restore survives GUI restarts.
+    bool saveDeletedOriginal(std::size_t blockIndex, const CarRecord& original);
+
+    // Removes a persisted deleted-original after a block is restored.
+    bool removeDeletedOriginal(std::size_t blockIndex);
+
+    // Loads all persisted deleted originals so the in-memory deletedRecords_ map can be rebuilt on startup.
+    std::map<std::size_t, CarRecord> loadDeletedOriginals();
 
 private:
     void createTables();

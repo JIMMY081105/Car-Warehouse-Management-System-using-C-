@@ -16,7 +16,11 @@ enum class AuditAction {
     CHAIN_VIEWED,
     TAMPER_SIMULATED,
     PERSISTENCE_IO,
-    BLOCK_DELETED
+    BLOCK_DELETED,
+    USER_LOGIN,        // Tracks successful and failed authentication attempts
+    USER_LOGOUT,       // Records when a user ends their session
+    APPROVAL_ACTION,   // Logs pending request submissions, approvals, and rejections
+    ACCESS_DENIED      // Captures unauthorised action attempts for security auditing
 };
 
 std::string actionToString(AuditAction action);

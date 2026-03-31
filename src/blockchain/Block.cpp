@@ -141,4 +141,51 @@ std::uint64_t Block::generateNonce() {
     return dist(engine);
 }
 
+// ---------------------------------------------------------------------------
+// Security metadata accessors
+// ---------------------------------------------------------------------------
+// These fields track who created and approved the block as part of the
+// multi-level security upgrade. They are intentionally excluded from hash
+// computation so existing chain integrity checks remain unchanged.
+
+const std::string& Block::getCreatedBy() const noexcept {
+    return createdBy_;
+}
+
+const std::string& Block::getApprovedBy() const noexcept {
+    return approvedBy_;
+}
+
+int Block::getOriginRequestId() const noexcept {
+    return originRequestId_;
+}
+
+const std::string& Block::getCreatorSignature() const noexcept {
+    return creatorSignature_;
+}
+
+bool Block::isSignatureVerified() const noexcept {
+    return signatureVerified_;
+}
+
+void Block::setCreatedBy(std::string value) {
+    createdBy_ = std::move(value);
+}
+
+void Block::setApprovedBy(std::string value) {
+    approvedBy_ = std::move(value);
+}
+
+void Block::setOriginRequestId(int id) {
+    originRequestId_ = id;
+}
+
+void Block::setCreatorSignature(std::string sig) {
+    creatorSignature_ = std::move(sig);
+}
+
+void Block::setSignatureVerified(bool verified) {
+    signatureVerified_ = verified;
+}
+
 }

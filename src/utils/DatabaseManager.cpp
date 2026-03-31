@@ -97,7 +97,12 @@ void DatabaseManager::createTables() {
         "    warranty_expiry     TEXT,"
         "    manufacturer_id     TEXT,"
         "    is_tombstone        INTEGER NOT NULL DEFAULT 0,"
-        "    sha3_hash           TEXT"
+        "    sha3_hash           TEXT,"
+        "    created_by          TEXT,"
+        "    approved_by         TEXT,"
+        "    origin_request_id   INTEGER DEFAULT -1,"
+        "    creator_signature   TEXT,"
+        "    signature_verified  INTEGER DEFAULT 0"
         ")";
 
     const char* auditSQL =
@@ -108,14 +113,57 @@ void DatabaseManager::createTables() {
         "    timestamp TEXT NOT NULL"
         ")";
 
+    const char* deletedOriginalsSQL =
+        "CREATE TABLE IF NOT EXISTS deleted_originals ("
+        "    block_index     INTEGER PRIMARY KEY,"
+        "    vin             TEXT NOT NULL,"
+        "    manufacturer    TEXT NOT NULL,"
+        "    model           TEXT NOT NULL,"
+        "    color           TEXT NOT NULL,"
+        "    production_year INTEGER NOT NULL,"
+        "    stage           INTEGER NOT NULL,"
+        "    factory_location    TEXT,"
+        "    warehouse_location  TEXT,"
+        "    received_by         TEXT,"
+        "    supplier_id         TEXT,"
+        "    inspector_id        TEXT,"
+        "    passed              INTEGER,"
+        "    qc_notes            TEXT,"
+        "    dealer_id           TEXT,"
+        "    destination         TEXT,"
+        "    transport_mode      TEXT,"
+        "    buyer_id            TEXT,"
+        "    retailer_id         TEXT,"
+        "    sale_price          REAL,"
+        "    warranty_expiry     TEXT,"
+        "    manufacturer_id     TEXT"
+        ")";
+
     execSQL(blocksSQL);
     execSQL(auditSQL);
+    execSQL(deletedOriginalsSQL);
 
     if (!execSQL("ALTER TABLE blocks ADD COLUMN sha3_hash TEXT")) {
         if (lastError_.find("duplicate") != std::string::npos) {
             lastError_.clear();
         }
     }
+
+    // Security metadata columns added for the multi-level security upgrade.
+    // Each ALTER TABLE is tried independently so existing databases gain the
+    // new columns safely without breaking the schema.
+    auto tryAddColumn = [&](const char* sql) {
+        if (!execSQL(sql)) {
+            if (lastError_.find("duplicate") != std::string::npos) {
+                lastError_.clear();
+            }
+        }
+    };
+    tryAddColumn("ALTER TABLE blocks ADD COLUMN created_by TEXT");
+    tryAddColumn("ALTER TABLE blocks ADD COLUMN approved_by TEXT");
+    tryAddColumn("ALTER TABLE blocks ADD COLUMN origin_request_id INTEGER DEFAULT -1");
+    tryAddColumn("ALTER TABLE blocks ADD COLUMN creator_signature TEXT");
+    tryAddColumn("ALTER TABLE blocks ADD COLUMN signature_verified INTEGER DEFAULT 0");
 }
 
 bool DatabaseManager::execSQL(const std::string& sql) {
@@ -170,6 +218,13 @@ static bool bindBlockToStmt(sqlite3_stmt* stmt, const Block& block) {
     sqlite3_bind_int(stmt,   bind(BlockCol::IsTombstone),      isTombstone);
     sqlite3_bind_text(stmt,  bind(BlockCol::Sha3Hash),         block.getSha3Hash().c_str(), -1, SQLITE_TRANSIENT);
 
+    // Security metadata columns added for the approval workflow.
+    sqlite3_bind_text(stmt,  bind(BlockCol::CreatedBy),        block.getCreatedBy().c_str(),        -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  bind(BlockCol::ApprovedBy),       block.getApprovedBy().c_str(),       -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt,   bind(BlockCol::OriginRequestId),  block.getOriginRequestId());
+    sqlite3_bind_text(stmt,  bind(BlockCol::CreatorSignature), block.getCreatorSignature().c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt,   bind(BlockCol::SignatureVerified),block.isSignatureVerified() ? 1 : 0);
+
     return true;
 }
 
@@ -180,8 +235,10 @@ static const char* k_upsertSQL =
     "  factory_location, warehouse_location, received_by, supplier_id,"
     "  inspector_id, passed, qc_notes, dealer_id, destination,"
     "  transport_mode, buyer_id, retailer_id, sale_price,"
-    "  warranty_expiry, manufacturer_id, is_tombstone, sha3_hash"
-    ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+    "  warranty_expiry, manufacturer_id, is_tombstone, sha3_hash,"
+    "  created_by, approved_by, origin_request_id, creator_signature,"
+    "  signature_verified"
+    ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
 bool DatabaseManager::saveAllBlocks(const std::vector<Block>& chain) {
     lastError_.clear();
@@ -281,6 +338,25 @@ std::vector<Block> DatabaseManager::loadAllBlocks() {
                             nonce,
                             std::move(rec),
                             std::move(sha3Hash));
+
+        // Read security metadata columns if they exist in this database.
+        Block& loaded = result.back();
+        int colCount = sqlite3_column_count(stmt);
+        if (colCount > col(BlockCol::CreatedBy)) {
+            loaded.setCreatedBy(getText(col(BlockCol::CreatedBy)));
+        }
+        if (colCount > col(BlockCol::ApprovedBy)) {
+            loaded.setApprovedBy(getText(col(BlockCol::ApprovedBy)));
+        }
+        if (colCount > col(BlockCol::OriginRequestId)) {
+            loaded.setOriginRequestId(getInt(col(BlockCol::OriginRequestId)));
+        }
+        if (colCount > col(BlockCol::CreatorSignature)) {
+            loaded.setCreatorSignature(getText(col(BlockCol::CreatorSignature)));
+        }
+        if (colCount > col(BlockCol::SignatureVerified)) {
+            loaded.setSignatureVerified(getInt(col(BlockCol::SignatureVerified)) != 0);
+        }
     }
 
     if (rc != SQLITE_DONE) {
@@ -582,6 +658,123 @@ bool DatabaseManager::fullResync(const std::vector<Block>& chain,
     }
 
     return execSQL("COMMIT");
+}
+
+bool DatabaseManager::saveDeletedOriginal(std::size_t blockIndex, const CarRecord& r) {
+    lastError_.clear();
+    if (db_ == nullptr) { lastError_ = "Database not open"; return false; }
+
+    static const char* sql =
+        "INSERT OR REPLACE INTO deleted_originals ("
+        "  block_index, vin, manufacturer, model, color, production_year, stage,"
+        "  factory_location, warehouse_location, received_by, supplier_id,"
+        "  inspector_id, passed, qc_notes, dealer_id, destination,"
+        "  transport_mode, buyer_id, retailer_id, sale_price,"
+        "  warranty_expiry, manufacturer_id"
+        ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) { lastError_ = sqlite3_errmsg(db_); return false; }
+
+    sqlite3_bind_int64(stmt, 1, static_cast<sqlite3_int64>(blockIndex));
+    sqlite3_bind_text(stmt,  2,  r.vin.c_str(),               -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  3,  r.manufacturer.c_str(),       -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  4,  r.model.c_str(),              -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  5,  r.color.c_str(),              -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt,   6,  r.productionYear);
+    sqlite3_bind_int(stmt,   7,  static_cast<int>(r.stage));
+    sqlite3_bind_text(stmt,  8,  r.factoryLocation.c_str(),    -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  9,  r.warehouseLocation.c_str(),  -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  10, r.receivedBy.c_str(),         -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  11, r.supplierId.c_str(),         -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  12, r.inspectorId.c_str(),        -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt,   13, r.passed ? 1 : 0);
+    sqlite3_bind_text(stmt,  14, r.qcNotes.c_str(),            -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  15, r.dealerId.c_str(),           -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  16, r.destination.c_str(),        -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  17, r.transportMode.c_str(),      -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  18, r.buyerId.c_str(),            -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  19, r.retailerId.c_str(),         -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(stmt,20, r.salePrice);
+    sqlite3_bind_text(stmt,  21, r.warrantyExpiry.c_str(),     -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  22, r.manufacturerId.c_str(),     -1, SQLITE_TRANSIENT);
+
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) { lastError_ = sqlite3_errmsg(db_); sqlite3_finalize(stmt); return false; }
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool DatabaseManager::removeDeletedOriginal(std::size_t blockIndex) {
+    lastError_.clear();
+    if (db_ == nullptr) { lastError_ = "Database not open"; return false; }
+
+    const char* sql = "DELETE FROM deleted_originals WHERE block_index = ?";
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) { lastError_ = sqlite3_errmsg(db_); return false; }
+
+    sqlite3_bind_int64(stmt, 1, static_cast<sqlite3_int64>(blockIndex));
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) { lastError_ = sqlite3_errmsg(db_); sqlite3_finalize(stmt); return false; }
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+std::map<std::size_t, CarRecord> DatabaseManager::loadDeletedOriginals() {
+    lastError_.clear();
+    std::map<std::size_t, CarRecord> result;
+    if (db_ == nullptr) { lastError_ = "Database not open"; return result; }
+
+    const char* sql = "SELECT * FROM deleted_originals ORDER BY block_index ASC";
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) { lastError_ = sqlite3_errmsg(db_); return result; }
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        auto getInt    = [&](int c) { return sqlite3_column_int(stmt, c); };
+        auto getInt64  = [&](int c) { return sqlite3_column_int64(stmt, c); };
+        auto getText   = [&](int c) -> std::string {
+            const unsigned char* t = sqlite3_column_text(stmt, c);
+            return (t != nullptr) ? std::string(reinterpret_cast<const char*>(t)) : std::string();
+        };
+        auto getDouble = [&](int c) { return sqlite3_column_double(stmt, c); };
+
+        std::size_t idx = static_cast<std::size_t>(getInt64(0));
+
+        CarRecord rec;
+        rec.vin              = getText(1);
+        rec.manufacturer     = getText(2);
+        rec.model            = getText(3);
+        rec.color            = getText(4);
+        rec.productionYear   = getInt(5);
+        int stageInt         = getInt(6);
+        if (stageInt >= static_cast<int>(BlockStage::PRODUCTION) &&
+            stageInt <= static_cast<int>(BlockStage::CUSTOMER_SALE)) {
+            rec.stage = static_cast<BlockStage>(stageInt);
+        }
+        rec.factoryLocation    = getText(7);
+        rec.warehouseLocation  = getText(8);
+        rec.receivedBy         = getText(9);
+        rec.supplierId         = getText(10);
+        rec.inspectorId        = getText(11);
+        rec.passed             = (getInt(12) != 0);
+        rec.qcNotes            = getText(13);
+        rec.dealerId           = getText(14);
+        rec.destination        = getText(15);
+        rec.transportMode      = getText(16);
+        rec.buyerId            = getText(17);
+        rec.retailerId         = getText(18);
+        rec.salePrice          = getDouble(19);
+        rec.warrantyExpiry     = getText(20);
+        rec.manufacturerId     = getText(21);
+
+        result[idx] = std::move(rec);
+    }
+
+    sqlite3_finalize(stmt);
+    return result;
 }
 
 }

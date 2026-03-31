@@ -66,6 +66,21 @@ inline std::string formatBlockForDisplay(const Block& block) {
             break;
     }
 
+    // Security metadata section shows creator and approver information when
+    // the block was committed through the pending approval workflow.
+    if (!block.getCreatedBy().empty() || !block.getApprovedBy().empty()) {
+        out << "Security     :\n";
+        if (!block.getCreatedBy().empty())
+            out << "  - Created By        : " << block.getCreatedBy() << '\n';
+        if (!block.getApprovedBy().empty())
+            out << "  - Approved By       : " << block.getApprovedBy() << '\n';
+        if (block.getOriginRequestId() >= 0)
+            out << "  - Origin Request ID : #" << block.getOriginRequestId() << '\n';
+        if (!block.getCreatorSignature().empty())
+            out << "  - Signature         : " << block.getCreatorSignature().substr(0, 16) << "...\n";
+        out << "  - Signature Verified: " << (block.isSignatureVerified() ? "YES" : "NO") << '\n';
+    }
+
     out << "======================================================================\n";
     return out.str();
 }
