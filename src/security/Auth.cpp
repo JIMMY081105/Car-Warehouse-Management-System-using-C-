@@ -65,7 +65,7 @@ void AuthManager::initDemoUsers() {
         "staff01",
         HashUtil::sha256("staff123"),
         Role::WAREHOUSE_STAFF,
-        "Ahmad bin Ismail",
+        "staff MA YIXING",
         "secret-key-staff-01"
     });
 
@@ -73,7 +73,7 @@ void AuthManager::initDemoUsers() {
         "qc01",
         HashUtil::sha256("qc123"),
         Role::QC_INSPECTOR,
-        "Inspector Lee",
+        "inspector MA YIXING",
         "secret-key-qc-01"
     });
 
@@ -81,7 +81,7 @@ void AuthManager::initDemoUsers() {
         "dealer01",
         HashUtil::sha256("dealer123"),
         Role::DEALER,
-        "Raj Kumar",
+        "MA YIXING",
         "secret-key-dealer-01"
     });
 
@@ -89,7 +89,7 @@ void AuthManager::initDemoUsers() {
         "auditor01",
         HashUtil::sha256("audit123"),
         Role::AUDITOR,
-        "Nurul Aina",
+        "MA YIXING",
         "secret-key-auditor-01"
     });
 }

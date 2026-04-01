@@ -65,6 +65,7 @@ static const ImVec4 COL_BORDER_SOFT = HexColor(0x30363d, 0.80f);
 static ImFont* g_fontBody = nullptr;
 static ImFont* g_fontSection = nullptr;
 static ImFont* g_fontTitle = nullptr;
+static ImFont* g_fontHero = nullptr;   // Extra-large font for the login hero title
 
 
 
@@ -698,12 +699,18 @@ static void RenderSidebar(cw1::Blockchain& chain) {
 static void DrawStatCard(const char* value, const char* label, ImVec4 col, ImVec2 sz) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_ELEV);
     ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
-    ImGui::BeginChild(label, sz, true);
+    const bool autoHeight = (sz.y <= 0.0f);
+    const ImVec2 childSize(sz.x, autoHeight ? 0.0f : sz.y);
+    const ImGuiChildFlags childFlags = ImGuiChildFlags_Borders
+                                     | (autoHeight ? ImGuiChildFlags_AutoResizeY : 0);
+    ImGui::BeginChild(label, childSize, childFlags,
+                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
     if (g_fontSection != nullptr) ImGui::PushFont(g_fontSection);
     ImGui::TextColored(col, "%s", value);
     if (g_fontSection != nullptr) ImGui::PopFont();
     ImGui::TextColored(COL_MUTED, "%s", label);
+    ImGui::Spacing();
     ImGui::EndChild();
     ImGui::PopStyleColor(2);
 }
@@ -2407,29 +2414,40 @@ static void RenderLoginScreen(cw1::Blockchain& chain) {
     ImGuiIO& io = ImGui::GetIO();
 
     // Centre the login card on screen.
-    const float cardW = 400.0f;
-    const float cardH = 340.0f;
+    const float cardW = 420.0f;
+    const float cardH = 420.0f;
+    const float titleGap = 70.0f;  // space for hero title above the card
+    const float totalH = titleGap + cardH;
     const float cardX = (io.DisplaySize.x - cardW) * 0.5f;
-    const float cardY = (io.DisplaySize.y - cardH) * 0.5f;
+    const float startY = (io.DisplaySize.y - totalH) * 0.5f;
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(io.DisplaySize);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, COL_BG_MAIN);
     ImGui::Begin("##loginbg", nullptr,
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     ImGui::PopStyleColor();
 
-    ImGui::SetCursorPos(ImVec2(cardX, cardY));
+    // Hero title above the card (42px bold).
+    if (g_fontHero) ImGui::PushFont(g_fontHero);
+    const char* bigTitle = "Car Warehouse Blockchain";
+    float titleW = ImGui::CalcTextSize(bigTitle).x;
+    ImGui::SetCursorPos(ImVec2((io.DisplaySize.x - titleW) * 0.5f, startY));
+    ImGui::TextColored(COL_ACCENT, "%s", bigTitle);
+    if (g_fontHero) ImGui::PopFont();
+
+    ImGui::SetCursorPos(ImVec2(cardX, startY + titleGap));
     ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
     ImGui::PushStyleColor(ImGuiCol_Border, COL_BORDER_SOFT);
-    ImGui::BeginChild("##logincard", ImVec2(cardW, cardH), true);
+    ImGui::BeginChild("##logincard", ImVec2(cardW, cardH), true,
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     ImGui::Spacing(); ImGui::Spacing();
     if (g_fontTitle) ImGui::PushFont(g_fontTitle);
-    ImGui::TextColored(COL_ACCENT, "  Car Warehouse Blockchain");
+    ImGui::TextColored(COL_TEXT, "  Login");
     if (g_fontTitle) ImGui::PopFont();
-
     ImGui::Spacing();
     ImGui::TextColored(COL_MUTED, "  Please log in to continue.");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -2720,15 +2738,27 @@ static void RenderSecurityPanel(cw1::Blockchain& chain) {
     ImGui::Spacing();
 
     char buf[64];
-    float halfW = (ImGui::GetContentRegionAvail().x - 8.0f) / 3.0f;
+    const float summaryGap = 12.0f;
+    const float summaryAvailW = ImGui::GetContentRegionAvail().x;
+    const float summaryRowW = std::min(summaryAvailW, 900.0f);
+    const float summaryCardW = (summaryRowW - (summaryGap * 2.0f)) / 3.0f;
+    const float valueTextH = (g_fontSection != nullptr) ? g_fontSection->FontSize
+                                                        : ImGui::GetFontSize();
+    const float summaryCardH = valueTextH
+                             + ImGui::GetTextLineHeightWithSpacing()
+                             + (ImGui::GetStyle().WindowPadding.y * 2.0f)
+                             + 16.0f;
+    if (summaryAvailW > summaryRowW) {
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (summaryAvailW - summaryRowW) * 0.5f);
+    }
     snprintf(buf, sizeof(buf), "%d", verified);
-    DrawStatCard(buf, "Signatures Verified", COL_GREEN_BR, ImVec2(halfW, 60));
-    ImGui::SameLine(0, 4);
+    DrawStatCard(buf, "Signatures Verified", COL_GREEN_BR, ImVec2(summaryCardW, summaryCardH));
+    ImGui::SameLine(0, summaryGap);
     snprintf(buf, sizeof(buf), "%d", unverified);
-    DrawStatCard(buf, "Unverified", COL_YELLOW, ImVec2(halfW, 60));
-    ImGui::SameLine(0, 4);
+    DrawStatCard(buf, "Unverified", COL_YELLOW, ImVec2(summaryCardW, summaryCardH));
+    ImGui::SameLine(0, summaryGap);
     snprintf(buf, sizeof(buf), "%d", noSig);
-    DrawStatCard(buf, "No Signature", COL_MUTED, ImVec2(halfW, 60));
+    DrawStatCard(buf, "No Signature", COL_MUTED, ImVec2(summaryCardW, summaryCardH));
 
     ImGui::Spacing();
     snprintf(buf, sizeof(buf), "%d", g_pendingMgr.pendingCount());
@@ -2813,6 +2843,12 @@ int main() {
             g_fontTitle = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 26.0f * dpiScale);
         }
 
+        // Hero font (42px) for login screen big title.
+        g_fontHero = TryLoadFont("C:/Windows/Fonts/segoeuib.ttf", 42.0f * dpiScale);
+        if (g_fontHero == nullptr) {
+            g_fontHero = TryLoadFont("fonts/JetBrainsMono-Regular.ttf", 42.0f * dpiScale);
+        }
+
         if (g_fontBody == nullptr) {
             g_fontBody = io.Fonts->AddFontDefault();
         }
@@ -2821,6 +2857,9 @@ int main() {
         }
         if (g_fontTitle == nullptr) {
             g_fontTitle = g_fontSection;
+        }
+        if (g_fontHero == nullptr) {
+            g_fontHero = g_fontTitle;
         }
         io.FontDefault = g_fontBody;
 
