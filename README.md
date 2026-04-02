@@ -21,13 +21,13 @@ COMP2034 CW1 — A GUI application that tracks the full lifecycle of vehicles (p
 
 ## Step-by-Step Setup (Windows, from scratch)
 
-This guide assumes you have a fresh Windows PC with nothing installed — just follow each step in order.
+This guide assumes you have a Windows PC with only VSCode installed — no extensions or build tools required. Just follow each step in order. No prior C++ setup is needed.
 
-### Step 1 — Install VSCode
+### Step 1 — Install VSCode (skip if already installed)
 
 1. Go to https://code.visualstudio.com/
 2. Download and install **Visual Studio Code**
-3. Open it once to make sure it works, then close it
+3. No extensions are needed — the project builds entirely from the terminal
 
 ### Step 2 — Install Git
 
@@ -54,9 +54,12 @@ MSYS2 gives you the C++ compiler, CMake, and OpenSSL — everything needed to bu
    ```
    (If it asks to close the terminal, close it, reopen **MSYS2 UCRT64** from the Start Menu, then run `pacman -Syu` again.)
 
+   Then install the required packages:
    ```
    pacman -S --noconfirm mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-make mingw-w64-x86_64-openssl
    ```
+
+   > **Tip:** Ctrl+C / Ctrl+V may not work in the MSYS2 terminal. If you cannot paste, **right-click** inside the terminal window and select **Paste**, or click the terminal's title bar icon (top-left) > **Edit > Paste**.
 
 5. Close the MSYS2 terminal — you will NOT need it again. Everything else is done from the VSCode terminal.
 
@@ -71,33 +74,42 @@ This lets the compiler and CMake work from any terminal (VSCode, CMD, PowerShell
    ```
    C:\msys64\mingw64\bin
    ```
-5. Click **OK** on all dialogs to save
-6. **Close and reopen** any open terminals for the change to take effect
-7. Verify: open a new CMD or PowerShell and run:
+5. **Important:** If you have an older MinGW or other C++ compiler already installed, make sure `C:\msys64\mingw64\bin` is **above** it in the list. Select the entry and click **Move Up** until it is at or near the top. This ensures the correct version of `gcc`, `cmake`, and `mingw32-make` is used.
+6. Click **OK** on all dialogs to save
+7. **Close and reopen** any open terminals for the change to take effect
+8. Verify: open a new CMD or PowerShell and run:
    ```
    gcc --version
    cmake --version
    mingw32-make --version
    ```
-   All three should print version info without errors.
+   - `gcc` should show version **14.x or higher** (not 6.x)
+   - `cmake` should show version **3.x or higher**
+   - `mingw32-make` should show **Built for x86_64-w64-mingw32** (not i686)
 
-### Step 5 — Clone the project
+   If `gcc` still shows an old version or `cmake` is not recognized, the MSYS2 path is not at the top. Either move it up, or as a quick fix run this in CMD before building:
+   ```
+   set PATH=C:\msys64\mingw64\bin;%PATH%
+   ```
 
-Open a terminal (CMD, PowerShell, or VSCode terminal) and run:
+### Step 5 — Extract the project
 
-```
-git clone <your-repo-url> cw1
-cd cw1
-```
+1. Download or extract the submitted project zip file
+2. You should see a folder containing `CMakeLists.txt`, `src/`, `include/`, `third_party/`, etc.
+3. Open the project folder in VSCode: **File > Open Folder** and select it
 
 ### Step 6 — Set up third-party dependencies
 
-GLFW and Dear ImGui need to be cloned into the `third_party/` folder. SQLite and fonts are already bundled.
+SQLite and fonts are already included in the project. **GLFW** and **Dear ImGui** need to be downloaded separately.
+
+Check if `third_party/glfw` and `third_party/imgui` folders already contain files. If they are **empty**, open a terminal in the project root and run:
 
 ```
 git clone https://github.com/glfw/glfw.git third_party/glfw
 git clone https://github.com/ocornut/imgui.git third_party/imgui
 ```
+
+> **Note:** Git must be installed for this step (see Step 2).
 
 ### Step 7 — Set up the AI chatbot API key (optional)
 
@@ -115,7 +127,7 @@ The chatbot works without this — you just cannot use the AI Assistant panel.
 
 ### Step 8 — Build the project
 
-From the project root folder:
+Open the VSCode terminal (**Terminal > New Terminal**, or press ``Ctrl+` ``). Make sure you are in the project root folder, then run:
 
 ```
 mkdir build
@@ -126,12 +138,14 @@ mingw32-make -j4
 
 This compiles everything and produces `car_warehouse_gui.exe` inside the `build/` folder.
 
+> If `cmake` is not recognized, run `set PATH=C:\msys64\mingw64\bin;%PATH%` first (see Step 4).
+
 ### Step 9 — Run the application
 
-From the `build/` folder:
+Still in the `build/` folder, run:
 
 ```
-./car_warehouse_gui.exe
+car_warehouse_gui.exe
 ```
 
 Or double-click `car_warehouse_gui.exe` in File Explorer.
@@ -144,22 +158,6 @@ Default login credentials:
 | qc1 | pass123 | QC Inspector |
 | dealer1 | pass123 | Dealer |
 | auditor1 | pass123 | Auditor (read-only) |
-
----
-
-## Opening in VSCode
-
-1. Open VSCode
-2. Go to **File > Open Folder** and select the `cw1` project folder
-3. Open the integrated terminal: **Terminal > New Terminal** (or press Ctrl+`)
-4. Build and run from there using the same commands:
-   ```
-   cd build
-   mingw32-make -j4
-   ./car_warehouse_gui.exe
-   ```
-
-If this is the first time building, run the full build steps from Step 8 first.
 
 ---
 
