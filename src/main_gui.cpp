@@ -965,7 +965,7 @@ static void RenderFuelPriceTable(float rightW, float chartH) {
     ImGui::TextColored(COL_VERY_MUTED, "%s", g_fuelMgr.statusText().c_str());
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - 110.0f);
     if (ImGui::SmallButton("Refresh")) {
-        g_fuelMgr.loadRecentHistory(16);
+        g_fuelMgr.loadRecentHistory(52);
         PushToast("Fuel data refreshed", COL_GREEN_BR);
     }
 
@@ -2419,13 +2419,15 @@ static void RenderToasts(float deltaTime) {
 static void RenderLoginScreen(cw1::Blockchain& chain) {
     ImGuiIO& io = ImGui::GetIO();
 
-    // Centre the login card on screen.
-    const float cardW = 420.0f;
-    const float cardH = 420.0f;
-    const float titleGap = 70.0f;  // space for hero title above the card
+    // Centre the login card on screen — scale to fit any resolution.
+    const float screenW = io.DisplaySize.x;
+    const float screenH = io.DisplaySize.y;
+    const float cardW = (screenW < 500.0f) ? (screenW - 40.0f) : (screenW * 0.32f < 420.0f ? 420.0f : (screenW * 0.32f > 520.0f ? 520.0f : screenW * 0.32f));
+    const float cardH = screenH * 0.7f < 480.0f ? 480.0f : (screenH * 0.7f > 600.0f ? 600.0f : screenH * 0.7f);
+    const float titleGap = screenH * 0.06f < 40.0f ? 40.0f : screenH * 0.06f;
     const float totalH = titleGap + cardH;
-    const float cardX = (io.DisplaySize.x - cardW) * 0.5f;
-    const float startY = (io.DisplaySize.y - totalH) * 0.5f;
+    const float cardX = (screenW - cardW) * 0.5f;
+    const float startY = (screenH - totalH) * 0.5f < 10.0f ? 10.0f : (screenH - totalH) * 0.5f;
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(io.DisplaySize);
@@ -2472,7 +2474,7 @@ static void RenderLoginScreen(cw1::Blockchain& chain) {
 
     ImGui::Spacing(); ImGui::Spacing();
     ImGui::SetCursorPosX(20.0f);
-    if (DrawPrimaryButton("  Login  ", ImVec2(cardW - 40.0f, 36.0f))) {
+    if (DrawPrimaryButton("  Login  ", ImVec2(cardW - 40.0f, 38.0f))) {
         if (g_authMgr.login(g_loginUser, g_loginPass)) {
             g_showLoginScreen = false;
             g_loginError.clear();
@@ -2506,9 +2508,32 @@ static void RenderLoginScreen(cw1::Blockchain& chain) {
     }
 
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-    ImGui::TextColored(COL_VERY_MUTED, "  Demo accounts:");
-    ImGui::TextColored(COL_VERY_MUTED, "  admin01/admin123  staff01/staff123  qc01/qc123");
-    ImGui::TextColored(COL_VERY_MUTED, "  dealer01/dealer123  auditor01/audit123");
+    ImGui::TextColored(COL_MUTED, "  Demo Accounts");
+    ImGui::Spacing();
+
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8.0f, 4.0f));
+    if (ImGui::BeginTable("##demoaccts", 3, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg,
+                          ImVec2(cardW - 40.0f, 0.0f))) {
+        ImGui::TableSetupColumn("Username", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Password", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Role",     ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+
+        auto DemoRow = [](const char* user, const char* pass, const char* role) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::TextColored(COL_ACCENT_HO, "%s", user);
+            ImGui::TableNextColumn(); ImGui::Text("%s", pass);
+            ImGui::TableNextColumn(); ImGui::TextColored(COL_VERY_MUTED, "%s", role);
+        };
+        DemoRow("admin01",   "admin123",  "Admin");
+        DemoRow("staff01",   "staff123",  "Warehouse Staff");
+        DemoRow("qc01",      "qc123",     "QC Inspector");
+        DemoRow("dealer01",  "dealer123", "Dealer");
+        DemoRow("auditor01", "audit123",  "Auditor");
+
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar();
 
     ImGui::EndChild();
     ImGui::PopStyleColor(2);
@@ -2877,9 +2902,6 @@ static void RenderAIAssistant(cw1::Blockchain& chain) {
         ImGui::SameLine();
         QuickBtn("Summarize DB",
                  "Summarize all database tables, their schemas, and row counts.");
-        ImGui::SameLine();
-        QuickBtn("Explain File",
-                 "Explain what the currently selected code file does and describe its key components.");
     }
 
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -2983,6 +3005,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
@@ -3077,10 +3100,23 @@ int main() {
     }
 
 
+    // Find the project root (the folder with CMakeLists.txt) so that all
+    // database and resource paths resolve correctly regardless of the working
+    // directory the exe was launched from.
+    std::string projectRoot = ".";
+    {
+        const char* roots[] = {".", "..", "../..", "../../.."};
+        for (const char* r : roots) {
+            std::string test = std::string(r) + "/CMakeLists.txt";
+            FILE* fp = fopen(test.c_str(), "r");
+            if (fp) { fclose(fp); projectRoot = r; break; }
+        }
+    }
+
     cw1::Blockchain chain;
     bool loadedFromDB = false;
     try {
-        if (!chain.openDatabase("database/cw1_blockchain.db")) {
+        if (!chain.openDatabase(projectRoot + "/database/cw1_blockchain.db")) {
             PushToast("SQLite database unavailable. Continuing with in-memory data.",
                       COL_YELLOW, 4.0f);
         }
@@ -3108,16 +3144,18 @@ int main() {
         });
         g_verifyDone = true;
 
+        // Open the fuel price database (separate file from blockchain).
+        if (g_fuelMgr.openDatabase(projectRoot + "/database/fuel_prices.db")) {
+            g_fuelMgr.seedFallbackDataIfEmpty();
+            g_fuelMgr.loadRecentHistory(52);
+            g_fuelInitialized = true;
+        }
+
         if (chain.isDatabaseOpen()) {
             cw1::DatabaseManager* dbm = chain.getDatabase();
             if (dbm != nullptr) {
-                g_fuelMgr.attach(dbm->rawHandle());
-                g_fuelMgr.seedFallbackDataIfEmpty();
-                g_fuelMgr.loadRecentHistory(16);
-                g_fuelInitialized = true;
-
-                // Attach the pending approval manager to the same database so
-                // pending requests persist across GUI restarts.
+                // Attach the pending approval manager to the blockchain database
+                // so pending requests persist across GUI restarts.
                 g_pendingMgr.attach(dbm->rawHandle());
             }
         }
@@ -3134,15 +3172,7 @@ int main() {
     }
 
     // Initialise the AI chatbot (read-only, uses Gemini Flash API).
-    // Find project root first so loadApiKey() can read env/gemini_api_key.txt.
-    {
-        const char* roots[] = {".", "..", "../..", "../../.."};
-        for (const char* r : roots) {
-            std::string test = std::string(r) + "/CMakeLists.txt";
-            FILE* fp = fopen(test.c_str(), "r");
-            if (fp) { fclose(fp); g_chatbot.setProjectRoot(r); break; }
-        }
-    }
+    g_chatbot.setProjectRoot(projectRoot);
     g_chatbot.loadApiKey();
 
     while (!glfwWindowShouldClose(window)) {

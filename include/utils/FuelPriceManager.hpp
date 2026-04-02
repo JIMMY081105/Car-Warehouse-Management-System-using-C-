@@ -15,6 +15,10 @@ namespace cw1 {
 class FuelPriceManager {
 public:
     FuelPriceManager();
+    ~FuelPriceManager();
+
+    // Opens a dedicated fuel_prices.db (separate from the blockchain DB).
+    bool openDatabase(const std::string& path);
 
     void attach(sqlite3* db);
 
@@ -53,6 +57,7 @@ private:
     static void ClassifyTrend(double delta, bool& increasing, bool& stable);
 
     sqlite3* db_ = nullptr;
+    bool ownsDb_ = false;   // true when we opened our own file
     std::vector<FuelWeeklyRecord> history_;
     std::string lastError_;
     std::string statusText_;

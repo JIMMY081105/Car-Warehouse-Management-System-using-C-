@@ -122,11 +122,11 @@ Or double-click `car_warehouse_gui.exe` in File Explorer.
 Default login credentials:
 | Username | Password | Role |
 |----------|----------|------|
-| admin | admin123 | Admin (full access) |
-| warehouse1 | pass123 | Warehouse Staff |
-| qc1 | pass123 | QC Inspector |
-| dealer1 | pass123 | Dealer |
-| auditor1 | pass123 | Auditor (read-only) |
+| admin01 | admin123 | Admin (full access) |
+| staff01 | staff123 | Warehouse Staff |
+| qc01 | qc123 | QC Inspector |
+| dealer01 | dealer123 | Dealer |
+| auditor01 | audit123 | Auditor (read-only) |
 
 ---
 
