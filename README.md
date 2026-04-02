@@ -19,30 +19,11 @@ COMP2034 CW1 — A GUI application that tracks the full lifecycle of vehicles (p
 
 ---
 
-## Step-by-Step Setup (Windows, from scratch)
+## How to Build and Run (Windows)
 
-This guide assumes you have a Windows PC with only VSCode installed — no extensions or build tools required. Just follow each step in order. No prior C++ setup is needed.
+All source code, third-party libraries, fonts, and the API key are included in the submitted files. You only need to install the build tools below, then run a few commands.
 
-### Step 1 — Install VSCode (skip if already installed)
-
-1. Go to https://code.visualstudio.com/
-2. Download and install **Visual Studio Code**
-3. No extensions are needed — the project builds entirely from the terminal
-
-### Step 2 — Install Git
-
-1. Go to https://git-scm.com/download/win
-2. Download and run the installer
-3. Use all default options, just keep clicking **Next** then **Install**
-4. Verify: open a new terminal (Win+R, type `cmd`, press Enter) and run:
-   ```
-   git --version
-   ```
-   You should see something like `git version 2.x.x`
-
-### Step 3 — Install MSYS2 (C++ compiler + build tools)
-
-MSYS2 gives you the C++ compiler, CMake, and OpenSSL — everything needed to build this project.
+### Step 1 — Install MSYS2 (C++ compiler + build tools)
 
 1. Go to https://www.msys2.org/
 2. Download the installer (the big button at the top)
@@ -61,9 +42,9 @@ MSYS2 gives you the C++ compiler, CMake, and OpenSSL — everything needed to bu
 
    > **Tip:** Ctrl+C / Ctrl+V may not work in the MSYS2 terminal. If you cannot paste, **right-click** inside the terminal window and select **Paste**, or click the terminal's title bar icon (top-left) > **Edit > Paste**.
 
-5. Close the MSYS2 terminal — you will NOT need it again. Everything else is done from the VSCode terminal.
+5. Close the MSYS2 terminal — you will NOT need it again. Everything else is done from the VSCode terminal or CMD.
 
-### Step 4 — Add MSYS2 to your system PATH
+### Step 2 — Add MSYS2 to your system PATH
 
 This lets the compiler and CMake work from any terminal (VSCode, CMD, PowerShell).
 
@@ -92,42 +73,11 @@ This lets the compiler and CMake work from any terminal (VSCode, CMD, PowerShell
    set PATH=C:\msys64\mingw64\bin;%PATH%
    ```
 
-### Step 5 — Extract the project
+### Step 3 — Build the project
 
-1. Download or extract the submitted project zip file
-2. You should see a folder containing `CMakeLists.txt`, `src/`, `include/`, `third_party/`, etc.
-3. Open the project folder in VSCode: **File > Open Folder** and select it
+Open the project folder in VSCode (**File > Open Folder**), then open the terminal (**Terminal > New Terminal**, or press ``Ctrl+` ``).
 
-### Step 6 — Set up third-party dependencies
-
-SQLite and fonts are already included in the project. **GLFW** and **Dear ImGui** need to be downloaded separately.
-
-Check if `third_party/glfw` and `third_party/imgui` folders already contain files. If they are **empty**, open a terminal in the project root and run:
-
-```
-git clone https://github.com/glfw/glfw.git third_party/glfw
-git clone https://github.com/ocornut/imgui.git third_party/imgui
-```
-
-> **Note:** Git must be installed for this step (see Step 2).
-
-### Step 7 — Set up the AI chatbot API key (optional)
-
-The AI Assistant feature requires a free Gemini API key. Skip this step if you do not need the chatbot.
-
-1. Go to https://aistudio.google.com/apikey
-2. Sign in with a Google account and create an API key
-3. In the project root, create a folder and file:
-   ```
-   mkdir env
-   ```
-4. Create the file `env/gemini_api_key.txt` and paste your API key inside (just the key, nothing else)
-
-The chatbot works without this — you just cannot use the AI Assistant panel.
-
-### Step 8 — Build the project
-
-Open the VSCode terminal (**Terminal > New Terminal**, or press ``Ctrl+` ``). Make sure you are in the project root folder, then run:
+Run these commands:
 
 ```
 mkdir build
@@ -138,9 +88,9 @@ mingw32-make -j4
 
 This compiles everything and produces `car_warehouse_gui.exe` inside the `build/` folder.
 
-> If `cmake` is not recognized, run `set PATH=C:\msys64\mingw64\bin;%PATH%` first (see Step 4).
+> If `cmake` is not recognized, run `set PATH=C:\msys64\mingw64\bin;%PATH%` first (see Step 2).
 
-### Step 9 — Run the application
+### Step 4 — Run the application
 
 Still in the `build/` folder, run:
 
@@ -206,11 +156,11 @@ cw1/
 │       └── VehicleData.cpp           # Static lookup tables
 ├── include/                          # Header files (mirrors src/ layout)
 ├── third_party/
-│   ├── imgui/                        # Dear ImGui (clone manually)
-│   ├── glfw/                         # GLFW (clone manually)
-│   ├── sqlite/                       # SQLite amalgamation (bundled)
-│   └── fonts/                        # JetBrainsMono-Regular.ttf (bundled)
-├── env/                              # API key file (not committed to git)
+│   ├── imgui/                        # Dear ImGui
+│   ├── glfw/                         # GLFW
+│   ├── sqlite/                       # SQLite amalgamation
+│   └── fonts/                        # JetBrainsMono-Regular.ttf
+├── env/                              # Gemini API key
 ├── database/                         # SQLite DB file created at runtime
 ├── CMakeLists.txt                    # Build configuration
 └── README.md
@@ -221,7 +171,7 @@ cw1/
 ## Troubleshooting
 
 **`gcc` / `cmake` / `mingw32-make` is not recognized**
-- Make sure `C:\msys64\mingw64\bin` is in your system PATH (Step 4)
+- Make sure `C:\msys64\mingw64\bin` is in your system PATH (Step 2)
 - Close and reopen your terminal after editing PATH
 
 **`Could not find OpenSSL`**
@@ -231,14 +181,8 @@ cw1/
 **`Permission denied` when building**
 - Close the running `car_warehouse_gui.exe` before rebuilding
 
-**`third_party/glfw` or `third_party/imgui` is empty**
-- Run the two `git clone` commands from Step 6
-
 **Window does not open / OpenGL errors**
 - Make sure your GPU drivers are up to date and support OpenGL 3.3+
-
-**AI Assistant says "Missing API Key"**
-- Create `env/gemini_api_key.txt` with a valid Gemini API key (Step 7)
 
 **Font not found at startup**
 - The build automatically copies `third_party/fonts/JetBrainsMono-Regular.ttf` next to the exe. If you move the exe, copy the `fonts/` folder with it.
