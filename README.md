@@ -82,27 +82,39 @@ This lets the compiler and CMake work from any terminal (VSCode, CMD, PowerShell
 
 ### Step 3 — Build the project
 
-Open the project folder in VSCode (**File > Open Folder**), then open the terminal (**Terminal > New Terminal**, or press ``Ctrl+` ``).
+1. Open the project folder in VSCode (**File > Open Folder** and select the extracted folder)
+2. Open the terminal: **Terminal > New Terminal** (or press ``Ctrl+` ``)
+3. **Make sure the terminal is in the project root** — it should show the folder that contains `CMakeLists.txt`, `src/`, `include/`, etc. If you are unsure, run `dir` and check that you see `CMakeLists.txt` in the output.
 
-Run these commands:
+4. If `cmake` is not recognized, run this first:
 
-```
-mkdir build
-cd build
-cmake .. -G "MinGW Makefiles"
-mingw32-make -j4
-```
+   **PowerShell (default VSCode terminal):**
+   ```
+   $env:PATH = "C:\msys64\mingw64\bin;" + $env:PATH
+   ```
+   **CMD:**
+   ```
+   set PATH=C:\msys64\mingw64\bin;%PATH%
+   ```
+
+5. Then build:
+   ```
+   mkdir build
+   cd build
+   cmake .. -G "MinGW Makefiles"
+   mingw32-make -j4
+   ```
 
 This compiles everything and produces `car_warehouse_gui.exe` inside the `build/` folder.
 
-> If `cmake` is not recognized, run `$env:PATH = "C:\msys64\mingw64\bin;" + $env:PATH` in PowerShell first, or `set PATH=C:\msys64\mingw64\bin;%PATH%` in CMD (see Step 2).
+> **Do not run these commands from inside the `build/` folder.** You must start from the project root (the folder with `CMakeLists.txt`). If you accidentally created a `build/build/` folder, delete `build/` and start again from the project root.
 
 ### Step 4 — Run the application
 
 Still in the `build/` folder, run:
 
 ```
-car_warehouse_gui.exe
+.\car_warehouse_gui.exe
 ```
 
 Or double-click `car_warehouse_gui.exe` in File Explorer.
