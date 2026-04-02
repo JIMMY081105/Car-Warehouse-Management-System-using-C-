@@ -68,9 +68,16 @@ This lets the compiler and CMake work from any terminal (VSCode, CMD, PowerShell
    - `cmake` should show version **3.x or higher**
    - `mingw32-make` should show **Built for x86_64-w64-mingw32** (not i686)
 
-   If `gcc` still shows an old version or `cmake` is not recognized, the MSYS2 path is not at the top. Either move it up, or as a quick fix run this in CMD before building:
+   If `gcc` still shows an old version or `cmake` is not recognized, the MSYS2 path is not at the top. Either move it up, or as a quick fix run one of these before building:
+
+   **CMD (Command Prompt):**
    ```
    set PATH=C:\msys64\mingw64\bin;%PATH%
+   ```
+
+   **PowerShell (default VSCode terminal):**
+   ```
+   $env:PATH = "C:\msys64\mingw64\bin;" + $env:PATH
    ```
 
 ### Step 3 — Build the project
@@ -88,7 +95,7 @@ mingw32-make -j4
 
 This compiles everything and produces `car_warehouse_gui.exe` inside the `build/` folder.
 
-> If `cmake` is not recognized, run `set PATH=C:\msys64\mingw64\bin;%PATH%` first (see Step 2).
+> If `cmake` is not recognized, run `$env:PATH = "C:\msys64\mingw64\bin;" + $env:PATH` in PowerShell first, or `set PATH=C:\msys64\mingw64\bin;%PATH%` in CMD (see Step 2).
 
 ### Step 4 — Run the application
 
