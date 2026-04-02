@@ -52,6 +52,7 @@ set(BACKEND_SOURCES
     src/security/AccessControl.cpp
     src/security/PendingApprovalManager.cpp
     src/security/SecurityUtil.cpp
+    src/ai/ChatbotService.cpp
 )
 
 
@@ -87,6 +88,7 @@ if(BUILD_GUI)
             glfw
             OpenGL::GL
             sqlite3_lib
+            winhttp
     )
 
     add_custom_command(TARGET car_warehouse_gui POST_BUILD

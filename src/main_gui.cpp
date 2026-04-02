@@ -29,6 +29,7 @@
 #include "utils/OperationTimer.hpp"
 #include "utils/TimeUtil.hpp"
 #include "utils/VehicleData.hpp"
+#include "ai/ChatbotService.hpp"
 
 
 
@@ -147,7 +148,7 @@ static void ApplyGitHubDarkTheme() {
 
 
 
-enum class View { DASHBOARD, CAR_DETAIL, ADD_BLOCK, GLOBAL_CHAIN, AUDIT_LOG, INTEGRITY, DELETE_BLOCK, PENDING_APPROVALS };
+enum class View { DASHBOARD, CAR_DETAIL, ADD_BLOCK, GLOBAL_CHAIN, AUDIT_LOG, INTEGRITY, DELETE_BLOCK, PENDING_APPROVALS, AI_ASSISTANT };
 
 static View        g_view        = View::DASHBOARD;
 static std::string g_selectedVin;
@@ -257,6 +258,10 @@ static std::size_t             g_tempRealCount    = 0;
 static std::size_t             g_tempPrevCount    = 0;
 static float                   g_tempNewBlockAnim = 1.0f;
 
+// ---------------------------------------------------------------------------
+// AI chatbot (read-only assistant)
+// ---------------------------------------------------------------------------
+static ai::ChatbotService g_chatbot;
 
 
 
@@ -491,6 +496,7 @@ static void RenderSidebar(cw1::Blockchain& chain) {
         { "  Global Chain",       View::GLOBAL_CHAIN        },
         { "  Audit Log",          View::AUDIT_LOG           },
         { "  Verify Integrity",   View::INTEGRITY           },
+        { "  AI Assistant",       View::AI_ASSISTANT        },
     };
 
     for (const auto& item : navItems) {
@@ -2768,6 +2774,209 @@ static void RenderSecurityPanel(cw1::Blockchain& chain) {
 }
 
 
+// ---------------------------------------------------------------------------
+// AI Assistant panel — read-only chatbot powered by Gemini Flash
+// ---------------------------------------------------------------------------
+
+static char g_chatInput[2048] = {};
+static bool g_chatProjectMode = false;   // false = Online, true = Project
+
+static void RenderAIAssistant(cw1::Blockchain& chain) {
+    g_chatbot.pollResponse();
+
+    // ---- Title + status badge --------------------------------------------
+    if (g_fontTitle) ImGui::PushFont(g_fontTitle);
+    ImGui::TextColored(COL_ACCENT, "AI Assistant");
+    if (g_fontTitle) ImGui::PopFont();
+
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 140.0f + ImGui::GetCursorPosX());
+    if (!g_chatbot.hasApiKey()) {
+        DrawMetricBadge("Missing API Key", COL_RED, HexColor(0xda3633, 0.18f));
+    } else if (g_chatbot.isWaiting()) {
+        DrawMetricBadge("Thinking...", COL_YELLOW, HexColor(0xd29922, 0.16f));
+    } else {
+        DrawMetricBadge("Read-only", COL_GREEN_BR, HexColor(0x238636, 0.16f));
+    }
+
+    ImGui::TextColored(COL_MUTED,
+        "Ask any question online, or switch to Project mode to query code and database.");
+    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+    // ---- Information Source toggle ----------------------------------------
+    DrawSectionHeading("Information Source");
+    ImGui::Spacing();
+
+    // Online button
+    {
+        bool isOnline = !g_chatProjectMode;
+        if (isOnline) {
+            ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  COL_ACCENT_HO);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,   HexColor(0x1158c7));
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Button,        COL_BG_ELEV);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  COL_BG_HOVER);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,   COL_BG_HOVER);
+        }
+        if (ImGui::Button("  Online  ", ImVec2(120.0f, 32.0f))) {
+            g_chatProjectMode = false;
+            g_chatbot.setOnlineMode(true);
+        }
+        ImGui::PopStyleColor(3);
+    }
+
+    ImGui::SameLine();
+
+    // Project button
+    {
+        bool isProject = g_chatProjectMode;
+        if (isProject) {
+            ImGui::PushStyleColor(ImGuiCol_Button,        COL_ACCENT);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  COL_ACCENT_HO);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,   HexColor(0x1158c7));
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Button,        COL_BG_ELEV);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  COL_BG_HOVER);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,   COL_BG_HOVER);
+        }
+        if (ImGui::Button("  Project  ", ImVec2(120.0f, 32.0f))) {
+            g_chatProjectMode = true;
+            g_chatbot.setOnlineMode(false);
+        }
+        ImGui::PopStyleColor(3);
+    }
+
+    ImGui::SameLine();
+    ImGui::TextColored(COL_VERY_MUTED, g_chatProjectMode
+        ? "  Answers using your project code and database"
+        : "  Answers using general online knowledge");
+
+    // ---- Project-mode controls (only shown when Project is active) --------
+    if (g_chatProjectMode) {
+        ImGui::Spacing();
+
+        // Quick actions (Project mode only).
+        DrawSectionHeading("Quick Actions");
+
+        auto QuickBtn = [&](const char* label, const char* question) {
+            if (DrawPrimaryButton(label) && !g_chatbot.isWaiting())
+                g_chatbot.sendMessage(question, chain, g_fuelMgr, g_pendingMgr, g_authMgr);
+        };
+
+        QuickBtn("Summarize Chain",
+                 "Summarize the current blockchain including total blocks, vehicles, and their latest stages.");
+        ImGui::SameLine();
+        QuickBtn("Fuel Summary",
+                 "What are the latest fuel prices and forecasts?");
+        ImGui::SameLine();
+        QuickBtn("Explain Auth",
+                 "Explain how the authentication and role-based access control system works in this project.");
+
+        QuickBtn("Pending Workflow",
+                 "Explain how the pending approval workflow works, including submission, approval, and rejection.");
+        ImGui::SameLine();
+        QuickBtn("Summarize DB",
+                 "Summarize all database tables, their schemas, and row counts.");
+        ImGui::SameLine();
+        QuickBtn("Explain File",
+                 "Explain what the currently selected code file does and describe its key components.");
+    }
+
+    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+    // ---- Chat history area -----------------------------------------------
+    const float bottomH = 44.0f;
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, COL_BG_PANEL);
+    ImGui::BeginChild("##chatHistory", ImVec2(-1.0f, -bottomH), true);
+
+    // Scale up text inside the chat area for readability.
+    ImGui::SetWindowFontScale(1.2f);
+
+    const auto& msgs = g_chatbot.history();
+
+    if (msgs.empty() && !g_chatbot.isWaiting()) {
+        ImGui::Spacing(); ImGui::Spacing();
+        ImGui::TextColored(COL_VERY_MUTED,
+            "No messages yet. Type a question below or use a quick action above.");
+    }
+
+    static size_t prevMsgCount = 0;
+    bool newMsg = (msgs.size() != prevMsgCount);
+    prevMsgCount = msgs.size();
+
+    for (size_t i = 0; i < msgs.size(); ++i) {
+        const auto& m = msgs[i];
+        ImGui::PushID(static_cast<int>(i));
+
+        const bool isUser = (m.role == ai::ChatMessage::Role::USER);
+
+        // Role label
+        if (g_fontSection) ImGui::PushFont(g_fontSection);
+        ImGui::TextColored(
+            isUser ? COL_ACCENT_HO : (m.isError ? COL_RED : COL_GREEN_BR),
+            "%s", isUser ? "You" : "AI Assistant");
+        if (g_fontSection) ImGui::PopFont();
+
+        // Timestamp
+        ImGui::SameLine();
+        ImGui::TextColored(COL_VERY_MUTED, "  %s", m.timestamp.c_str());
+
+        // Message body
+        if (m.isError) ImGui::PushStyleColor(ImGuiCol_Text, COL_RED);
+        ImGui::TextWrapped("%s", m.content.c_str());
+        if (m.isError) ImGui::PopStyleColor();
+
+        ImGui::Spacing();
+
+        ImGui::PushStyleColor(ImGuiCol_Separator, COL_BORDER_SOFT);
+        ImGui::Separator();
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
+
+        ImGui::PopID();
+    }
+
+    if (g_chatbot.isWaiting()) {
+        ImGui::TextColored(COL_YELLOW, "Thinking...");
+    }
+
+    // Auto-scroll when new messages arrive.
+    if (newMsg || g_chatbot.isWaiting()) {
+        ImGui::SetScrollHereY(1.0f);
+    }
+
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+
+    // ---- Input area ------------------------------------------------------
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, COL_BG_ELEV);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 160.0f);
+    bool enterPressed = ImGui::InputText("##chatInput", g_chatInput,
+        sizeof(g_chatInput), ImGuiInputTextFlags_EnterReturnsTrue);
+    ImGui::PopStyleColor();
+
+    ImGui::SameLine();
+    bool sendClicked = DrawPrimaryButton("Send", ImVec2(70.0f, 0.0f));
+
+    ImGui::SameLine();
+    if (DrawDangerButton("Clear", ImVec2(70.0f, 0.0f))) {
+        g_chatbot.clearHistory();
+    }
+
+    if ((enterPressed || sendClicked) && g_chatInput[0] != '\0'
+        && !g_chatbot.isWaiting()) {
+        g_chatbot.sendMessage(g_chatInput, chain,
+                              g_fuelMgr, g_pendingMgr, g_authMgr);
+        g_chatInput[0] = '\0';
+    }
+
+    // Refocus input after sending so user can keep typing.
+    if (enterPressed || sendClicked)
+        ImGui::SetKeyboardFocusHere(-1);
+}
+
+
 int main() {
 
     if (!glfwInit()) return 1;
@@ -2924,6 +3133,17 @@ int main() {
         g_verifyDone = true;
     }
 
+    // Initialise the AI chatbot (read-only, uses Gemini Flash API).
+    // Find project root first so loadApiKey() can read env/gemini_api_key.txt.
+    {
+        const char* roots[] = {".", "..", "../..", "../../.."};
+        for (const char* r : roots) {
+            std::string test = std::string(r) + "/CMakeLists.txt";
+            FILE* fp = fopen(test.c_str(), "r");
+            if (fp) { fclose(fp); g_chatbot.setProjectRoot(r); break; }
+        }
+    }
+    g_chatbot.loadApiKey();
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -3044,6 +3264,8 @@ int main() {
         ImGui::PopStyleColor();
         ImGui::Spacing(); ImGui::Spacing();
 
+        g_chatbot.pollResponse();
+
         switch (g_view) {
         case View::DASHBOARD:          RenderDashboard(chain);          break;
         case View::CAR_DETAIL:         RenderCarDetail(chain);          break;
@@ -3053,6 +3275,7 @@ int main() {
         case View::AUDIT_LOG:          RenderAuditLog(chain);           break;
         case View::INTEGRITY:          RenderIntegrity(chain);          break;
         case View::DELETE_BLOCK:       RenderDeleteBlock(chain);        break;
+        case View::AI_ASSISTANT:       RenderAIAssistant(chain);        break;
         }
 
         ImGui::EndChild();
