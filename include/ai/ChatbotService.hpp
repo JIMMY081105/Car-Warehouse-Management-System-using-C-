@@ -1,6 +1,6 @@
 // Declares the read-only AI chatbot service that answers questions about the
 // codebase, SQLite database, blockchain state, and system behaviour using the
-// Gemini Flash API.  No data is ever written or mutated by this module.
+// Gemini 2.0 Flash API.  No data is ever written or mutated by this module.
 
 #pragma once
 

@@ -1,6 +1,6 @@
 // Implements the read-only AI chatbot service.  All application data is
 // collected on the main thread and handed to a background worker that calls
-// the Gemini Flash HTTP API via WinHTTP (built into Windows, no extra
+// the Gemini 2.0 Flash API via WinHTTP (built into Windows, no extra
 // installs needed).  The response is polled each frame and appended to the
 // chat history.
 
@@ -160,7 +160,7 @@ void ChatbotService::sendMessage(const std::string& userMessage,
 
     if (apiKey_.empty()) {
         history_.push_back({ChatMessage::Role::ASSISTANT,
-            "Error: No API key found. Set the GEMINI_API_KEY environment variable and restart the application.",
+            "Error: No API key found. Place your Gemini API key in env/gemini_api_key.txt and restart the application.",
             currentTimestamp(), true});
         return;
     }
@@ -589,14 +589,14 @@ std::string ChatbotService::buildContext(
 }
 
 // ===================================================================
-// Gemini HTTP API call (runs on the worker thread)
+// Gemini 2.0 Flash API call (runs on the worker thread)
 // ===================================================================
 
 std::string ChatbotService::callGeminiApi(
         const std::string& systemPrompt,
         const std::vector<ChatMessage>& msgs) const {
 
-    // --- Build JSON request body -------------------------------------------
+    // --- Build JSON request body (Gemini format) --------------------------
     std::string body;
     body.reserve(systemPrompt.size() + 4096);
     body += "{\n  \"systemInstruction\":{\"parts\":[{\"text\":\"";

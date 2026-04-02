@@ -2800,7 +2800,7 @@ static void RenderSecurityPanel(cw1::Blockchain& chain) {
 
 
 // ---------------------------------------------------------------------------
-// AI Assistant panel — read-only chatbot powered by Gemini Flash
+// AI Assistant panel — read-only chatbot powered by Gemini 2.0 Flash
 // ---------------------------------------------------------------------------
 
 static char g_chatInput[2048] = {};
@@ -3171,7 +3171,7 @@ int main() {
         g_verifyDone = true;
     }
 
-    // Initialise the AI chatbot (read-only, uses Gemini Flash API).
+    // Initialise the AI chatbot (read-only, uses Gemini 2.0 Flash API).
     g_chatbot.setProjectRoot(projectRoot);
     g_chatbot.loadApiKey();
 
