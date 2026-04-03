@@ -1,5 +1,4 @@
-// Keeps the read-only AI assistant in its own module so the chatbot UI and
-// context-selection controls do not clutter the main application loop.
+// AI assistant chat panel.
 
 #include "ui/GuiApp.hpp"
 

@@ -1,5 +1,4 @@
-// Handles vehicle-focused pages: the per-VIN history view and the add-block
-// form that feeds either direct admin commits or the pending approval queue.
+// Car detail view and the add-block form.
 
 #include "ui/GuiApp.hpp"
 

@@ -1,7 +1,4 @@
-// Shared declarations for the GUI layer. The coursework UI now keeps its
-// state, shared widgets, and panel entry points in one header so individual
-// panels can live in separate source files without changing the existing
-// render flow or application behaviour.
+// Header for all the shared GUI state, helpers, and panel function declarations.
 
 #pragma once
 

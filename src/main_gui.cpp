@@ -1,6 +1,4 @@
-// Keeps the application entry point focused on startup, shared initialisation,
-// and the top-level frame loop. Individual panels now live in dedicated UI
-// modules so this file reads as orchestration instead of a 3,000-line god file.
+// Main entry point - sets up the window, loads fonts, and runs the render loop.
 
 #include <GLFW/glfw3.h>
 

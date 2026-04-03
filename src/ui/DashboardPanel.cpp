@@ -1,6 +1,4 @@
-// Renders the dashboard landing page. This module focuses on summary
-// information, visual analytics, and quick navigation into the detailed
-// blockchain records.
+// Dashboard page - shows stats, fuel chart, and recent blocks.
 
 #include "ui/GuiApp.hpp"
 

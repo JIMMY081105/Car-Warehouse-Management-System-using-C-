@@ -1,5 +1,4 @@
-// Hosts shared layout widgets that appear regardless of the active content
-// panel: the top header, the left navigation/sidebar, and toast overlays.
+// Top header bar, sidebar navigation, and toast notifications.
 
 #include "ui/GuiApp.hpp"
 

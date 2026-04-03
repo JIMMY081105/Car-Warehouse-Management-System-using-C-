@@ -1,6 +1,4 @@
-// Groups the blockchain-centric panels. These views focus on chain structure,
-// auditability, immutability demonstrations, and soft-delete recovery rather
-// than vehicle data entry.
+// Global chain view, audit log, integrity/tamper demo, and delete/restore.
 
 #include "ui/GuiApp.hpp"
 

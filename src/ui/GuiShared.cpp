@@ -1,6 +1,4 @@
-// Owns shared GUI state and helpers used by multiple panels. Keeping these
-// pieces together avoids duplicating toast logic, audit writes, styling, and
-// workflow utilities across separate render modules.
+// Global state definitions and shared helper functions used across the UI.
 
 #include "ui/GuiApp.hpp"
 

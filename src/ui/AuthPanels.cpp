@@ -1,5 +1,4 @@
-// Handles authentication-facing UI: the initial login card and the pending
-// approval queue that separates request submission from final chain commits.
+// Login screen and pending approvals page.
 
 #include "ui/GuiApp.hpp"
 

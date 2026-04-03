@@ -1,6 +1,4 @@
-// Keeps PDF report generation out of the main render code. The exporter is
-// intentionally simple and self-contained because the coursework needs a
-// portable way to produce a lecturer-friendly report without extra libraries.
+// PDF export function - writes blockchain data and fuel prices to a .pdf file.
 
 #include "ui/GuiApp.hpp"
 
