@@ -19,11 +19,37 @@ COMP2034 CW1 — A GUI application that tracks the full lifecycle of vehicles (p
 
 ---
 
-## How to Build and Run (Windows)
+## How to Run (Windows)
 
-All source code, third-party libraries, fonts, and the API key are included in the submitted files. You only need to install the build tools below, then run a few commands.
+There are **two options**. Choose whichever is easier for you.
 
-### Step 1 — Install MSYS2 (C++ compiler + build tools)
+| | Option A — Quick Start | Option B — Build from Source |
+|---|---|---|
+| Install anything? | No | Yes (MSYS2) |
+| Time needed | ~10 seconds | ~10 minutes |
+| What you run | Pre-built `.exe` with bundled DLLs | Compile the source code yourself |
+
+---
+
+### Option A — Quick Start (no install needed)
+
+The `prebuilt/` folder contains the compiled executable and all required DLLs. No compiler, no MSYS2, no CMake needed.
+
+1. Open the `prebuilt/` folder in File Explorer
+2. Double-click **`car_warehouse_gui.exe`**
+3. That's it — the application should open
+
+> **Note:** The `prebuilt/` folder must stay inside the project folder (next to `CMakeLists.txt`, `src/`, `env/`, etc.) because the application looks for `env/gemini_api_key.txt` and `database/` relative to the project root.
+
+If you get a Windows SmartScreen warning, click **"More info"** then **"Run anyway"**.
+
+---
+
+### Option B — Build from Source
+
+If you want to compile the project yourself, follow the steps below. All source code, third-party libraries, fonts, and the API key are included in the submitted files. You only need to install the build tools.
+
+#### Step 1 — Install MSYS2 (C++ compiler + build tools)
 
 1. Go to https://www.msys2.org/
 2. Download the installer (the big button at the top)
@@ -44,7 +70,7 @@ All source code, third-party libraries, fonts, and the API key are included in t
 
 5. Close the MSYS2 terminal — you will NOT need it again. Everything else is done from the VSCode terminal or CMD.
 
-### Step 2 — Add MSYS2 to your system PATH
+#### Step 2 — Add MSYS2 to your system PATH
 
 This lets the compiler and CMake work from any terminal (VSCode, CMD, PowerShell).
 
@@ -80,7 +106,7 @@ This lets the compiler and CMake work from any terminal (VSCode, CMD, PowerShell
    $env:PATH = "C:\msys64\mingw64\bin;" + $env:PATH
    ```
 
-### Step 3 — Build the project
+#### Step 3 — Build the project
 
 1. Open the project folder in VSCode (**File > Open Folder** and select the extracted folder)
 2. Open the terminal: **Terminal > New Terminal** (or press ``Ctrl+` ``)
@@ -109,7 +135,7 @@ This compiles everything and produces `car_warehouse_gui.exe` inside the `build/
 
 > **Do not run these commands from inside the `build/` folder.** You must start from the project root (the folder with `CMakeLists.txt`). If you accidentally created a `build/build/` folder, delete `build/` and start again from the project root.
 
-### Step 4 — Run the application
+#### Step 4 — Run the application
 
 Still in the `build/` folder, run:
 
@@ -119,7 +145,10 @@ Still in the `build/` folder, run:
 
 Or double-click `car_warehouse_gui.exe` in File Explorer.
 
-Default login credentials:
+---
+
+## Default Login Credentials
+
 | Username | Password | Role |
 |----------|----------|------|
 | admin01 | admin123 | Admin (full access) |
@@ -190,8 +219,17 @@ cw1/
 │   ├── glfw/                         # GLFW
 │   ├── sqlite/                       # SQLite amalgamation
 │   └── fonts/                        # JetBrainsMono-Regular.ttf
+├── prebuilt/                         # Pre-built exe + DLLs (Option A)
+│   ├── car_warehouse_gui.exe
+│   ├── libcrypto-3-x64.dll
+│   ├── libgcc_s_seh-1.dll
+│   ├── libstdc++-6.dll
+│   ├── libwinpthread-1.dll
+│   ├── env/gemini_api_key.txt
+│   └── fonts/JetBrainsMono-Regular.ttf
 ├── env/                              # Gemini API key
-├── database/                         # SQLite DB file created at runtime
+├── database/                         # SQLite DB files (created at runtime)
+├── reports/                          # Exported PDF reports (created at runtime)
 ├── CMakeLists.txt                    # Build configuration
 └── README.md
 ```
@@ -216,3 +254,6 @@ cw1/
 
 **Font not found at startup**
 - The build automatically copies `third_party/fonts/JetBrainsMono-Regular.ttf` next to the exe. If you move the exe, copy the `fonts/` folder with it.
+
+**Windows SmartScreen blocks the exe**
+- Click **"More info"** then **"Run anyway"** — this is normal for unsigned executables.
