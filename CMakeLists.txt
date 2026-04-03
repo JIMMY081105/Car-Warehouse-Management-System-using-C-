@@ -67,12 +67,24 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
+set(UI_SOURCES
+    src/ui/GuiShared.cpp
+    src/ui/ReportExporter.cpp
+    src/ui/Layout.cpp
+    src/ui/DashboardPanel.cpp
+    src/ui/VehiclePanels.cpp
+    src/ui/ChainPanels.cpp
+    src/ui/AuthPanels.cpp
+    src/ui/AIAssistantPanel.cpp
+)
+
 
 
 if(BUILD_GUI)
     add_executable(car_warehouse_gui
         src/main_gui.cpp
         ${BACKEND_SOURCES}
+        ${UI_SOURCES}
         ${IMGUI_SOURCES}
     )
     target_include_directories(car_warehouse_gui

@@ -148,7 +148,7 @@ If `car_warehouse_gui.exe` is still running, close it first or you will get a "P
 ```
 cw1/
 ├── src/
-│   ├── main_gui.cpp                  # Application entry point & ImGui loop
+│   ├── main_gui.cpp                  # Application entry point, startup, and frame orchestration
 │   ├── ai/
 │   │   └── ChatbotService.cpp        # AI chatbot (Gemini API via WinHTTP)
 │   ├── blockchain/
@@ -164,6 +164,15 @@ cw1/
 │   │   ├── AccessControl.cpp         # Role-based permission checks
 │   │   ├── PendingApprovalManager.cpp# Approval workflow
 │   │   └── SecurityUtil.cpp          # Password hashing
+│   ├── ui/
+│   │   ├── GuiShared.cpp             # Shared GUI state, styling, and helper utilities
+│   │   ├── Layout.cpp                # Header, sidebar, and toast rendering
+│   │   ├── DashboardPanel.cpp        # Dashboard analytics and summary widgets
+│   │   ├── VehiclePanels.cpp         # Car detail and add-block workflow
+│   │   ├── ChainPanels.cpp           # Global chain, integrity, audit, and delete/restore panels
+│   │   ├── AuthPanels.cpp            # Login screen and pending approvals UI
+│   │   ├── AIAssistantPanel.cpp      # Read-only AI assistant panel
+│   │   └── ReportExporter.cpp        # PDF report export
 │   └── utils/
 │       ├── AuditLog.cpp              # Append-only operation log
 │       ├── BranchMap.cpp             # Manufacturer/dealer branch map
@@ -174,6 +183,8 @@ cw1/
 │       ├── TimeUtil.cpp              # Timestamp utilities
 │       └── VehicleData.cpp           # Static lookup tables
 ├── include/                          # Header files (mirrors src/ layout)
+│   └── ui/
+│       └── GuiApp.hpp                # Shared UI declarations and panel interfaces
 ├── third_party/
 │   ├── imgui/                        # Dear ImGui
 │   ├── glfw/                         # GLFW
