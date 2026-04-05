@@ -1,6 +1,4 @@
-
-
-// Implements the linked-list audit trail. This module is a direct example of manual dynamic memory management with safe append and cleanup behaviour.
+// Linked-list audit log implementation.
 
 #include "utils/AuditLog.hpp"
 #include "utils/TimeUtil.hpp"

@@ -1,4 +1,4 @@
-// These helpers keep the blockchain hashing code in one place instead of spreading OpenSSL calls around.
+// Hash helpers shared across the project.
 #pragma once
 
 #include <string>

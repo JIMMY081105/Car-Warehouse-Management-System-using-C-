@@ -1,4 +1,4 @@
-// AI assistant chat panel.
+// Renders the AI assistant page and chat controls.
 
 #include "ui/GuiApp.hpp"
 
@@ -159,6 +159,7 @@ void RenderAIAssistant(cw1::Blockchain& chain) {
     }
 
     if (newMessage || g_chatbot.isWaiting()) {
+        // Follow the latest reply so the user does not have to scroll manually.
         ImGui::SetScrollHereY(1.0f);
     }
 

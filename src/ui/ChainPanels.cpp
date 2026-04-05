@@ -1,4 +1,4 @@
-// Global chain view, audit log, integrity/tamper demo, and delete/restore.
+// Global chain, audit log, integrity demo, and delete views.
 
 #include "ui/GuiApp.hpp"
 
@@ -17,6 +17,7 @@ void RenderTempChainControls(cw1::Blockchain& chain) {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, HexColor(0x238636));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, HexColor(0x2ea043));
         if (ImGui::Button("Start Generating Temp Blocks##tempstart", ImVec2(280.0f, 36.0f))) {
+            // Copy the real chain once, then mutate only the temp copy.
             g_tempChain = chain.getChain();
             g_tempRealCount = g_tempChain.size();
             g_tempPrevCount = g_tempChain.size();
@@ -98,6 +99,7 @@ void RenderTempChainControls(cw1::Blockchain& chain) {
     ImGui::BeginDisabled(!deleteValid);
     if (DrawDangerButton("Delete Temp Block##tempdel", ImVec2(180.0f, 34.0f))) {
         const std::size_t deleteIndex = static_cast<std::size_t>(g_tempDeleteIndex);
+        // Delete without repairing links so validation has something obvious to catch.
         g_tempChain.erase(g_tempChain.begin() + static_cast<std::ptrdiff_t>(deleteIndex));
         for (std::size_t i = deleteIndex; i < g_tempChain.size(); ++i) {
             g_tempChain[i].setIndex(i);
@@ -234,6 +236,7 @@ void RenderTempChainVisual() {
     bool scrollToEnd = false;
     if (g_tempChain.size() != g_tempPrevCount) {
         if (g_tempChain.size() > g_tempPrevCount) {
+            // Animate only newly appended temp blocks.
             g_tempNewBlockAnim = 0.0f;
             scrollToEnd = true;
         }
@@ -542,6 +545,7 @@ void RenderGlobalChain(cw1::Blockchain& chain) {
     }
     ImGui::Spacing();
 
+    // Show the linked-list mirror separately from the vector table below.
     const ImGuiTableFlags linkedFlags =
         ImGuiTableFlags_BordersInnerV |
         ImGuiTableFlags_BordersInnerH |

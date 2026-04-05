@@ -1,4 +1,4 @@
-// Defines one blockchain block in the car warehouse lifecycle. Each block stores the current payload snapshot, cryptographic hashes, timestamp, nonce, and the previous-hash reference that links one block to the next.
+// Block data model used by the blockchain and GUI.
 
 #pragma once
 

@@ -1,4 +1,4 @@
-// Declares the fuel-price intelligence module. This is one of the coursework's extra features: it stores weekly fuel prices, forecasts trends, and helps the GUI estimate delivery-cost implications for logistics decisions.
+// Fuel data manager used by the dashboard.
 
 #pragma once
 

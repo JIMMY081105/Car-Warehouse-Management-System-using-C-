@@ -1,4 +1,4 @@
-// Header for all the shared GUI state, helpers, and panel function declarations.
+// Shared GUI globals, helpers, and panel declarations.
 
 #pragma once
 

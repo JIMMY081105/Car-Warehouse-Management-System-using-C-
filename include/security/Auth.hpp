@@ -1,7 +1,4 @@
-// Manages user authentication for the car warehouse blockchain system.
-// Demo users are initialised at startup with hardcoded credentials so the
-// coursework can demonstrate login, logout, and role-based access without
-// requiring an external identity provider.
+// Demo authentication manager and session state.
 
 #pragma once
 

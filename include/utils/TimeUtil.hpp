@@ -1,4 +1,4 @@
-// Small helper for consistent ISO-8601 timestamps across blocks, audit entries, and persistence logs.
+// Timestamp helper used across the app.
 
 #pragma once
 

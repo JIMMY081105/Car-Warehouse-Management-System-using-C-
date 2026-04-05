@@ -1,4 +1,4 @@
-// Provides string conversions for lifecycle stages used by the blockchain, persistence layer, and GUI.
+// Converts block stages between enum values and display text.
 
 #include "blockchain/BlockStage.hpp"
 

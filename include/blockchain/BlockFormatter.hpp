@@ -1,4 +1,4 @@
-// Helper for producing lecturer-friendly block summaries in text form. The formatter makes the hash links, genesis rule, and stage-specific payload fields easy to inspect quickly.
+// Text formatter for printing block details.
 
 #pragma once
 

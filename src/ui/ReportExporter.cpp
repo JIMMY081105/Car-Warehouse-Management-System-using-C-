@@ -1,4 +1,4 @@
-// PDF export function - writes blockchain data and fuel prices to a .pdf file.
+// Writes a simple PDF report from chain, audit, and fuel data.
 
 #include "ui/GuiApp.hpp"
 
@@ -127,6 +127,7 @@ bool ExportBlockchainPDF(cw1::Blockchain& chain,
         }
     }
 
+    // Keep pagination simple by treating the report as fixed-width text.
     constexpr int kLinesPerPage = 62;
     std::vector<std::vector<std::string>> pages;
     for (std::size_t i = 0; i < lines.size(); i += kLinesPerPage) {

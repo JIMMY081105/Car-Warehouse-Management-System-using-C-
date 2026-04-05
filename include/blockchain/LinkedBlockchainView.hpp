@@ -1,4 +1,4 @@
-// Defines a lightweight linked-list mirror of the blockchain. The main coursework chain remains vector-backed for indexing, search, validation, and database persistence, while this helper exposes explicit Node* next traversal so a marker can see pointer-based chaining clearly.
+// Linked-list mirror of the chain for traversal demos.
 
 #pragma once
 

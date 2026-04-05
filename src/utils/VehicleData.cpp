@@ -1,4 +1,4 @@
-// Stores static manufacturer, model, colour, and transport lists used by the add-block form and demo data generation.
+// Static vehicle lists used by forms and demo data.
 
 #include "utils/VehicleData.hpp"
 

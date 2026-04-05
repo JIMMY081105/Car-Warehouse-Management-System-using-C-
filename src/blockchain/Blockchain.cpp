@@ -1,4 +1,4 @@
-// Implements the main blockchain workflow for the car warehouse system. The vector-backed chain remains authoritative for indexed access and persistence, while a secondary linked-list mirror is rebuilt after structural edits so the coursework can demonstrate explicit pointer chaining safely.
+// Core blockchain operations, searches, validation, and persistence.
 
 #include "blockchain/Blockchain.hpp"
 
@@ -61,12 +61,10 @@ void Blockchain::addBlockWithMetadata(const CarRecord& record,
                                       int originRequestId,
                                       const std::string& creatorSignature,
                                       bool signatureVerified) {
-    // Use the existing addBlock logic to maintain chain linkage, VIN indexing,
-    // linked-list mirroring, and audit logging.
+    // Reuse the normal add path so indexing, mirroring, and audit logging stay in sync.
     addBlock(record);
 
-    // Set security metadata on the newly appended block. These fields are
-    // excluded from hash computation so the chain integrity remains intact.
+    // Store approval metadata after the block itself has been added.
     Block& added = chain_.back();
     added.setCreatedBy(createdBy);
     added.setApprovedBy(approvedBy);
@@ -74,7 +72,7 @@ void Blockchain::addBlockWithMetadata(const CarRecord& record,
     added.setCreatorSignature(creatorSignature);
     added.setSignatureVerified(signatureVerified);
 
-    // Re-persist the block with its metadata so SQLite stores the full record.
+    // Save the enriched block back to SQLite when persistence is active.
     if (db_ && db_->isOpen()) {
         db_->upsertBlock(added);
     }
@@ -140,7 +138,7 @@ BlockStage Blockchain::getLatestStage(const std::string& vin) const {
             return chain_[*rit].getRecord().stage;
         }
     }
-    // All blocks deleted - return stage from the last block anyway to avoid throwing.
+    // If every block is deleted, fall back to the last stored stage.
     return chain_[indices.back()].getRecord().stage;
 }
 
@@ -626,7 +624,7 @@ bool Blockchain::saveToDB() {
                                          : db_->lastError());
         }
 
-        // Re-persist deleted originals since fullResync wipes and rebuilds all tables.
+        // fullResync rebuilds tables, so deleted originals need to be inserted again.
         for (const auto& [idx, rec] : deletedRecords_) {
             db_->saveDeletedOriginal(idx, rec);
         }

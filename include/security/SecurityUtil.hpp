@@ -1,7 +1,4 @@
-// Provides lightweight cryptographic signing and sensitive-data masking helpers
-// for the security layer. The signature scheme uses SHA-256 with a per-user
-// secret key, which is intentionally simple for coursework demonstration
-// rather than a full PKI implementation.
+// Helpers for request signatures and masked display values.
 
 #pragma once
 

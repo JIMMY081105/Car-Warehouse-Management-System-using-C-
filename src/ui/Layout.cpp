@@ -1,4 +1,4 @@
-// Top header bar, sidebar navigation, and toast notifications.
+// Header, sidebar, and toast layout for the GUI shell.
 
 #include "ui/GuiApp.hpp"
 
@@ -216,6 +216,7 @@ void RenderSidebar(cw1::Blockchain& chain) {
     const std::string query(g_searchBuf);
     if (!query.empty()) {
         if (query != g_cachedSearchQuery) {
+            // Cache the VIN list so we do not rerun the same search every frame.
             g_cachedSearchQuery = query;
             g_cachedSearchVins.clear();
 
@@ -262,6 +263,7 @@ void RenderSidebar(cw1::Blockchain& chain) {
         const cw1::BlockStage stage = chain.getLatestStage(vin);
 
         if (selected) {
+            // Add a small accent bar to the active vehicle card.
             const ImVec2 pos = ImGui::GetCursorScreenPos();
             ImGui::GetWindowDrawList()->AddRectFilled(
                 pos,

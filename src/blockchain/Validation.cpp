@@ -1,4 +1,4 @@
-// Implements the explicit blockchain checks used by both the real chain and the temporary integrity demo shown in the GUI.
+// Chain validation rules used by both the real chain and the temp demo.
 
 #include "blockchain/Validation.hpp"
 

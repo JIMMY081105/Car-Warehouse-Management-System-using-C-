@@ -1,4 +1,4 @@
-// Implements small search helpers shared by blockchain queries and the GUI.
+// Small case-insensitive string helpers.
 
 #include "utils/StringUtil.hpp"
 
@@ -15,6 +15,7 @@ bool containsIgnoreCase(const std::string& haystack, const std::string& needle) 
         return static_cast<char>(std::tolower(c));
     };
 
+    // Compare lowercase copies so the original strings stay untouched.
     std::string h, n;
     h.resize(haystack.size());
     n.resize(needle.size());

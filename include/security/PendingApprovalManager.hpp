@@ -1,7 +1,4 @@
-// Manages the pending block approval workflow that sits between the user-facing
-// "Add Block" form and the authoritative blockchain. New records enter as pending
-// requests, and only Admin-approved requests are committed to the chain. This
-// makes the blockchain more dynamic by adding a multi-step governance layer.
+// Pending request model and approval workflow manager.
 
 #pragma once
 

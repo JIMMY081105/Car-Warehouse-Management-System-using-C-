@@ -1,4 +1,4 @@
-// Dashboard page - shows stats, fuel chart, and recent blocks.
+// Dashboard widgets for stats, fuel data, and recent blocks.
 
 #include "ui/GuiApp.hpp"
 
@@ -120,6 +120,7 @@ void RenderFuelChart(const std::vector<cw1::FuelWeeklyRecord>& history,
             return origin.y + graphHeight
                  - (static_cast<float>(value) - minY) / (maxY - minY) * graphHeight;
         };
+        // Spread each week evenly across the available width.
         const auto mapX = [&](std::size_t index) {
             return origin.x + kLabelWidth + 6.0f
                  + (static_cast<float>(index) / static_cast<float>(count - 1))
@@ -165,6 +166,7 @@ void RenderFuelChart(const std::vector<cw1::FuelWeeklyRecord>& history,
         const ImVec2 mouse = ImGui::GetMousePos();
         if (mouse.x >= mapX(0) && mouse.x <= mapX(count - 1)
             && mouse.y >= origin.y && mouse.y <= origin.y + graphHeight) {
+            // Snap the tooltip to the nearest week so hovering feels steady.
             std::size_t nearest = 0;
             float bestDistance = 1e9f;
             for (std::size_t i = 0; i < count; ++i) {

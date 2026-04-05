@@ -1,6 +1,4 @@
-// Implements lightweight request signing and sensitive-data masking for the
-// security layer. The signature uses SHA-256 with a per-user secret key,
-// and masking replaces middle characters with asterisks for display purposes.
+// Request-signing and masking helpers for sensitive fields.
 
 #include "security/SecurityUtil.hpp"
 
@@ -9,9 +7,7 @@
 namespace cw1 {
 namespace SecurityUtil {
 
-// ---------------------------------------------------------------------------
-// Request signing
-// ---------------------------------------------------------------------------
+// Request signing.
 
 std::string signRequest(const std::string& username,
                         const std::string& timestamp,
@@ -37,18 +33,14 @@ bool verifySignature(const std::string& signature,
     return signature == expected;
 }
 
-// ---------------------------------------------------------------------------
-// Sensitive data masking
-// ---------------------------------------------------------------------------
+// Sensitive field masking.
 
 std::string maskSensitive(const std::string& value) {
     // Short values are fully masked to prevent information leakage.
     if (value.empty()) return "";
     if (value.size() <= 3) return std::string(value.size(), '*');
 
-    // Keep the first three and last two characters visible, replacing the
-    // middle portion with asterisks so the value is recognisable but not
-    // fully readable.
+    // Leave a small prefix and suffix so the value stays recognisable.
     const std::size_t visiblePrefix = 3;
     const std::size_t visibleSuffix = 2;
 

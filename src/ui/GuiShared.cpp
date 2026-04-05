@@ -1,4 +1,4 @@
-// Global state definitions and shared helper functions used across the UI.
+// Shared GUI state, colors, helpers, and demo data.
 
 #include "ui/GuiApp.hpp"
 
@@ -117,6 +117,7 @@ ImVec4 HexColor(std::uint32_t hex, float a) {
 
 void ApplyGitHubDarkTheme() {
     ImGuiStyle& s = ImGui::GetStyle();
+    // Keep one place for theme tuning so the panels stay visually consistent.
     s.WindowRounding = 10.0f;
     s.FrameRounding = 7.0f;
     s.PopupRounding = 8.0f;
@@ -194,6 +195,7 @@ void ApplyGitHubDarkTheme() {
 }
 
 void LoadDemoData(cw1::Blockchain& chain) {
+    // Seed a few VIN histories so the dashboard has something to show on first run.
     {
         cw1::CarRecord r;
         r.vin = "VIN1001";
@@ -469,6 +471,7 @@ void WriteAuditEvent(cw1::Blockchain& chain,
 }
 
 void ResetAddBlockForm() {
+    // Clear the whole form after a successful submit.
     g_formVin[0] = '\0';
     g_formMfrIndex = 0;
     g_formModelIndex = 0;

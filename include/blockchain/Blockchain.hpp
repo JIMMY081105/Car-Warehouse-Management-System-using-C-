@@ -1,4 +1,4 @@
-// Declares the main blockchain service used by the coursework system. The class keeps the authoritative chain in a std::vector for efficient indexed access, search, validation, and SQLite persistence, and also maintains a companion linked-list mirror so pointer-based traversal is explicit for lecture requirements.
+// Main blockchain service used by the application.
 
 #pragma once
 

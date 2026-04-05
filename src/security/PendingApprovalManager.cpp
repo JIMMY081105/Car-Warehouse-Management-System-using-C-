@@ -1,6 +1,4 @@
-// Implements the pending block approval workflow with SQLite persistence.
-// Requests flow through three states: PENDING -> APPROVED or REJECTED.
-// Only approved requests are committed to the authoritative blockchain.
+// Stores and updates pending block requests before admin approval.
 
 #include "security/PendingApprovalManager.hpp"
 
@@ -11,9 +9,7 @@
 
 namespace cw1 {
 
-// ---------------------------------------------------------------------------
-// RequestStatus helpers
-// ---------------------------------------------------------------------------
+// Request status labels.
 
 std::string requestStatusToString(RequestStatus status) {
     switch (status) {
@@ -24,9 +20,7 @@ std::string requestStatusToString(RequestStatus status) {
     return "Unknown";
 }
 
-// ---------------------------------------------------------------------------
-// PendingApprovalManager implementation
-// ---------------------------------------------------------------------------
+// PendingApprovalManager.
 
 PendingApprovalManager::PendingApprovalManager() = default;
 
@@ -45,8 +39,7 @@ bool PendingApprovalManager::isAttached() const noexcept {
 void PendingApprovalManager::createTables() {
     if (db_ == nullptr) return;
 
-    // The pending_requests table stores every submission regardless of outcome
-    // so the approval history is always available for audit review.
+    // Keep every request row so approvals and rejections stay visible.
     const char* sql =
         "CREATE TABLE IF NOT EXISTS pending_requests ("
         "    request_id         INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -90,8 +83,7 @@ void PendingApprovalManager::createTables() {
 }
 
 int PendingApprovalManager::submitRequest(const PendingBlockRequest& request) {
-    // Assign a local ID and persist to the database. The database auto-increment
-    // will provide the authoritative ID if SQLite is connected.
+    // SQLite owns the final ID when a database is attached.
     PendingBlockRequest req = request;
     req.status = RequestStatus::PENDING;
 
@@ -100,11 +92,11 @@ int PendingApprovalManager::submitRequest(const PendingBlockRequest& request) {
     }
 
     if (db_ != nullptr) {
-        // Insert and let SQLite assign the ID via AUTOINCREMENT.
+        // Let SQLite assign the real request id.
         if (!saveRequestToDB(req)) {
             return -1;
         }
-        // Retrieve the last inserted rowid as the request ID.
+        // Mirror the row id back into memory.
         req.requestId = static_cast<int>(sqlite3_last_insert_rowid(db_));
     } else {
         req.requestId = nextId_++;
@@ -189,9 +181,7 @@ std::string PendingApprovalManager::lastError() const {
     return lastError_;
 }
 
-// ---------------------------------------------------------------------------
-// SQLite persistence
-// ---------------------------------------------------------------------------
+// SQLite persistence.
 
 bool PendingApprovalManager::saveRequestToDB(const PendingBlockRequest& req) {
     if (db_ == nullptr) { lastError_ = "Database not attached"; return false; }
@@ -343,7 +333,7 @@ bool PendingApprovalManager::loadFromDB() {
         req.rejectReason       = getText(28);
         req.creatorSignature   = getText(29);
 
-        // Track the highest ID so locally-assigned IDs never collide.
+        // Keep local fallback ids ahead of anything loaded from the database.
         if (req.requestId >= nextId_) {
             nextId_ = req.requestId + 1;
         }

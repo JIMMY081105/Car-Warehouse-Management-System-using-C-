@@ -1,4 +1,4 @@
-// Defines a tiny abstract interface for block-like objects. The current coursework implementation uses Block directly, but this interface documents the common block contract clearly for a marker.
+// Small read-only interface for block-like objects.
 
 #pragma once
 

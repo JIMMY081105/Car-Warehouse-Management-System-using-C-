@@ -1,4 +1,4 @@
-// Declares the linked-list audit trail used to capture user actions, database activity, integrity checks, and tamper simulations. This gives the coursework a second visible pointer-based structure besides the blockchain mirror.
+// Linked-list audit log types used across the app.
 
 #pragma once
 

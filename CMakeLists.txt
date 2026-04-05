@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
+# Main coursework project definition.
 project(COMP2034_CW1_CarWarehouseBlockchain LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -7,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 
+# Toggle the ImGui desktop app.
 option(BUILD_GUI "Build the ImGui GUI version"   ON)
 
 
@@ -16,6 +18,7 @@ find_package(OpenGL REQUIRED)
 
 find_package(glfw3 QUIET)
 if(NOT glfw3_FOUND)
+    # Fall back to the bundled GLFW copy when the system package is missing.
     message(STATUS "System glfw3 not found -- using third_party/glfw")
     set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
     set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
@@ -25,6 +28,7 @@ if(NOT glfw3_FOUND)
 endif()
 
 
+# Build SQLite from the bundled source so the project stays self-contained.
 add_library(sqlite3_lib STATIC third_party/sqlite/sqlite3.c)
 target_include_directories(sqlite3_lib PUBLIC third_party/sqlite)
 if(MSVC)
@@ -33,6 +37,7 @@ else()
     target_compile_options(sqlite3_lib PRIVATE -w)
 endif()
 
+# Core logic shared by the GUI targets.
 set(BACKEND_SOURCES
     src/models/CarRecord.cpp
     src/blockchain/Block.cpp
@@ -67,6 +72,7 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
+# GUI-only panels and helpers.
 set(UI_SOURCES
     src/ui/GuiShared.cpp
     src/ui/ReportExporter.cpp

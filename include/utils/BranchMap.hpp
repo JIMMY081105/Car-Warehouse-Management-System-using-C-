@@ -1,4 +1,4 @@
-// Shares manufacturer/branch metadata with the GUI and declares the branch globe visualisation used on the dashboard as an advanced presentation feature.
+// Branch datasets and map drawing entry point.
 
 #pragma once
 

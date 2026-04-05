@@ -1,4 +1,4 @@
-// Login screen and pending approvals page.
+// Login screen and pending-approval screens.
 
 #include "ui/GuiApp.hpp"
 
@@ -11,6 +11,7 @@
 void RenderLoginScreen(cw1::Blockchain& chain) {
     ImGuiIO& io = ImGui::GetIO();
 
+    // Size the card from the current window so it still fits on smaller screens.
     const float screenW = io.DisplaySize.x;
     const float screenH = io.DisplaySize.y;
     const float cardW = (screenW < 500.0f)
@@ -263,6 +264,7 @@ void RenderPendingApprovals(cw1::Blockchain& chain) {
             if (request.status == cw1::RequestStatus::PENDING) {
                 const std::string approveId = "Approve##ap" + std::to_string(request.requestId);
                 if (DrawPrimaryButton(approveId.c_str(), ImVec2(80, 26))) {
+                    // Approval both updates the request and commits the real block.
                     const std::string approver = g_authMgr.currentUser().username;
                     if (g_pendingMgr.approveRequest(request.requestId, approver)) {
                         chain.addBlockWithMetadata(request.payload, request.requestedBy,

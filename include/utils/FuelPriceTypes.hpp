@@ -1,4 +1,4 @@
-// Shared data types for the fuel-price intelligence feature.
+// Shared fuel-related enums and data structs.
 
 #pragma once
 

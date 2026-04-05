@@ -1,6 +1,4 @@
-// Implements user authentication with hardcoded demo accounts. Passwords are
-// stored as SHA-256 hashes so the coursework demonstrates a realistic security
-// pattern without requiring an external authentication framework.
+// Demo login logic and role labels for the GUI.
 
 #include "security/Auth.hpp"
 
@@ -11,9 +9,7 @@
 
 namespace cw1 {
 
-// ---------------------------------------------------------------------------
-// Role string conversion helpers
-// ---------------------------------------------------------------------------
+// Role labels used by the UI.
 
 std::string roleToString(Role role) {
     switch (role) {
@@ -40,18 +36,14 @@ Role stringToRole(const std::string& text) {
     return Role::AUDITOR;  // Safe default for unknown role strings
 }
 
-// ---------------------------------------------------------------------------
-// AuthManager implementation
-// ---------------------------------------------------------------------------
+// AuthManager.
 
 AuthManager::AuthManager() {
     initDemoUsers();
 }
 
 void AuthManager::initDemoUsers() {
-    // Five demo accounts covering every role in the RBAC matrix. Each account
-    // uses a simple password that is easy to type during a coursework demo.
-    // The secret key is unique per user and used for request signatures.
+    // Keep one demo account per role so every flow can be tested quickly.
 
     users_.push_back({
         "admin01",
@@ -95,8 +87,7 @@ void AuthManager::initDemoUsers() {
 }
 
 bool AuthManager::login(const std::string& username, const std::string& password) {
-    // Hash the supplied plaintext password and compare it against the stored
-    // digest so credentials are never compared in cleartext.
+    // Hash the input before comparing it with stored credentials.
     const std::string hash = HashUtil::sha256(password);
 
     for (const User& user : users_) {
@@ -123,8 +114,7 @@ bool AuthManager::isLoggedIn() const noexcept {
 }
 
 const User& AuthManager::currentUser() const {
-    // Precondition: isLoggedIn() must be true. The GUI always checks this
-    // before rendering any authenticated page.
+    // The GUI checks isLoggedIn() before calling this.
     return *currentUser_;
 }
 

@@ -1,4 +1,4 @@
-// Implements block hashing, tamper simulation helpers, and rehash behaviour. The coursework uses both SHA-256 and SHA3-128 so the marker can see multiple integrity checks applied to the same stored payload.
+// Block hashing, nonce generation, and block mutation helpers.
 
 #include "blockchain/Block.hpp"
 
@@ -11,7 +11,7 @@
 
 namespace cw1 {
 
-// A new block starts with a fresh timestamp and nonce so the stored hash represents the exact state that was appended to the blockchain.
+// New blocks stamp their own time and nonce before the first hash is stored.
 Block::Block(std::size_t index, std::string previousHash, CarRecord record)
     : index_(index),
       previousHash_(std::move(previousHash)),
@@ -21,7 +21,7 @@ Block::Block(std::size_t index, std::string previousHash, CarRecord record)
     currentHash_ = computeHash();
     sha3Hash_    = computeSha3Hash();
 
-    // The genesis block visibly satisfies the lecture rule by storing its own hash in previousHash_ after the initial digest has been computed.
+    // The first block keeps its own hash in previousHash_ to match the project rule.
     if (index_ == 0 && previousHash_ == "0") {
         previousHash_ = currentHash_;
     }
@@ -78,7 +78,7 @@ const std::string& Block::getSha3Hash() const noexcept {
 std::string Block::computeHash() const {
     std::ostringstream payload;
 
-    // The genesis block is hashed with "0" as its logical previous-hash input, while later blocks use the real previous block hash.
+    // Genesis uses "0" as the seed input before the visible previousHash_ is rewritten.
     const std::string prevForHash = (index_ == 0) ? std::string("0") : previousHash_;
     payload << index_ << prevForHash << timestamp_ << nonce_ << record_.serialize();
     return HashUtil::sha256(payload.str());
@@ -110,7 +110,7 @@ void Block::debugOverrideCurrentHash(std::string forgedHash) {
 }
 
 void Block::debugTamperPayloadForSimulation(const std::string& marker) {
-    // Mutating one payload field is enough to invalidate the stored hash.
+    // Changing one payload field is enough to break validation later.
     record_.destination = marker;
 }
 
@@ -129,7 +129,7 @@ void Block::setRecord(CarRecord newRecord) {
 void Block::rehash() {
     currentHash_ = computeHash();
     sha3Hash_    = computeSha3Hash();
-    // The custom genesis rule is restored whenever block zero is recomputed.
+    // Reapply the custom genesis rule after rehashing block zero.
     if (index_ == 0) {
         previousHash_ = currentHash_;
     }
@@ -141,12 +141,8 @@ std::uint64_t Block::generateNonce() {
     return dist(engine);
 }
 
-// ---------------------------------------------------------------------------
-// Security metadata accessors
-// ---------------------------------------------------------------------------
-// These fields track who created and approved the block as part of the
-// multi-level security upgrade. They are intentionally excluded from hash
-// computation so existing chain integrity checks remain unchanged.
+// Security metadata stays outside the hash so approval info can be stored
+// without changing old integrity rules.
 
 const std::string& Block::getCreatedBy() const noexcept {
     return createdBy_;

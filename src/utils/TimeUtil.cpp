@@ -1,4 +1,4 @@
-// Centralises timestamp formatting so blocks and audit entries use the same ISO-8601 representation.
+// Shared timestamp formatting helpers.
 
 #include "utils/TimeUtil.hpp"
 
@@ -13,6 +13,7 @@ std::string nowIso8601() {
     const auto now = std::chrono::system_clock::now();
     const std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
 
+    // Store UTC timestamps so logs and saved blocks stay comparable across machines.
     std::tm utcTime = {};
 #ifdef _WIN32
     gmtime_s(&utcTime, &currentTime);

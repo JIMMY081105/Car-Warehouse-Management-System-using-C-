@@ -1,4 +1,4 @@
-// Implements the pointer-based mirror used to demonstrate linked-list traversal alongside the production vector-backed blockchain storage.
+// Linked-list view of the chain used for traversal demos in the GUI.
 
 #include "blockchain/LinkedBlockchainView.hpp"
 

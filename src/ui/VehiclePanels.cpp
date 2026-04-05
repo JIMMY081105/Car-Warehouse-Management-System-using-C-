@@ -1,4 +1,4 @@
-// Car detail view and the add-block form.
+// Vehicle detail view and add-block form.
 
 #include "ui/GuiApp.hpp"
 
@@ -111,6 +111,7 @@ void RenderCarDetail(cw1::Blockchain& chain) {
             continue;
         }
 
+        // Pre-calculate a child height so expanded blocks do not jump around too much.
         int rows = 7;
         const bool isGenesis = (block.getIndex() == 0);
         if (isGenesis) {
@@ -439,6 +440,7 @@ void RenderAddBlock(cw1::Blockchain& chain) {
 
         try {
             if (isAdmin) {
+                // Admin can commit straight to the chain without the approval queue.
                 const cw1::User& user = g_authMgr.currentUser();
                 g_lastAddBlockSeconds = cw1::measureSeconds([&]() {
                     chain.addBlockWithMetadata(record, user.username, user.username,
@@ -450,6 +452,7 @@ void RenderAddBlock(cw1::Blockchain& chain) {
                               + cw1::formatSeconds(g_lastAddBlockSeconds) + " s",
                           COL_GREEN_BR);
             } else {
+                // Other roles create a signed request for later review.
                 const cw1::User& user = g_authMgr.currentUser();
                 cw1::PendingBlockRequest request;
                 request.requestedBy = user.username;

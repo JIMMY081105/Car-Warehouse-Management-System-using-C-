@@ -1,4 +1,4 @@
-// Defines the structured payload stored inside each blockchain block. Fields are grouped by stage so a marker can see how one vehicle progresses from production to customer sale through multiple immutable snapshots.
+// Vehicle snapshot stored inside each block.
 
 #pragma once
 

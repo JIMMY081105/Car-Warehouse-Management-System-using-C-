@@ -1,7 +1,4 @@
-// Centralises Role-Based Access Control (RBAC) permission checks for the
-// car warehouse blockchain system. Both the GUI (button enable/disable) and
-// backend logic (action guards) call these helpers so permission rules are
-// defined in one place rather than duplicated across render functions.
+// Permission checks shared by the GUI and backend.
 
 #pragma once
 

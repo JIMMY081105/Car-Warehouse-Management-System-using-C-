@@ -1,4 +1,4 @@
-// Lightweight timing helpers used to show search, verification, and add-block durations in the GUI.
+// Small timing helpers for GUI measurements.
 
 #pragma once
 

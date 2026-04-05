@@ -1,4 +1,4 @@
-// Declares the ordered lifecycle stages represented in the blockchain. The enum values drive both validation-friendly payload structure and GUI labels.
+// Lifecycle stages used in the vehicle workflow.
 
 #pragma once
 

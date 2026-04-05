@@ -1,8 +1,4 @@
-// Implements the read-only AI chatbot service.  All application data is
-// collected on the main thread and handed to a background worker that calls
-// the Gemini 2.0 Flash API via WinHTTP (built into Windows, no extra
-// installs needed).  The response is polled each frame and appended to the
-// chat history.
+// Read-only chatbot service used by the AI assistant panel.
 
 #include "ai/ChatbotService.hpp"
 
@@ -33,9 +29,7 @@
 
 namespace ai {
 
-// ===================================================================
-// Local helpers
-// ===================================================================
+// Small local helpers.
 
 static const char* stageName(cw1::BlockStage s) {
     switch (s) {
@@ -78,9 +72,7 @@ static int sqlCb(void* data, int argc, char** argv, char** colNames) {
     return 0;
 }
 
-// ===================================================================
-// Construction / destruction
-// ===================================================================
+// Construction and cleanup.
 
 ChatbotService::ChatbotService() = default;
 
@@ -88,9 +80,7 @@ ChatbotService::~ChatbotService() {
     if (worker_.joinable()) worker_.join();
 }
 
-// ===================================================================
-// API-key management
-// ===================================================================
+// API key loading.
 
 bool ChatbotService::loadApiKey() {
     // 1) Try reading from env/gemini_api_key.txt relative to project root.
@@ -147,9 +137,7 @@ const std::string& ChatbotService::projectRoot()  const noexcept        { return
 void               ChatbotService::setOnlineMode(bool o) noexcept       { onlineMode_ = o; }
 bool               ChatbotService::isOnlineMode() const noexcept        { return onlineMode_; }
 
-// ===================================================================
-// Chat lifecycle
-// ===================================================================
+// Chat flow.
 
 void ChatbotService::sendMessage(const std::string& userMessage,
                                   cw1::Blockchain& chain,
@@ -215,9 +203,7 @@ void ChatbotService::clearHistory() { if (!waiting_) history_.clear(); }
 ContextOptions&       ChatbotService::options()       noexcept { return opts_; }
 const ContextOptions& ChatbotService::options() const noexcept { return opts_; }
 
-// ===================================================================
-// Available code files and database tables
-// ===================================================================
+// Static lists used by project mode.
 
 const std::vector<std::string>& ChatbotService::availableCodeFiles() {
     static const std::vector<std::string> files = {
@@ -255,9 +241,7 @@ const std::vector<std::string>& ChatbotService::availableDbTables() {
     return tables;
 }
 
-// ===================================================================
-// Read-only code-file access
-// ===================================================================
+// Read-only file access.
 
 bool ChatbotService::isPathSafe(const std::string& p) const {
     if (p.find("..") != std::string::npos) return false;
@@ -288,9 +272,7 @@ std::string ChatbotService::readCodeFile(const std::string& relativePath) const 
     return content;
 }
 
-// ===================================================================
-// Read-only SQLite database inspection
-// ===================================================================
+// Read-only database inspection.
 
 std::string ChatbotService::getTableSummary(sqlite3* db,
                                              const std::string& table,
@@ -392,9 +374,7 @@ std::string ChatbotService::getDbOverview(sqlite3* db) const {
     return out.str();
 }
 
-// ===================================================================
-// System prompt
-// ===================================================================
+// Prompt building.
 
 std::string ChatbotService::buildSystemPrompt() const {
     if (onlineMode_) {
@@ -441,10 +421,7 @@ std::string ChatbotService::buildSystemPrompt() const {
         "- Soft delete and restore for blocks (tombstone pattern).";
 }
 
-// ===================================================================
-// Context builder — collects live read-only state for the prompt
-// ===================================================================
-
+// Collect live context for project mode.
 std::string ChatbotService::buildContext(
         cw1::Blockchain& chain,
         const cw1::FuelPriceManager& fuelMgr,
@@ -456,7 +433,7 @@ std::string ChatbotService::buildContext(
 
     std::ostringstream ctx;
 
-    // ---- App state (always included in project mode) ---------------------
+    // Basic app state always goes in project mode.
     {
         ctx << "=== CURRENT APPLICATION STATE ===\n";
 
@@ -533,7 +510,7 @@ std::string ChatbotService::buildContext(
         ctx << "\n";
     }
 
-    // ---- Fuel data (always in project mode) ---------------------------------
+    // Fuel data is cheap to include and useful on the dashboard side.
     {
         ctx << "=== FUEL PRICE DATA ===\n";
         const auto& hist = fuelMgr.history();
@@ -558,7 +535,7 @@ std::string ChatbotService::buildContext(
         ctx << "\n";
     }
 
-    // ---- Audit log (always in project mode) -------------------------------
+    // Recent audit entries help explain what the user just did.
     {
         ctx << "=== RECENT AUDIT LOG (last 10) ===\n";
         auto entries = chain.getAuditLog().getRecentEntries(10);
@@ -573,7 +550,7 @@ std::string ChatbotService::buildContext(
         ctx << "\n";
     }
 
-    // ---- Database summary (always in project mode) ------------------------
+    // Table counts and samples help with database questions.
     if (chain.isDatabaseOpen()) {
         sqlite3* db = chain.getDatabase()->rawHandle();
         if (db) {
@@ -588,15 +565,13 @@ std::string ChatbotService::buildContext(
     return ctx.str();
 }
 
-// ===================================================================
-// Gemini 2.0 Flash API call (runs on the worker thread)
-// ===================================================================
+// Worker-thread API call.
 
 std::string ChatbotService::callGeminiApi(
         const std::string& systemPrompt,
         const std::vector<ChatMessage>& msgs) const {
 
-    // --- Build JSON request body (Gemini format) --------------------------
+    // Build the JSON payload expected by Gemini.
     std::string body;
     body.reserve(systemPrompt.size() + 4096);
     body += "{\n  \"systemInstruction\":{\"parts\":[{\"text\":\"";
@@ -619,7 +594,7 @@ std::string ChatbotService::callGeminiApi(
             "  \"generationConfig\":{\"temperature\":0.7,\"maxOutputTokens\":4096}\n"
             "}";
 
-    // --- WinHTTP request ---------------------------------------------------
+    // Send the request with WinHTTP to avoid extra runtime dependencies.
     const std::wstring path = toWide(
         "/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey_);
 
@@ -686,7 +661,7 @@ std::string ChatbotService::callGeminiApi(
     WinHttpCloseHandle(hConnect);
     WinHttpCloseHandle(hSession);
 
-    // --- Check for API-level error -----------------------------------------
+    // Pull out a readable API error when the request fails.
     if (response.find("\"error\"") != std::string::npos) {
         size_t pos = response.find("\"message\"");
         if (pos != std::string::npos) {
@@ -708,9 +683,7 @@ std::string ChatbotService::callGeminiApi(
     return extractJsonText(response);
 }
 
-// ===================================================================
 // JSON helpers
-// ===================================================================
 
 std::string ChatbotService::jsonEscape(const std::string& s) {
     std::string r;
@@ -796,9 +769,7 @@ std::string ChatbotService::extractJsonText(const std::string& json) {
     return result;
 }
 
-// ===================================================================
-// Markdown cleanup — strips formatting so ImGui shows clean text
-// ===================================================================
+// Strip markdown before showing the reply in ImGui.
 
 std::string ChatbotService::cleanMarkdown(const std::string& raw) {
     if (raw.empty()) return raw;
@@ -889,9 +860,7 @@ std::string ChatbotService::cleanMarkdown(const std::string& raw) {
     return result;
 }
 
-// ===================================================================
 // Misc
-// ===================================================================
 
 std::string ChatbotService::currentTimestamp() {
     std::time_t now = std::time(nullptr);

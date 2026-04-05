@@ -1,17 +1,11 @@
-// Implements the RBAC permission matrix for the car warehouse blockchain.
-// Every permission check in the system ultimately calls one of these functions
-// so the rules are defined once and enforced consistently.
+// Role checks for add, approve, delete, and tamper actions.
 
 #include "security/AccessControl.hpp"
 
 namespace cw1 {
 namespace AccessControl {
 
-// ---------------------------------------------------------------------------
-// Stage creation permissions
-// ---------------------------------------------------------------------------
-// Each non-admin role can only create blocks for stages that match their
-// organisational responsibility. Admin can create any stage.
+// Stage creation follows the role's part of the workflow.
 
 bool canCreateStage(Role role, BlockStage stage) {
     switch (role) {
@@ -40,9 +34,7 @@ bool canCreateStage(Role role, BlockStage stage) {
     return false;
 }
 
-// ---------------------------------------------------------------------------
-// Action-level permissions
-// ---------------------------------------------------------------------------
+// Other action-level checks.
 
 bool canApprove(Role role) {
     // Only Admin can approve or reject pending block requests. This ensures

@@ -1,4 +1,4 @@
-// Declares small string helpers shared by search and filtering code.
+// Small string utilities used by search code.
 
 #pragma once
 

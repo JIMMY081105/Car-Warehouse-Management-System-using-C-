@@ -1,4 +1,4 @@
-// Implements SQLite persistence for blocks and audit entries. The database is optional at runtime, but when enabled it preserves the richer coursework workflow across sessions and supports SQL-backed search.
+// SQLite persistence for blocks, audit entries, and deleted records.
 
 #include "utils/DatabaseManager.hpp"
 

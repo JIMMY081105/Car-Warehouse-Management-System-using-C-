@@ -1,4 +1,4 @@
-// Exposes the static coursework datasets that power combo boxes, demo vehicle generation, and consistent stage names across the GUI.
+// Static vehicle data used by forms and demo records.
 
 #pragma once
 

@@ -1,4 +1,4 @@
-// Declares the blockchain integrity checks used throughout the coursework. Validation is kept separate from Blockchain so the rules are easy for a marker to inspect and can also be reused for temporary demo chains.
+// Validation result types and chain-checking entry point.
 
 #pragma once
 

@@ -1,6 +1,4 @@
-// Represents an authenticated user in the car warehouse system. Each user
-// carries a role assignment that the RBAC layer uses to enforce permissions,
-// and a secret key used for lightweight request signing.
+// Basic user record used by login and approvals.
 
 #pragma once
 

@@ -1,6 +1,4 @@
-// Defines the user roles used by the Role-Based Access Control (RBAC) system.
-// Each role maps to a specific set of permissions that govern what actions a
-// user can perform inside the car warehouse blockchain system.
+// User roles used by the access-control layer.
 
 #pragma once
 

@@ -1,4 +1,4 @@
-// Supplies the manufacturer/branch dataset and renders the interactive branch globe shown on the dashboard. This supports the coursework's richer GUI and helps visualise the warehouse network geographically.
+// Branch data and globe rendering used on the dashboard.
 
 #include "utils/BranchMap.hpp"
 #include "imgui.h"
@@ -524,6 +524,7 @@ void RenderBranchMap(float mapW, float mapH)
     float cosClat = std::cos(cLatR), sinClat = std::sin(cLatR);
 
 
+    // Convert latitude and longitude into the current rotated globe position.
     auto GeoToGlobe = [&](float lat, float lon, float& outZ) -> ImVec2 {
         float latR = lat * DEG2RAD;
         float dLon = (lon - g_globeRotLon) * DEG2RAD;
@@ -666,6 +667,7 @@ void RenderBranchMap(float mapW, float mapH)
     ImGui::InvisibleButton("##globe", ImVec2(mapW, mapH));
     bool hov = ImGui::IsItemHovered();
 
+    // Drag rotates the globe, wheel zooms it.
     if (hov && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
         ImVec2 d = ImGui::GetIO().MouseDelta;
         float sensitivity = 0.195f / g_globeRadius;
@@ -705,9 +707,7 @@ void RenderBranchMap(float mapW, float mapH)
 
 
     {
-
-
-
+        // Approximate a scale bar from the current globe radius.
         float milesPerPx = 3959.0f / radius;
         float targetBarPx = 80.0f;
         float rawMiles = targetBarPx * milesPerPx;

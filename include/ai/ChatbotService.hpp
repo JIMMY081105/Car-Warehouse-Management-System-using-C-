@@ -1,6 +1,4 @@
-// Declares the read-only AI chatbot service that answers questions about the
-// codebase, SQLite database, blockchain state, and system behaviour using the
-// Gemini 2.0 Flash API.  No data is ever written or mutated by this module.
+// Read-only chatbot service for the AI assistant panel.
 
 #pragma once
 
@@ -20,9 +18,7 @@ struct sqlite3;
 
 namespace ai {
 
-// ---------------------------------------------------------------------------
-// A single chat message displayed in the AI Assistant panel.
-// ---------------------------------------------------------------------------
+// One message shown in the chat history.
 struct ChatMessage {
     enum class Role { USER, ASSISTANT };
     Role        role;
@@ -31,9 +27,7 @@ struct ChatMessage {
     bool        isError = false;
 };
 
-// ---------------------------------------------------------------------------
-// Toggles that control which context sources are sent to the LLM.
-// ---------------------------------------------------------------------------
+// Optional context toggles for project mode.
 struct ContextOptions {
     bool includeAppState     = true;
     bool includeCodeFile     = false;
@@ -44,9 +38,7 @@ struct ContextOptions {
     int  selectedTableIndex  = 0;
 };
 
-// ---------------------------------------------------------------------------
-// Chatbot service — manages conversation, context building, and Gemini calls.
-// ---------------------------------------------------------------------------
+// Owns chat history, context building, and Gemini requests.
 class ChatbotService {
 public:
     ChatbotService();
@@ -55,7 +47,7 @@ public:
     ChatbotService(const ChatbotService&)            = delete;
     ChatbotService& operator=(const ChatbotService&) = delete;
 
-    // --- Initialisation -----------------------------------------------------
+    // Setup.
     bool               loadApiKey();
     bool               hasApiKey()    const noexcept;
     std::string        statusText()   const;
@@ -64,7 +56,7 @@ public:
     void               setOnlineMode(bool online) noexcept;
     bool               isOnlineMode() const noexcept;
 
-    // --- Chat lifecycle -----------------------------------------------------
+    // Chat flow.
     void sendMessage(const std::string& userMessage,
                      cw1::Blockchain& chain,
                      const cw1::FuelPriceManager& fuelMgr,
@@ -75,15 +67,15 @@ public:
     const std::vector<ChatMessage>& history() const noexcept;
     void clearHistory();
 
-    // --- Context options ----------------------------------------------------
+    // Context options.
     ContextOptions&       options()       noexcept;
     const ContextOptions& options() const noexcept;
 
-    // --- Static data lists --------------------------------------------------
+    // Static lists.
     static const std::vector<std::string>& availableCodeFiles();
     static const std::vector<std::string>& availableDbTables();
 
-    // --- Read-only data helpers ---------------------------------------------
+    // Read-only helpers.
     std::string readCodeFile(const std::string& relativePath) const;
     std::string getTableSummary(sqlite3* db, const std::string& table,
                                 int maxRows = 10) const;
@@ -104,14 +96,14 @@ private:
     static std::string currentTimestamp();
     bool               isPathSafe(const std::string& relativePath) const;
 
-    // --- State --------------------------------------------------------------
+    // Stored state.
     std::string              apiKey_;
     std::string              projectRoot_;
     std::vector<ChatMessage> history_;
     ContextOptions           opts_;
     bool                     onlineMode_ = true;
 
-    // --- Async worker -------------------------------------------------------
+    // Worker-thread result buffer.
     std::atomic<bool> waiting_{false};
     std::thread       worker_;
     std::mutex        pendingMutex_;

@@ -1,4 +1,4 @@
-// Main entry point - sets up the window, loads fonts, and runs the render loop.
+// Starts the GUI, loads shared resources, and runs the main loop.
 
 #include <GLFW/glfw3.h>
 
@@ -28,6 +28,7 @@ ImFont* TryLoadFont(ImGuiIO& io, const char* path, float sizePx) {
 
 void LoadFonts(ImGuiIO& io, float dpiScale) {
 #ifdef _WIN32
+    // Prefer system fonts first so the UI looks consistent on lab machines.
     g_fontBody = TryLoadFont(io, "C:/Windows/Fonts/segoeui.ttf", 16.0f * dpiScale);
     g_fontSection = TryLoadFont(io, "C:/Windows/Fonts/segoeuib.ttf", 22.0f * dpiScale);
     g_fontTitle = TryLoadFont(io, "C:/Windows/Fonts/segoeuib.ttf", 26.0f * dpiScale);
@@ -92,6 +93,7 @@ void InitialiseData(cw1::Blockchain& chain) {
     bool loadedFromDatabase = false;
 
     try {
+        // The GUI can still run without SQLite, so treat database setup as optional.
         if (!chain.openDatabase(g_projectRoot + "/database/cw1_blockchain.db")) {
             PushToast("SQLite database unavailable. Continuing with in-memory data.",
                       COL_YELLOW, 4.0f);
@@ -109,6 +111,7 @@ void InitialiseData(cw1::Blockchain& chain) {
         }
 
         if (!loadedFromDatabase) {
+            // Fresh run or failed load: fall back to bundled demo records.
             LoadDemoData(chain);
             if (chain.isDatabaseOpen() && !chain.saveToDB()) {
                 PushToast("Database sync failed. Continuing with in-memory chain.",
@@ -201,6 +204,7 @@ void UpdateTempChainAutoGeneration() {
     }
 
     const std::string previousHash = g_tempChain.back().getCurrentHash();
+    // Temp blocks only live in memory for the integrity demo.
     g_tempChain.emplace_back(g_tempChain.size(), previousHash, record);
     PushToast("Temp block #" + std::to_string(g_tempChain.size() - 1)
                   + " generated (not saved to DB)",
@@ -227,6 +231,7 @@ void RenderFrame(GLFWwindow* window, cw1::Blockchain& chain) {
     ImGuiIO& io = ImGui::GetIO();
 
     if (g_showLoginScreen || !g_authMgr.isLoggedIn()) {
+        // Keep the login screen on its own path so the rest of the UI does not render behind it.
         RenderLoginScreen(chain);
         RenderToasts(io.DeltaTime);
 

@@ -1,4 +1,4 @@
-// Wraps SQLite persistence for the coursework blockchain. The database keeps blocks, audit events, and SQL-driven search available across GUI sessions.
+// SQLite wrapper used by blockchain persistence.
 
 #pragma once
 

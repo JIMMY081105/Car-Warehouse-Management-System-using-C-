@@ -1,4 +1,4 @@
-// This file turns raw strings into the hashes used by the blockchain and the extra digest view.
+// Hash helpers used by block creation and validation.
 #include "utils/HashUtil.hpp"
 
 #include <iomanip>
