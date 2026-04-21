@@ -17,7 +17,7 @@ ValidationResult verifyChain(const std::vector<Block>& blocks) {
         const Block& current = blocks[i];
 
         // Recompute the payload hash to detect direct edits to stored data.
-        if (current.getCurrentHash() != current.computeHash()) {
+        if (current.getCurrentHash() != current.computeHash()) {///
             failedIndices.push_back(i);
             continue;
         }
