@@ -1,0 +1,400 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 5 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+5 0 obj
+<< /Length 5031 >>
+stream
+BT
+/F1 9 Tf
+/F1 13 Tf
+1 0 0 1 50 792 Tm
+(CAR WAREHOUSE BLOCKCHAIN SYSTEM - REPORT) Tj
+/F1 9 Tf
+1 0 0 1 50 780 Tm
+(========================================) Tj
+1 0 0 1 50 768 Tm
+(Generated: 2026-04-21 22:31:10) Tj
+1 0 0 1 50 756 Tm
+() Tj
+1 0 0 1 50 744 Tm
+(SUMMARY) Tj
+1 0 0 1 50 732 Tm
+(-------) Tj
+1 0 0 1 50 720 Tm
+(Total blocks: 21) Tj
+1 0 0 1 50 708 Tm
+(Total vehicles: 10) Tj
+1 0 0 1 50 696 Tm
+(Chain integrity: VERIFIED) Tj
+1 0 0 1 50 684 Tm
+() Tj
+1 0 0 1 50 672 Tm
+(BLOCKCHAIN BLOCKS) Tj
+1 0 0 1 50 660 Tm
+(-----------------) Tj
+1 0 0 1 50 648 Tm
+(Block #0 | VIN: VIN1001 | Perodua Axia | Silver | Stage: Production) Tj
+1 0 0 1 50 636 Tm
+(  Hash:  102a125d5a28f42e547ef9c6d77b7bdaa79fe3c7363f76e0737b062a478c9b34) Tj
+1 0 0 1 50 624 Tm
+(  Prev:  102a125d5a28f42e547ef9c6d77b7bdaa79fe3c7363f76e0737b062a478c9b34) Tj
+1 0 0 1 50 612 Tm
+(  SHA3:  0f4f6cac73f1428ed98884a78751925c) Tj
+1 0 0 1 50 600 Tm
+(  Nonce: 671080326442725113 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 588 Tm
+(Block #1 | VIN: VIN1001 | Perodua Axia | Silver | Stage: Warehouse Intake) Tj
+1 0 0 1 50 576 Tm
+(  Hash:  5ee40197097116c8ee43311a544f5cd2a3d6946349ddaf8a4f75aa7ac61526e3) Tj
+1 0 0 1 50 564 Tm
+(  Prev:  102a125d5a28f42e547ef9c6d77b7bdaa79fe3c7363f76e0737b062a478c9b34) Tj
+1 0 0 1 50 552 Tm
+(  SHA3:  c4e97ce3e5faeab5e2e2a6f7eadca75e) Tj
+1 0 0 1 50 540 Tm
+(  Nonce: 3216103123439739512 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 528 Tm
+(Block #2 | VIN: VIN1001 | Perodua Axia | Silver | Stage: Quality Check) Tj
+1 0 0 1 50 516 Tm
+(  Hash:  cca573d8db744344381e31a0cdaa7b964cd33f74f95c4e45457c67a39ba691a1) Tj
+1 0 0 1 50 504 Tm
+(  Prev:  5ee40197097116c8ee43311a544f5cd2a3d6946349ddaf8a4f75aa7ac61526e3) Tj
+1 0 0 1 50 492 Tm
+(  SHA3:  1ee7dbd0b19cc5f058f82b1f646e0ba8) Tj
+1 0 0 1 50 480 Tm
+(  Nonce: 2402321584028768028 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 468 Tm
+(Block #3 | VIN: VIN1001 | Perodua Axia | Silver | Stage: Dealer Dispatch) Tj
+1 0 0 1 50 456 Tm
+(  Hash:  778cffacb38c2df630ef5ac60959de0798207ccc104afcef7aa83c3dc618d8c3) Tj
+1 0 0 1 50 444 Tm
+(  Prev:  cca573d8db744344381e31a0cdaa7b964cd33f74f95c4e45457c67a39ba691a1) Tj
+1 0 0 1 50 432 Tm
+(  SHA3:  433f7665e355348b6eb45377e2cfcdd7) Tj
+1 0 0 1 50 420 Tm
+(  Nonce: 10758287352914756068 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 408 Tm
+(Block #4 | VIN: VIN1001 | Perodua Axia | Silver | Stage: Customer Sale) Tj
+1 0 0 1 50 396 Tm
+(  Hash:  dfb38acbc1fc82b414360720a277c8179e53eb8d94b1953b469aae1377679e2b) Tj
+1 0 0 1 50 384 Tm
+(  Prev:  778cffacb38c2df630ef5ac60959de0798207ccc104afcef7aa83c3dc618d8c3) Tj
+1 0 0 1 50 372 Tm
+(  SHA3:  b11a4ee7e3d8ca3733bbfca11fe718fc) Tj
+1 0 0 1 50 360 Tm
+(  Nonce: 1398990351702718785 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 348 Tm
+(Block #5 | VIN: VIN1002 | Toyota Vios | White | Stage: Production) Tj
+1 0 0 1 50 336 Tm
+(  Hash:  99e88202ef267c39408747c6937581b4079bf514ea84b01ca196575b6f40d264) Tj
+1 0 0 1 50 324 Tm
+(  Prev:  dfb38acbc1fc82b414360720a277c8179e53eb8d94b1953b469aae1377679e2b) Tj
+1 0 0 1 50 312 Tm
+(  SHA3:  4a6d721b557831c07178106df5624b73) Tj
+1 0 0 1 50 300 Tm
+(  Nonce: 8745312438544760515 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 288 Tm
+(Block #6 | VIN: VIN1002 | Toyota Vios | White | Stage: Warehouse Intake) Tj
+1 0 0 1 50 276 Tm
+(  Hash:  c6aeda1a389ed3cdaa7d17142b681a301d88c9eaefef1f80cddfb1ec6fab01a5) Tj
+1 0 0 1 50 264 Tm
+(  Prev:  99e88202ef267c39408747c6937581b4079bf514ea84b01ca196575b6f40d264) Tj
+1 0 0 1 50 252 Tm
+(  SHA3:  9f275724f2889618e77016c4cffe5dd1) Tj
+1 0 0 1 50 240 Tm
+(  Nonce: 14451404992320735085 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 228 Tm
+(Block #7 | VIN: VIN1002 | Toyota Vios | White | Stage: Quality Check) Tj
+1 0 0 1 50 216 Tm
+(  Hash:  5f6c4957af419a139af3993deb044ab8b275e05cf7ef2c1b85d09257845644c6) Tj
+1 0 0 1 50 204 Tm
+(  Prev:  c6aeda1a389ed3cdaa7d17142b681a301d88c9eaefef1f80cddfb1ec6fab01a5) Tj
+1 0 0 1 50 192 Tm
+(  SHA3:  f8b16aa91563e0bd4fea7b59e574b923) Tj
+1 0 0 1 50 180 Tm
+(  Nonce: 14319312628332177738 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 168 Tm
+(Block #8 | VIN: VIN1002 | Toyota Vios | White | Stage: Dealer Dispatch) Tj
+1 0 0 1 50 156 Tm
+(  Hash:  a504717436634acd7681f429091379ed5ef944b612335cd42adc13f558f00fd3) Tj
+1 0 0 1 50 144 Tm
+(  Prev:  5f6c4957af419a139af3993deb044ab8b275e05cf7ef2c1b85d09257845644c6) Tj
+1 0 0 1 50 132 Tm
+(  SHA3:  7cc273458cd87c8fa800130ef2b7b052) Tj
+1 0 0 1 50 120 Tm
+(  Nonce: 4932995666356520136 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 108 Tm
+(Block #9 | VIN: VIN1003 | Honda City | Blue | Stage: Production) Tj
+1 0 0 1 50 96 Tm
+(  Hash:  e7c84f21cc9b8a5690266be63ce572b652967da50a8285caf15511deb3a9e07c) Tj
+1 0 0 1 50 84 Tm
+(  Prev:  a504717436634acd7681f429091379ed5ef944b612335cd42adc13f558f00fd3) Tj
+1 0 0 1 50 72 Tm
+(  SHA3:  4be53aa83291139fecdfcd9d0d8970fb) Tj
+1 0 0 1 50 60 Tm
+(  Nonce: 16101687933672333551 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 35 Tm
+(Page 1 of 3) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 7 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+7 0 obj
+<< /Length 5596 >>
+stream
+BT
+/F1 9 Tf
+1 0 0 1 50 792 Tm
+(Block #10 | VIN: VIN1003 | Honda City | Blue | Stage: Warehouse Intake) Tj
+1 0 0 1 50 780 Tm
+(  Hash:  69437e2d474aaf8edd6d466b2b98ee6d2e0d36ab37e433a61da36636db34a3c4) Tj
+1 0 0 1 50 768 Tm
+(  Prev:  e7c84f21cc9b8a5690266be63ce572b652967da50a8285caf15511deb3a9e07c) Tj
+1 0 0 1 50 756 Tm
+(  SHA3:  9266255c7bde265673beb546df62347f) Tj
+1 0 0 1 50 744 Tm
+(  Nonce: 12481632807719338517 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 732 Tm
+(Block #11 | VIN: VIN1003 | Honda City | Blue | Stage: Quality Check) Tj
+1 0 0 1 50 720 Tm
+(  Hash:  c62042a2ac5807e4a72cc7c14768a2797002d7ad2af4176d0eddce26f668ee30) Tj
+1 0 0 1 50 708 Tm
+(  Prev:  69437e2d474aaf8edd6d466b2b98ee6d2e0d36ab37e433a61da36636db34a3c4) Tj
+1 0 0 1 50 696 Tm
+(  SHA3:  24371012e1b2c741446a3a84caf59ff4) Tj
+1 0 0 1 50 684 Tm
+(  Nonce: 14075337110308338794 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 672 Tm
+(Block #12 | VIN: VIN1004 | Proton X50 | Red | Stage: Production) Tj
+1 0 0 1 50 660 Tm
+(  Hash:  af230a73c30bfc1f66db63a4e456e53662b11b9c50021771ecaf4212c11db9f5) Tj
+1 0 0 1 50 648 Tm
+(  Prev:  c62042a2ac5807e4a72cc7c14768a2797002d7ad2af4176d0eddce26f668ee30) Tj
+1 0 0 1 50 636 Tm
+(  SHA3:  a5fd489f7c4f8a7007ca7b77b61e5515) Tj
+1 0 0 1 50 624 Tm
+(  Nonce: 6784009993671421732 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 612 Tm
+(Block #13 | VIN: VIN1004 | Proton X50 | Red | Stage: Warehouse Intake) Tj
+1 0 0 1 50 600 Tm
+(  Hash:  0abede92cce44973806f48cd05845b74690ae5142be15876103dd241bdd27efc) Tj
+1 0 0 1 50 588 Tm
+(  Prev:  af230a73c30bfc1f66db63a4e456e53662b11b9c50021771ecaf4212c11db9f5) Tj
+1 0 0 1 50 576 Tm
+(  SHA3:  7fd6492dbbafa81fa9503139acb73afa) Tj
+1 0 0 1 50 564 Tm
+(  Nonce: 1643415520338738332 | Time: 2026-04-02T10:56:26Z | By: system) Tj
+1 0 0 1 50 552 Tm
+(Block #14 | VIN: VIN1005 | Perodua Myvi | Black | Stage: Production) Tj
+1 0 0 1 50 540 Tm
+(  Hash:  2fc6a8ad830b2d0bbe42aee23121305e1eaa72defb0c1d4288346052b0ead2df) Tj
+1 0 0 1 50 528 Tm
+(  Prev:  0abede92cce44973806f48cd05845b74690ae5142be15876103dd241bdd27efc) Tj
+1 0 0 1 50 516 Tm
+(  SHA3:  6174267c65bf47e7ecb48d6a62fbb678) Tj
+1 0 0 1 50 504 Tm
+(  Nonce: 750607699767626400 | Time: 2026-04-02T10:56:27Z | By: system) Tj
+1 0 0 1 50 492 Tm
+(Block #15 | VIN: VBK9201 | Volkswagen Passat | Brown | Stage: Customer Sale) Tj
+1 0 0 1 50 480 Tm
+(  Hash:  12fe7ac2580a42c2a5ec10143386372222ce8a9bc7ae2cd221e1a38a8140163f) Tj
+1 0 0 1 50 468 Tm
+(  Prev:  2fc6a8ad830b2d0bbe42aee23121305e1eaa72defb0c1d4288346052b0ead2df) Tj
+1 0 0 1 50 456 Tm
+(  SHA3:  1fcb47afdc1400d004684da489173c5f) Tj
+1 0 0 1 50 444 Tm
+(  Nonce: 11806308560129790067 | Time: 2026-04-02T17:44:24Z | By: admin01) Tj
+1 0 0 1 50 432 Tm
+(Block #16 | VIN: MKS8360 | Ford Territory | Red | Stage: Customer Sale) Tj
+1 0 0 1 50 420 Tm
+(  Hash:  15b8c3a4234a5c0142982e302aa6c68b58404a1ce9a00ba10a9f94458a9faddc) Tj
+1 0 0 1 50 408 Tm
+(  Prev:  12fe7ac2580a42c2a5ec10143386372222ce8a9bc7ae2cd221e1a38a8140163f) Tj
+1 0 0 1 50 396 Tm
+(  SHA3:  57790eb75569e961552b58e350e156b8) Tj
+1 0 0 1 50 384 Tm
+(  Nonce: 6827356017340988505 | Time: 2026-04-03T09:37:31Z | By: admin01) Tj
+1 0 0 1 50 372 Tm
+(Block #17  [DELETED]) Tj
+1 0 0 1 50 360 Tm
+(Block #18 | VIN: JKF 7856 | Mazda CX-30 | White | Stage: Customer Sale) Tj
+1 0 0 1 50 348 Tm
+(  Hash:  286e53f620144a6d41d946b6af8de76b051918fbc25533dcbecb6d2f952583fb) Tj
+1 0 0 1 50 336 Tm
+(  Prev:  9982c95789d73e54aa05a59bfc20ec8831b875b7b0f4300186cf2b139096cc48) Tj
+1 0 0 1 50 324 Tm
+(  SHA3:  af2ef5e470abc61e239f99230b5f4841) Tj
+1 0 0 1 50 312 Tm
+(  Nonce: 16936471484187724605 | Time: 2026-04-03T11:13:33Z | By: admin01) Tj
+1 0 0 1 50 300 Tm
+(Block #19 | VIN: MNK 8752 | Mazda CX-5 | Brown | Stage: Production) Tj
+1 0 0 1 50 288 Tm
+(  Hash:  702d0184e8693ad4a61c1cd3b388dbc8789286c3701f31900208abbdd28833ca) Tj
+1 0 0 1 50 276 Tm
+(  Prev:  286e53f620144a6d41d946b6af8de76b051918fbc25533dcbecb6d2f952583fb) Tj
+1 0 0 1 50 264 Tm
+(  SHA3:  e47d5e030b6080ff54201c4b8a502b7c) Tj
+1 0 0 1 50 252 Tm
+(  Nonce: 17620061754324381120 | Time: 2026-04-21T14:25:21Z | By: admin01) Tj
+1 0 0 1 50 240 Tm
+(Block #20 | VIN: JKR 7862 | Subaru WRX | Brown | Stage: Warehouse Intake) Tj
+1 0 0 1 50 228 Tm
+(  Hash:  30b0d2dcab5acd3657458e815257a93242b7c064a24344cbbbedfb915c4ae648) Tj
+1 0 0 1 50 216 Tm
+(  Prev:  702d0184e8693ad4a61c1cd3b388dbc8789286c3701f31900208abbdd28833ca) Tj
+1 0 0 1 50 204 Tm
+(  SHA3:  70d67e7d2f01bd2d2294774ee6edd375) Tj
+1 0 0 1 50 192 Tm
+(  Nonce: 4663618566155206674 | Time: 2026-04-21T14:25:39Z | By: staff01) Tj
+1 0 0 1 50 180 Tm
+() Tj
+1 0 0 1 50 168 Tm
+(RECENT AUDIT LOG \(last 30\)) Tj
+1 0 0 1 50 156 Tm
+(--------------------------) Tj
+1 0 0 1 50 144 Tm
+([2026-04-04T14:56:59Z] INTEGRITY_CHECK: verifyIntegrity\(\) -> PASS: Blockchain integrity verified. 19 block\(s\) OK.) Tj
+1 0 0 1 50 132 Tm
+([2026-04-04T14:57:07Z] USER_LOGIN: User admin01 \(Admin\) logged in successfully) Tj
+1 0 0 1 50 120 Tm
+([2026-04-05T06:56:31Z] INTEGRITY_CHECK: verifyIntegrity\(\) -> PASS: Blockchain integrity verified. 19 block\(s\) OK.) Tj
+1 0 0 1 50 108 Tm
+([2026-04-05T06:58:09Z] USER_LOGIN: User admin01 \(Admin\) logged in successfully) Tj
+1 0 0 1 50 96 Tm
+([2026-04-05T07:06:49Z] USER_LOGOUT: User admin01 logged out) Tj
+1 0 0 1 50 84 Tm
+([2026-04-05T07:07:00Z] USER_LOGIN: User staff01 \(Warehouse Staff\) logged in successfully) Tj
+1 0 0 1 50 72 Tm
+([2026-04-05T07:07:45Z] APPROVAL_ACTION: User staff01 submitted pending request #1 for VIN JKR 7862 \(Warehouse Intake\)) Tj
+1 0 0 1 50 60 Tm
+([2026-04-05T07:09:02Z] USER_LOGOUT: User staff01 logged out) Tj
+1 0 0 1 50 35 Tm
+(Page 2 of 3) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 9 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+9 0 obj
+<< /Length 4088 >>
+stream
+BT
+/F1 9 Tf
+1 0 0 1 50 792 Tm
+([2026-04-05T07:09:10Z] USER_LOGIN: User admin01 \(Admin\) logged in successfully) Tj
+1 0 0 1 50 780 Tm
+([2026-04-05T07:20:10Z] BLOCK_DELETED: Soft delete block #16 for VIN MKS8360 \(tombstone applied, chain rehashed\)) Tj
+1 0 0 1 50 768 Tm
+([2026-04-05T07:20:10Z] INTEGRITY_CHECK: verifyIntegrity\(\) -> PASS: Blockchain integrity verified. 19 block\(s\) OK.) Tj
+1 0 0 1 50 756 Tm
+([2026-04-05T07:20:16Z] BLOCK_DELETED: Restored block #16 for VIN MKS8360 \(original data recovered, chain rehashed\)) Tj
+1 0 0 1 50 744 Tm
+([2026-04-05T07:20:16Z] INTEGRITY_CHECK: verifyIntegrity\(\) -> PASS: Blockchain integrity verified. 19 block\(s\) OK.) Tj
+1 0 0 1 50 732 Tm
+([2026-04-21T14:17:53Z] INTEGRITY_CHECK: verifyIntegrity\(\) -> PASS: Blockchain integrity verified. 19 block\(s\) OK.) Tj
+1 0 0 1 50 720 Tm
+([2026-04-21T14:21:01Z] USER_LOGIN: Login failed for username: admin01) Tj
+1 0 0 1 50 708 Tm
+([2026-04-21T14:21:19Z] INTEGRITY_CHECK: verifyIntegrity\(\) -> PASS: Blockchain integrity verified. 19 block\(s\) OK.) Tj
+1 0 0 1 50 696 Tm
+([2026-04-21T14:22:27Z] USER_LOGIN: Login failed for username: admin123) Tj
+1 0 0 1 50 684 Tm
+([2026-04-21T14:22:54Z] PERSISTENCE_IO: loadFromDB: PASS - Blockchain integrity verified. 19 block\(s\) OK.) Tj
+1 0 0 1 50 672 Tm
+([2026-04-21T14:22:54Z] INTEGRITY_CHECK: verifyIntegrity\(\) -> PASS: Blockchain integrity verified. 19 block\(s\) OK.) Tj
+1 0 0 1 50 660 Tm
+([2026-04-21T14:23:52Z] USER_LOGIN: User admin01 \(Admin\) logged in successfully) Tj
+1 0 0 1 50 648 Tm
+([2026-04-21T14:25:21Z] BLOCK_ADDED: Added block #19 for MNK 8752 \(Production\)) Tj
+1 0 0 1 50 636 Tm
+([2026-04-21T14:25:39Z] BLOCK_ADDED: Added block #20 for JKR 7862 \(Warehouse Intake\)) Tj
+1 0 0 1 50 624 Tm
+([2026-04-21T14:25:39Z] APPROVAL_ACTION: User admin01 approved request #1 and committed block #20 for VIN JKR 7862) Tj
+1 0 0 1 50 612 Tm
+([2026-04-21T14:25:53Z] CHAIN_VIEWED: Global chain viewed) Tj
+1 0 0 1 50 600 Tm
+([2026-04-21T14:26:09Z] CHAIN_VIEWED: Car detail viewed: JKR 7862) Tj
+1 0 0 1 50 588 Tm
+([2026-04-21T14:26:21Z] CHAIN_VIEWED: Car detail viewed: MNK 8752) Tj
+1 0 0 1 50 576 Tm
+([2026-04-21T14:26:28Z] CHAIN_VIEWED: Car detail viewed: VIN1001) Tj
+1 0 0 1 50 564 Tm
+([2026-04-21T14:30:54Z] BLOCK_DELETED: Soft delete block #17 for VIN MKT6742 \(tombstone applied, chain rehashed\)) Tj
+1 0 0 1 50 552 Tm
+([2026-04-21T14:30:54Z] INTEGRITY_CHECK: verifyIntegrity\(\) -> PASS: Blockchain integrity verified. 21 block\(s\) OK.) Tj
+1 0 0 1 50 540 Tm
+([2026-04-21T14:31:10Z] INTEGRITY_CHECK: verifyIntegrity\(\) -> PASS: Blockchain integrity verified. 21 block\(s\) OK.) Tj
+1 0 0 1 50 528 Tm
+() Tj
+1 0 0 1 50 516 Tm
+(FUEL PRICE DATA) Tj
+1 0 0 1 50 504 Tm
+(---------------) Tj
+1 0 0 1 50 492 Tm
+(Date         | RON95  | RON97  | Diesel\(Pen\) | Diesel\(East\)) Tj
+1 0 0 1 50 480 Tm
+(2025-01-02   | RM2.05 | RM3.28 | RM2.98      | RM2.15) Tj
+1 0 0 1 50 468 Tm
+(2025-01-09   | RM2.05 | RM3.33 | RM3.03      | RM2.15) Tj
+1 0 0 1 50 456 Tm
+(2025-01-16   | RM2.05 | RM3.38 | RM3.08      | RM2.15) Tj
+1 0 0 1 50 444 Tm
+(2025-01-23   | RM2.05 | RM3.43 | RM3.13      | RM2.15) Tj
+1 0 0 1 50 432 Tm
+(2025-01-30   | RM2.05 | RM3.43 | RM3.18      | RM2.15) Tj
+1 0 0 1 50 420 Tm
+(2025-02-06   | RM2.05 | RM3.43 | RM3.18      | RM2.15) Tj
+1 0 0 1 50 408 Tm
+(2025-02-13   | RM2.05 | RM3.43 | RM3.18      | RM2.15) Tj
+1 0 0 1 50 396 Tm
+(2025-02-20   | RM2.05 | RM3.43 | RM3.18      | RM2.15) Tj
+1 0 0 1 50 384 Tm
+(2025-02-27   | RM2.05 | RM3.43 | RM3.18      | RM2.15) Tj
+1 0 0 1 50 372 Tm
+(2025-03-06   | RM2.05 | RM3.38 | RM3.13      | RM2.15) Tj
+1 0 0 1 50 360 Tm
+(2025-03-13   | RM2.05 | RM3.28 | RM3.06      | RM2.15) Tj
+1 0 0 1 50 348 Tm
+(2025-03-20   | RM2.05 | RM3.28 | RM3.03      | RM2.15) Tj
+1 0 0 1 50 336 Tm
+(2025-03-27   | RM2.05 | RM3.28 | RM3.03      | RM2.15) Tj
+1 0 0 1 50 324 Tm
+(2025-04-03   | RM2.05 | RM3.33 | RM3.03      | RM2.15) Tj
+1 0 0 1 50 312 Tm
+(2025-04-10   | RM2.05 | RM3.28 | RM2.98      | RM2.15) Tj
+1 0 0 1 50 300 Tm
+(2025-04-17   | RM2.05 | RM3.18 | RM2.88      | RM2.15) Tj
+1 0 0 1 50 35 Tm
+(Page 3 of 3) Tj
+ET
+endstream
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000127 00000 n 
+0000000195 00000 n 
+0000000321 00000 n 
+0000005403 00000 n 
+0000005529 00000 n 
+0000011176 00000 n 
+0000011302 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R >>
+startxref
+15441
+%%EOF
